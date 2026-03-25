@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,22 +22,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
-import { Printer, Eye, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
-
-const mockOrders = [
-  { id: 'ORD-101', date: 'Oct 24, 2023', customer: 'Alice Johnson', amount: 15400, status: 'processing', payment: 'paid' },
-  { id: 'ORD-102', date: 'Oct 25, 2023', customer: 'Bob Smith', amount: 8200, status: 'pending', payment: 'unpaid' },
-  { id: 'ORD-103', date: 'Oct 26, 2023', customer: 'Charlie Davis', amount: 12100, status: 'shipped', payment: 'paid' },
-  { id: 'ORD-104', date: 'Oct 27, 2023', customer: 'Diana Ross', amount: 4500, status: 'pending', payment: 'unpaid' },
-];
+import { Printer, Eye, AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { Order, OrderStatus } from '@/lib/types';
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState(mockOrders);
+  const db = useFirestore();
+  const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
+  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
-  const unpaidCount = orders.filter(o => o.payment === 'unpaid').length;
+  const unpaidCount = orders?.filter(o => o.paymentStatus === 'unpaid').length || 0;
+  const pendingFulfillment = orders?.filter(o => o.status === 'pending' || o.status === 'processing').length || 0;
+  const completedToday = orders?.filter(o => o.status === 'completed').length || 0;
 
-  const handleStatusChange = (orderId: string, newStatus: string) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
+  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
+    const orderRef = doc(db, 'orders', orderId);
+    updateDocumentNonBlocking(orderRef, { status: newStatus, updatedAt: new Date().toISOString() });
   };
 
   return (
@@ -55,7 +56,7 @@ export default function OrdersPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase">Unpaid Orders</p>
-              <p className="text-2xl font-bold text-slate-900">{unpaidCount}</p>
+              <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : unpaidCount}</p>
             </div>
           </CardContent>
         </Card>
@@ -66,9 +67,7 @@ export default function OrdersPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Fulfillment</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {orders.filter(o => o.status === 'pending' || o.status === 'processing').length}
-              </p>
+              <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : pendingFulfillment}</p>
             </div>
           </CardContent>
         </Card>
@@ -78,74 +77,84 @@ export default function OrdersPage() {
               <CheckCircle2 className="h-6 w-6 text-teal-600" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Completed Today</p>
-              <p className="text-2xl font-bold text-slate-900">
-                {orders.filter(o => o.status === 'shipped').length}
-              </p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">Completed</p>
+              <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : completedToday}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden">
+      <Card className="border-none shadow-sm overflow-hidden min-h-[400px]">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow className="border-slate-100">
-                <TableHead className="font-bold text-slate-800 pl-6">Order ID</TableHead>
-                <TableHead className="font-bold text-slate-800">Customer</TableHead>
-                <TableHead className="font-bold text-slate-800">Payment</TableHead>
-                <TableHead className="font-bold text-slate-800">Status Action</TableHead>
-                <TableHead className="font-bold text-slate-800 text-right">Total</TableHead>
-                <TableHead className="pr-6"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-slate-50 border-slate-100 group">
-                  <TableCell className="font-bold text-slate-900 pl-6">{order.id}</TableCell>
-                  <TableCell className="font-medium text-slate-900">{order.customer}</TableCell>
-                  <TableCell>
-                    <span className={cn(
-                      "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
-                      order.payment === 'paid' ? "bg-teal-100 text-teal-700" : "bg-[#fef3c7] text-[#92400e]"
-                    )}>
-                      {order.payment}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Select 
-                      defaultValue={order.status} 
-                      onValueChange={(val) => handleStatusChange(order.id, val)}
-                    >
-                      <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="shipped">Shipped</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-teal-accent">
-                    KES {order.amount.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="pr-6">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+              <p className="text-sm font-medium text-slate-400">Loading orders...</p>
+            </div>
+          ) : !orders || orders.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-slate-400 font-medium">No orders found.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="bg-slate-50/50">
+                <TableRow className="border-slate-100 hover:bg-transparent">
+                  <TableHead className="font-bold text-slate-800 pl-6">Order ID</TableHead>
+                  <TableHead className="font-bold text-slate-800">Customer</TableHead>
+                  <TableHead className="font-bold text-slate-800">Payment</TableHead>
+                  <TableHead className="font-bold text-slate-800">Status Action</TableHead>
+                  <TableHead className="font-bold text-slate-800 text-right">Total</TableHead>
+                  <TableHead className="pr-6"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id} className="hover:bg-slate-50 border-slate-100 group">
+                    <TableCell className="font-bold text-slate-900 pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                    <TableCell className="font-medium text-slate-900">{order.customerName || 'Anonymous'}</TableCell>
+                    <TableCell>
+                      <span className={cn(
+                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
+                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-[#fef3c7] text-[#92400e]"
+                      )}>
+                        {order.paymentStatus}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Select 
+                        value={order.status} 
+                        onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}
+                      >
+                        <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="processing">Processing</SelectItem>
+                          <SelectItem value="shipped">Shipped</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-teal-accent">
+                      KES {order.totalAmount.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="pr-6">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </Shell>

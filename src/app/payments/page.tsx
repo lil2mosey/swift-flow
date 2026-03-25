@@ -39,43 +39,52 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-
-const initialTransactions = [
-  { id: 'TXN-001', orderId: 'ORD-101', date: 'Oct 24, 2023', customer: 'Alice Johnson', amount: 15400, method: 'M-Pesa', status: 'completed' },
-  { id: 'TXN-002', orderId: 'ORD-102', date: 'Oct 25, 2023', customer: 'Bob Smith', amount: 8200, method: 'Card', status: 'pending' },
-  { id: 'TXN-003', orderId: 'ORD-103', date: 'Oct 26, 2023', customer: 'Charlie Davis', amount: 12100, method: 'M-Pesa', status: 'completed' },
-  { id: 'TXN-004', orderId: 'ORD-104', date: 'Oct 27, 2023', customer: 'Diana Ross', amount: 4500, method: 'Bank Transfer', status: 'pending' },
-  { id: 'TXN-005', orderId: 'ORD-105', date: 'Oct 28, 2023', customer: 'Edward Kenway', amount: 22000, method: 'Card', status: 'completed' },
-];
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { Order } from '@/lib/types';
 
 export default function PaymentsPage() {
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const db = useFirestore();
+  const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
+  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
+
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [selectedTxn, setSelectedTxn] = useState<typeof initialTransactions[0] | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('0712345678');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const openPaymentDialog = (txn: typeof initialTransactions[0]) => {
-    setSelectedTxn(txn);
+  const openPaymentDialog = (order: Order) => {
+    setSelectedOrder(order);
     setIsPaymentDialogOpen(true);
   };
 
   const handleMpesaPrompt = () => {
-    if (!selectedTxn) return;
+    if (!selectedOrder) return;
     
     setIsProcessing(true);
     
-    // Simulate STK Push
+    // Simulate STK Push Confirmation
     setTimeout(() => {
-      setTransactions(prev => prev.map(t => t.id === selectedTxn.id ? { ...t, status: 'completed' } : t));
+      const orderRef = doc(db, 'orders', selectedOrder.id);
+      
+      // Update order to PAID and status to COMPLETED as requested
+      updateDocumentNonBlocking(orderRef, { 
+        paymentStatus: 'paid', 
+        status: 'completed',
+        updatedAt: new Date().toISOString()
+      });
+
       setIsProcessing(false);
       setIsPaymentDialogOpen(false);
       toast({
-        title: "M-Pesa Payment Received",
-        description: `Payment for ${selectedTxn.orderId} has been confirmed.`,
+        title: "M-Pesa Payment Confirmed",
+        description: `Order ${selectedOrder.id.slice(0,8).toUpperCase()} is now marked as Completed.`,
       });
     }, 2500);
   };
+
+  const totalRevenue = orders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
+  const pendingClearance = orders?.filter(o => o.paymentStatus === 'unpaid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
 
   return (
     <Shell userRole="seller">
@@ -96,11 +105,11 @@ export default function PaymentsPage() {
               <div className="p-2 bg-slate-800 rounded-lg">
                 <Wallet className="h-5 w-5 text-teal-400" />
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Total Revenue</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Confirmed Revenue</span>
             </div>
-            <div className="text-3xl font-bold">KES 142,500</div>
+            <div className="text-3xl font-bold">KES {totalRevenue.toLocaleString()}</div>
             <div className="flex items-center gap-1 mt-2 text-teal-400 text-xs font-bold">
-              <ArrowUpRight className="h-3 w-3" /> +12.5% from last month
+              <ArrowUpRight className="h-3 w-3" /> Real-time balance
             </div>
           </CardContent>
         </Card>
@@ -111,10 +120,10 @@ export default function PaymentsPage() {
               <div className="p-2 bg-amber-50 rounded-lg">
                 <Clock className="h-5 w-5 text-amber-500" />
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Pending Clearance</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Awaiting Payment</span>
             </div>
-            <div className="text-3xl font-bold text-slate-900">KES 12,700</div>
-            <p className="text-xs text-slate-500 mt-2 font-medium">To be cleared in 2-3 business days</p>
+            <div className="text-3xl font-bold text-slate-900">KES {pendingClearance.toLocaleString()}</div>
+            <p className="text-xs text-slate-500 mt-2 font-medium">Potential revenue from unpaid orders</p>
           </CardContent>
         </Card>
 
@@ -126,19 +135,19 @@ export default function PaymentsPage() {
               </div>
               <span className="text-[10px] font-bold uppercase text-slate-400">Next Payout</span>
             </div>
-            <div className="text-3xl font-bold text-slate-900">KES 45,000</div>
-            <p className="text-xs text-slate-500 mt-2 font-medium">Scheduled for Oct 31, 2023</p>
+            <div className="text-3xl font-bold text-slate-900">KES {(totalRevenue * 0.9).toLocaleString()}</div>
+            <p className="text-xs text-slate-500 mt-2 font-medium">Estimated net after fees</p>
           </CardContent>
         </Card>
       </div>
 
       <Card className="border-none shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg font-bold">Transaction History</CardTitle>
+          <CardTitle className="text-lg font-bold">Payment Log</CardTitle>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input className="pl-9 h-9 w-[250px] bg-slate-50 border-none" placeholder="Search transactions..." />
+              <Input className="pl-9 h-9 w-[250px] bg-slate-50 border-none" placeholder="Search orders..." />
             </div>
             <Button variant="outline" size="sm" className="h-9 gap-2">
               <Filter className="h-4 w-4" /> Filter
@@ -146,57 +155,67 @@ export default function PaymentsPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="relative w-full overflow-auto">
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow className="border-slate-100">
-                  <TableHead className="font-bold text-slate-800 pl-6">ID / Order</TableHead>
-                  <TableHead className="font-bold text-slate-800">Date</TableHead>
-                  <TableHead className="font-bold text-slate-800">Customer</TableHead>
-                  <TableHead className="font-bold text-slate-800">Status</TableHead>
-                  <TableHead className="font-bold text-slate-800 text-right pr-6">Action / Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((txn) => (
-                  <TableRow key={txn.id} className="hover:bg-slate-50 border-slate-100 transition-colors group">
-                    <TableCell className="font-bold text-slate-900 pl-6">
-                      <div className="flex flex-col">
-                        <span>{txn.id}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Order: {txn.orderId}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-slate-500 font-medium">{txn.date}</TableCell>
-                    <TableCell className="font-medium text-slate-900">{txn.customer}</TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1",
-                        txn.status === 'completed' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
-                      )}>
-                        {txn.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-3">
-                        {txn.status === 'pending' && (
-                          <Button 
-                            onClick={() => openPaymentDialog(txn)}
-                            size="sm" 
-                            variant="outline" 
-                            className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-4"
-                          >
-                            Pay
-                          </Button>
-                        )}
-                        <span className="font-bold text-teal-accent">
-                          KES {txn.amount.toLocaleString()}
-                        </span>
-                      </div>
-                    </TableCell>
+          <div className="relative w-full overflow-auto min-h-[400px]">
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+                <p className="text-sm font-medium text-slate-400">Loading payment data...</p>
+              </div>
+            ) : !orders || orders.length === 0 ? (
+              <div className="text-center py-20 text-slate-400 font-medium">No payment history found.</div>
+            ) : (
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-slate-100">
+                    <TableHead className="font-bold text-slate-800 pl-6">Order Reference</TableHead>
+                    <TableHead className="font-bold text-slate-800">Customer</TableHead>
+                    <TableHead className="font-bold text-slate-800">Payment Status</TableHead>
+                    <TableHead className="font-bold text-slate-800">Order Status</TableHead>
+                    <TableHead className="font-bold text-slate-800 text-right pr-6">Action / Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-slate-50 border-slate-100 transition-colors group">
+                      <TableCell className="font-bold text-slate-900 pl-6">
+                        {order.id.slice(0, 8).toUpperCase()}
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-900">{order.customerName || 'Anonymous'}</TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1",
+                          order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
+                        )}>
+                          {order.paymentStatus}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">
+                          {order.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-3">
+                          {order.paymentStatus === 'unpaid' && (
+                            <Button 
+                              onClick={() => openPaymentDialog(order)}
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-4"
+                            >
+                              Pay
+                            </Button>
+                          )}
+                          <span className="font-bold text-teal-accent">
+                            KES {order.totalAmount.toLocaleString()}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -209,7 +228,7 @@ export default function PaymentsPage() {
               M-Pesa Payment Prompt
             </DialogTitle>
             <DialogDescription>
-              Process payment for transaction {selectedTxn?.id}. A STK push will be sent to the customer.
+              Confirm payment for order {selectedOrder?.id.slice(0,8).toUpperCase()}. A simulated STK push will be triggered.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -226,7 +245,7 @@ export default function PaymentsPage() {
             <div className="bg-teal-50 p-4 rounded-xl border border-teal-100">
               <div className="flex justify-between items-center text-sm font-bold text-teal-900">
                 <span>Amount Due:</span>
-                <span>KES {selectedTxn?.amount.toLocaleString()}</span>
+                <span>KES {selectedOrder?.totalAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -239,7 +258,7 @@ export default function PaymentsPage() {
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Sending Prompt...
+                  Confirming Payment...
                 </>
               ) : (
                 "Trigger Payment Request"

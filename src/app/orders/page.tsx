@@ -29,18 +29,20 @@ import { FirebaseService } from '@/services/firebase-service';
 
 export default function OrdersPage() {
   const db = useFirestore();
-  const { user, profile } = useUser();
+  const { user, profile, isProfileLoading } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
+    // CRITICAL: Guard the query. Firestore rules will REJECT any query 
+    // that doesn't include the required filters (sellerId/customerId).
     if (!db || !user || !profile?.role) return null;
     
-    // Use optimized service queries based on confirmed role to ensure security rule compliance
     return profile.role === 'seller' 
       ? FirebaseService.getSellerOrdersQuery(db, user.uid)
       : FirebaseService.getCustomerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
   
-  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+  const isLoading = isProfileLoading || isOrdersLoading;
 
   const unpaidCount = orders?.filter(o => o.paymentStatus === 'unpaid').length || 0;
   const pendingFulfillment = orders?.filter(o => o.status === 'pending' || o.status === 'processing').length || 0;
@@ -107,7 +109,7 @@ export default function OrdersPage() {
             </div>
           ) : !orders || orders.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-slate-400 font-medium">No orders found.</p>
+              <p className="text-slate-400 font-medium italic">No orders found in your history.</p>
             </div>
           ) : (
             <Table>
@@ -123,15 +125,15 @@ export default function OrdersPage() {
               </TableHeader>
               <TableBody>
                 {orders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-slate-50 border-slate-100 group">
+                  <TableRow key={order.id} className="border-slate-100 group">
                     <TableCell className="font-bold text-slate-900 pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                    <TableCell className="font-medium text-slate-900">
+                    <TableCell className="font-medium text-slate-600">
                       {isSeller ? (order.customerName || 'Anonymous') : `${order.items?.length || 0} items`}
                     </TableCell>
                     <TableCell>
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
-                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-[#fef3c7] text-[#92400e]"
+                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
                       )}>
                         {order.paymentStatus}
                       </span>
@@ -142,7 +144,7 @@ export default function OrdersPage() {
                           value={order.status} 
                           onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}
                         >
-                          <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200">
+                          <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200 bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

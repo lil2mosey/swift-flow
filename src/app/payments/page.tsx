@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
@@ -37,20 +36,22 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { FirebaseService } from '@/services/firebase-service';
 import { Order } from '@/lib/types';
 
 export default function PaymentsPage() {
   const db = useFirestore();
-  const { user, profile } = useUser();
+  const { user, profile, isProfileLoading } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
+    // Only fetch if profile is loaded and the user is a seller to prevent permission errors
     if (!db || !user || profile?.role !== 'seller') return null;
-    return query(collection(db, 'orders'), where('sellerId', '==', user.uid));
+    return FirebaseService.getSellerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
   
-  const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+  const isLoading = isProfileLoading || isOrdersLoading;
 
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -68,15 +69,8 @@ export default function PaymentsPage() {
     setIsProcessing(true);
     
     // Simulate STK Push Confirmation
-    setTimeout(() => {
-      const orderRef = doc(db, 'orders', selectedOrder.id);
-      
-      updateDocumentNonBlocking(orderRef, { 
-        paymentStatus: 'paid', 
-        status: 'completed',
-        updatedAt: new Date().toISOString()
-      });
-
+    setTimeout(async () => {
+      FirebaseService.processPayment(db, selectedOrder.id);
       setIsProcessing(false);
       setIsPaymentDialogOpen(false);
       toast({
@@ -117,7 +111,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="border-none shadow-sm bg-white">
           <CardContent className="p-6">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-amber-50 rounded-lg">
@@ -130,7 +124,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm">
+        <Card className="border-none shadow-sm bg-white">
           <CardContent className="p-6">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2 bg-teal-50 rounded-lg">
@@ -165,7 +159,7 @@ export default function PaymentsPage() {
                 <p className="text-sm font-medium text-slate-400">Loading payment data...</p>
               </div>
             ) : !orders || orders.length === 0 ? (
-              <div className="text-center py-20 text-slate-400 font-medium">No payment history found.</div>
+              <div className="text-center py-20 text-slate-400 font-medium italic">No payment history found.</div>
             ) : (
               <Table>
                 <TableHeader className="bg-slate-50/50">
@@ -183,7 +177,7 @@ export default function PaymentsPage() {
                       <TableCell className="font-bold text-slate-900 pl-6">
                         {order.id.slice(0, 8).toUpperCase()}
                       </TableCell>
-                      <TableCell className="font-medium text-slate-900">{order.customerName || 'Anonymous'}</TableCell>
+                      <TableCell className="font-medium text-slate-600">{order.customerName || 'Anonymous'}</TableCell>
                       <TableCell>
                         <span className={cn(
                           "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1",

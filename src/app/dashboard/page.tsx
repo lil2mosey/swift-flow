@@ -18,17 +18,29 @@ const CustomerView = dynamic(() => import('./CustomerView'), {
 });
 
 export default function DashboardPage() {
-  const { profile, isProfileLoading } = useUser();
+  const { profile, isProfileLoading, isUserLoading, user } = useUser();
 
-  if (isProfileLoading) {
+  if (isUserLoading || isProfileLoading) {
     return <BrandLoader />;
   }
 
   // Choose the view based on the confirmed role
+  // If no role is found yet (e.g. profile doc still creating), show a minimal loader within the shell
+  if (!profile || !profile.role) {
+    return (
+      <Shell>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <BrandLoader />
+          <p className="text-slate-400 font-medium">Initializing your workspace...</p>
+        </div>
+      </Shell>
+    );
+  }
+
   return (
-    <Shell userRole={profile?.role}>
+    <Shell userRole={profile.role}>
       <Suspense fallback={<BrandLoader />}>
-        {profile?.role === 'seller' ? (
+        {profile.role === 'seller' ? (
           <SellerView />
         ) : (
           <CustomerView />

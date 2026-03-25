@@ -1,25 +1,19 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
-  ShoppingBag, 
+  DollarSign, 
   Clock, 
   CheckCircle2, 
-  AlertTriangle, 
-  DollarSign, 
   MessageSquare,
   PlusCircle,
   Package,
-  Mail,
-  CreditCard,
-  ArrowRight,
   Activity,
-  Plus,
   ShoppingCart,
   Heart
 } from 'lucide-react';
@@ -29,12 +23,10 @@ import {
   Area,
   XAxis,
   YAxis,
-  CartesianGrid,
-  BarChart,
-  Bar
+  CartesianGrid
 } from 'recharts';
-import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, addDoc, limit } from 'firebase/firestore';
+import { useUser, useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Order, Product } from '@/lib/types';
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
@@ -79,44 +71,38 @@ export default function DashboardPage() {
     { label: 'Unread', value: '3', sub: 'MESSAGES', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50' },
   ];
 
-  const handleQuickAddOrder = async () => {
+  const handleQuickAddOrder = () => {
     if (!user) return;
-    try {
-      await addDoc(collection(db, 'orders'), {
-        sellerId: user.uid,
-        customerId: 'manual-dm',
-        customerName: 'Instagram DM Customer',
-        totalAmount: 500,
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        items: [{ productName: 'Hoodie', quantity: 1, priceAtOrder: 500 }],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      toast({ title: "Order Added", description: "Manual DM order created successfully." });
-    } catch (e) {
-      console.error(e);
-    }
+    const ordersRef = collection(db, 'orders');
+    addDocumentNonBlocking(ordersRef, {
+      sellerId: user.uid,
+      customerId: 'manual-dm',
+      customerName: 'Instagram DM Customer',
+      totalAmount: 500,
+      status: 'pending',
+      paymentStatus: 'unpaid',
+      items: [{ productName: 'Hoodie', quantity: 1, priceAtOrder: 500 }],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    toast({ title: "Order Added", description: "Manual DM order created successfully." });
   };
 
-  const placeOrder = async (product: Product) => {
+  const placeOrder = (product: Product) => {
     if (!user) return;
-    try {
-      await addDoc(collection(db, 'orders'), {
-        customerId: user.uid,
-        customerName: profile?.fullName || user.email?.split('@')[0],
-        sellerId: 'system-seller', // Default for prototype
-        items: [{ productId: product.id, productName: product.name, quantity: 1, priceAtOrder: product.price }],
-        totalAmount: product.price,
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-      toast({ title: "Order Placed!", description: `Successfully ordered ${product.name}.` });
-    } catch (e) {
-      console.error(e);
-    }
+    const ordersRef = collection(db, 'orders');
+    addDocumentNonBlocking(ordersRef, {
+      customerId: user.uid,
+      customerName: profile?.fullName || user.email?.split('@')[0],
+      sellerId: 'system-seller', 
+      items: [{ productId: product.id, productName: product.name, quantity: 1, priceAtOrder: product.price }],
+      totalAmount: product.price,
+      status: 'pending',
+      paymentStatus: 'unpaid',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    toast({ title: "Order Placed!", description: `Successfully ordered ${product.name}.` });
   };
 
   if (profile?.role === 'seller') {
@@ -134,7 +120,6 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, i) => (
             <Card key={i} className="border-none shadow-sm">
@@ -153,7 +138,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Master Orders Table */}
           <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
             <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
               <div>
@@ -193,7 +177,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Performance Summary */}
           <div className="space-y-6">
             <Card className="border-none shadow-sm">
               <CardHeader className="pb-2">
@@ -236,7 +219,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Customer View (Instagram Bridge)
   return (
     <Shell userRole="customer">
       <div className="mb-8">
@@ -255,7 +237,7 @@ export default function DashboardPage() {
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute top-3 right-3">
-                <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-9 w-9 shadow-sm hover:text-rose-500">
+                <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-9 w-9 shadow-sm hover: Rose-500">
                   <Heart className="h-4 w-4" />
                 </Button>
               </div>

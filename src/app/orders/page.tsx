@@ -29,13 +29,14 @@ import { Order, OrderStatus } from '@/lib/types';
 
 export default function OrdersPage() {
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, profile } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    // Filter by sellerId since this is the seller portal view
-    return query(collection(db, 'orders'), where('sellerId', '==', user.uid));
-  }, [db, user]);
+    if (!db || !user || !profile) return null;
+    // Determine the field to filter by based on the user's role
+    const filterField = profile.role === 'seller' ? 'sellerId' : 'customerId';
+    return query(collection(db, 'orders'), where(filterField, '==', user.uid));
+  }, [db, user, profile]);
   
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
@@ -48,48 +49,52 @@ export default function OrdersPage() {
     updateDocumentNonBlocking(orderRef, { status: newStatus, updatedAt: new Date().toISOString() });
   };
 
+  const isSeller = profile?.role === 'seller';
+
   return (
-    <Shell userRole="seller">
+    <Shell userRole={isSeller ? "seller" : "customer"}>
       <PageHeader 
-        title="Order Management" 
-        description="Update fulfillment status and track payment compliance."
+        title={isSeller ? "Order Management" : "My Order History"} 
+        description={isSeller ? "Update fulfillment status and track payment compliance." : "Track your recent purchases and delivery status."}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-amber-50 rounded-xl">
-              <AlertCircle className="h-6 w-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Unpaid Orders</p>
-              <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : unpaidCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-50 rounded-xl">
-              <Clock className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Fulfillment</p>
-              <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : pendingFulfillment}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-teal-50 rounded-xl">
-              <CheckCircle2 className="h-6 w-6 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Completed</p>
-              <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : completedToday}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {isSeller && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="border-none shadow-sm bg-white">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-amber-50 rounded-xl">
+                <AlertCircle className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Unpaid Orders</p>
+                <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : unpaidCount}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm bg-white">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-blue-50 rounded-xl">
+                <Clock className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Fulfillment</p>
+                <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : pendingFulfillment}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm bg-white">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-teal-50 rounded-xl">
+                <CheckCircle2 className="h-6 w-6 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Completed</p>
+                <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : completedToday}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Card className="border-none shadow-sm overflow-hidden min-h-[400px]">
         <CardContent className="p-0">
@@ -107,9 +112,9 @@ export default function OrdersPage() {
               <TableHeader className="bg-slate-50/50">
                 <TableRow className="border-slate-100 hover:bg-transparent">
                   <TableHead className="font-bold text-slate-800 pl-6">Order ID</TableHead>
-                  <TableHead className="font-bold text-slate-800">Customer</TableHead>
+                  <TableHead className="font-bold text-slate-800">{isSeller ? "Customer" : "Items"}</TableHead>
                   <TableHead className="font-bold text-slate-800">Payment</TableHead>
-                  <TableHead className="font-bold text-slate-800">Status Action</TableHead>
+                  <TableHead className="font-bold text-slate-800">Status</TableHead>
                   <TableHead className="font-bold text-slate-800 text-right">Total</TableHead>
                   <TableHead className="pr-6"></TableHead>
                 </TableRow>
@@ -118,7 +123,9 @@ export default function OrdersPage() {
                 {orders.map((order) => (
                   <TableRow key={order.id} className="hover:bg-slate-50 border-slate-100 group">
                     <TableCell className="font-bold text-slate-900 pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                    <TableCell className="font-medium text-slate-900">{order.customerName || 'Anonymous'}</TableCell>
+                    <TableCell className="font-medium text-slate-900">
+                      {isSeller ? (order.customerName || 'Anonymous') : `${order.items.length} items`}
+                    </TableCell>
                     <TableCell>
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
@@ -128,21 +135,27 @@ export default function OrdersPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Select 
-                        value={order.status} 
-                        onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}
-                      >
-                        <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {isSeller ? (
+                        <Select 
+                          value={order.status} 
+                          onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="processing">Processing</SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          {order.status}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-bold text-teal-accent">
                       KES {order.totalAmount.toLocaleString()}

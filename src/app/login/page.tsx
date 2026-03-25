@@ -3,15 +3,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirebase, useUser } from '@/firebase';
+import { useFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, LogIn, UserPlus, ShieldCheck } from 'lucide-react';
+import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -45,15 +45,15 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
       
-      // Create profile
-      await setDoc(doc(firestore, 'users', uid), {
+      const profileRef = doc(firestore, 'users', uid);
+      setDocumentNonBlocking(profileRef, {
         uid,
         email,
         fullName: fullName || email.split('@')[0],
         role,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
     } catch (error) {
       setIsLoading(false);
     }

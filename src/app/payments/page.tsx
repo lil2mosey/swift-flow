@@ -7,9 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
-  DollarSign, 
   ArrowUpRight, 
-  ArrowDownLeft, 
   Download, 
   Search,
   Filter,
@@ -45,13 +43,12 @@ import { Order } from '@/lib/types';
 
 export default function PaymentsPage() {
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, profile } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
-    // Filter by sellerId to satisfy security rules for the seller portal
+    if (!db || !user || profile?.role !== 'seller') return null;
     return query(collection(db, 'orders'), where('sellerId', '==', user.uid));
-  }, [db, user]);
+  }, [db, user, profile]);
   
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
@@ -74,7 +71,6 @@ export default function PaymentsPage() {
     setTimeout(() => {
       const orderRef = doc(db, 'orders', selectedOrder.id);
       
-      // Update order to PAID and status to COMPLETED as requested
       updateDocumentNonBlocking(orderRef, { 
         paymentStatus: 'paid', 
         status: 'completed',

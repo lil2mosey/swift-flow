@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Table, 
   TableBody, 
@@ -13,10 +13,19 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { CreditCard, Printer, Eye, ChevronRight } from 'lucide-react';
+import { Printer, Eye, Loader2, Smartphone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const mockOrders = [
@@ -28,15 +37,31 @@ const mockOrders = [
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState(mockOrders);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<typeof mockOrders[0] | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('0712345678');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleProcessPayment = (orderId: string) => {
-    // Logic: If order is paid, inventory would decrease. 
-    // Here we simulate the status change.
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment: 'paid' as const, status: 'processing' as const } : o));
-    toast({
-      title: "Payment Successful",
-      description: `Order ${orderId} has been marked as paid and inventory updated.`,
-    });
+  const openPaymentDialog = (order: typeof mockOrders[0]) => {
+    setSelectedOrder(order);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleMpesaPrompt = () => {
+    if (!selectedOrder) return;
+    
+    setIsProcessing(true);
+    
+    // Simulate STK Push
+    setTimeout(() => {
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, payment: 'paid' as const, status: 'processing' as const } : o));
+      setIsProcessing(false);
+      setIsPaymentDialogOpen(false);
+      toast({
+        title: "M-Pesa Payment Received",
+        description: `Payment for ${selectedOrder.id} has been confirmed.`,
+      });
+    }, 2500);
   };
 
   return (
@@ -91,7 +116,7 @@ export default function OrdersPage() {
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {order.payment === 'unpaid' && (
                         <Button 
-                          onClick={() => handleProcessPayment(order.id)}
+                          onClick={() => openPaymentDialog(order)}
                           size="sm" 
                           variant="outline" 
                           className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50"
@@ -113,6 +138,54 @@ export default function OrdersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-teal-600" />
+              M-Pesa Payment Prompt
+            </DialogTitle>
+            <DialogDescription>
+              A STK push notification will be sent to the phone number below for {selectedOrder?.id}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input 
+                id="phone" 
+                value={phoneNumber} 
+                onChange={(e) => setPhoneNumber(e.target.value)} 
+                placeholder="07XXXXXXXX"
+                className="bg-slate-50 border-slate-200"
+              />
+            </div>
+            <div className="bg-teal-50 p-4 rounded-xl border border-teal-100">
+              <div className="flex justify-between items-center text-sm font-bold text-teal-900">
+                <span>Total Amount:</span>
+                <span>KES {selectedOrder?.amount.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-11"
+              onClick={handleMpesaPrompt}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Sending Prompt...
+                </>
+              ) : (
+                "Send M-Pesa Prompt"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Shell>
   );
 }

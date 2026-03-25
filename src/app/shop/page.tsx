@@ -6,10 +6,20 @@ import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Search } from 'lucide-react';
+import { ShoppingCart, Heart, Search, Smartphone, Loader2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const catalog = [
   { id: '1', name: 'Premium Espresso Beans', price: 2500, stock: 120, category: 'Coffee', image: 'https://picsum.photos/seed/coffee/400/300' },
@@ -21,14 +31,47 @@ const catalog = [
 ];
 
 export default function ShopPage() {
-  const [cartCount, setCartCount] = useState(0);
+  const [cart, setCart] = useState<{ id: string, name: string, price: number, quantity: number }[]>([]);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('0712345678');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const addToCart = (productName: string) => {
-    setCartCount(prev => prev + 1);
+  const addToCart = (product: typeof catalog[0]) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1 }];
+    });
     toast({
       title: "Added to Cart",
-      description: `${productName} has been added to your shopping cart.`,
+      description: `${product.name} has been added to your shopping cart.`,
     });
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+
+  const handleMpesaPrompt = () => {
+    if (cart.length === 0) return;
+    
+    setIsProcessing(true);
+    
+    // Simulate STK Push
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsCheckoutOpen(false);
+      setCart([]);
+      toast({
+        title: "Order Placed Successfully",
+        description: `Payment confirmed via M-Pesa. Your order is being processed.`,
+      });
+    }, 2500);
   };
 
   return (
@@ -37,7 +80,11 @@ export default function ShopPage() {
         title="Storefront" 
         description="Browse our curated selection of coffee and brewing equipment."
         action={
-          <Button variant="outline" className="relative gap-2 border-slate-200">
+          <Button 
+            variant="outline" 
+            className="relative gap-2 border-slate-200"
+            onClick={() => setIsCheckoutOpen(true)}
+          >
             <ShoppingCart className="h-4 w-4" />
             Cart
             {cartCount > 0 && (
@@ -91,7 +138,7 @@ export default function ShopPage() {
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={() => addToCart(product.name)}
+                onClick={() => addToCart(product)}
                 className="w-full bg-primary hover:bg-slate-800 text-white font-bold gap-2"
               >
                 <ShoppingCart className="h-4 w-4" /> Add to Cart
@@ -100,6 +147,86 @@ export default function ShopPage() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-teal-600" />
+              Checkout Summary
+            </DialogTitle>
+            <DialogDescription>
+              Review your items and complete payment via M-Pesa.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[300px] pr-4 my-2">
+            <div className="space-y-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 font-medium italic">
+                  Your cart is empty
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl">
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-900">{item.name}</p>
+                      <p className="text-xs text-slate-500">Qty: {item.quantity} × KES {item.price.toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-teal-600">KES {(item.price * item.quantity).toLocaleString()}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500" onClick={() => removeFromCart(item.id)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+
+          {cart.length > 0 && (
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex justify-between items-center font-bold text-slate-900">
+                <span>Grand Total:</span>
+                <span className="text-xl">KES {cartTotal.toLocaleString()}</span>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="checkout-phone" className="text-xs font-bold uppercase text-slate-500">M-Pesa Phone Number</Label>
+                <div className="relative">
+                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input 
+                    id="checkout-phone" 
+                    value={phoneNumber} 
+                    onChange={(e) => setPhoneNumber(e.target.value)} 
+                    placeholder="07XXXXXXXX"
+                    className="pl-9 bg-slate-50 border-slate-200"
+                  />
+                </div>
+              </div>
+
+              <Button 
+                className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 gap-2"
+                onClick={handleMpesaPrompt}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    <Smartphone className="h-5 w-5" />
+                    Pay KES {cartTotal.toLocaleString()} via M-Pesa
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Shell>
   );
 }

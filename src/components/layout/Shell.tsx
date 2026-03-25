@@ -13,10 +13,12 @@ import {
   LogOut,
   Settings,
   Menu,
-  X
+  X,
+  CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ShellProps {
   children: React.ReactNode;
@@ -29,9 +31,10 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
 
   const sellerNav = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Orders', href: '/orders', icon: ClipboardList },
+    { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
+    { name: 'Payments', href: '/payments', icon: CreditCard },
   ];
 
   const customerNav = [
@@ -43,46 +46,49 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
   const navItems = userRole === 'seller' ? sellerNav : customerNav;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50">
       {/* Top Navigation Bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-primary text-primary-foreground border-b border-slate-800 flex items-center justify-between px-6">
-        <div className="flex items-center gap-4">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#0f172a] text-white flex items-center justify-between px-6 shadow-md">
+        <div className="flex items-center gap-8">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden"
+            className="md:hidden text-white"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? <X /> : <Menu />}
           </Button>
           <Link href="/" className="text-xl font-bold tracking-tight">
-            musaa<span className="text-teal-accent">OrderFlow</span>
+            Swift<span className="text-teal-400">Flow</span>
           </Link>
+
+          <nav className="hidden md:flex items-center gap-6">
+            {navItems.map((item) => (
+              <Link 
+                key={item.href} 
+                href={item.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-teal-400",
+                  pathname === item.href ? "text-white" : "text-slate-400"
+                )}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => (
-            <Link 
-              key={item.href} 
-              href={item.href}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-teal-accent",
-                pathname === item.href ? "text-teal-accent" : "text-slate-400"
-              )}
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-
         <div className="flex items-center gap-4">
-          <span className="hidden sm:inline text-xs font-medium px-2 py-1 bg-slate-800 rounded uppercase tracking-wider text-slate-400">
-            {userRole}
-          </span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
+            <span className="text-xs font-medium text-slate-300">musaa</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider">
+              {userRole}
+            </span>
+          </div>
           <Button 
-            variant="outline" 
+            variant="secondary" 
             size="sm" 
-            className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-white"
+            className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 font-bold"
           >
             Logout
           </Button>
@@ -90,15 +96,15 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
       </header>
 
       {/* Main Content Area */}
-      <main className="pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6">
+      <main className="pt-20 pb-12">
+        <div className="max-w-[1400px] mx-auto px-6">
           {children}
         </div>
       </main>
 
       {/* Mobile Nav Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-primary/95 pt-20 px-6 md:hidden">
+        <div className="fixed inset-0 z-40 bg-[#0f172a]/95 pt-20 px-6 md:hidden">
           <div className="flex flex-col gap-4">
             {navItems.map((item) => (
               <Link 

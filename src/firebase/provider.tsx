@@ -3,8 +3,8 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, onSnapshot } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { Auth, User, onAuthStateChanged, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { UserProfile } from '@/lib/types';
 
 interface FirebaseProviderProps {
@@ -22,35 +22,17 @@ interface UserAuthState {
   userError: Error | null;
 }
 
-export interface FirebaseContextState {
+export interface FirebaseContextState extends UserAuthState {
   areServicesAvailable: boolean;
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  user: User | null;
-  profile: UserProfile | null;
-  isUserLoading: boolean;
-  isProfileLoading: boolean;
-  userError: Error | null;
 }
 
-export interface FirebaseServicesAndUser {
+export interface FirebaseServicesAndUser extends UserAuthState {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
-  user: User | null;
-  profile: UserProfile | null;
-  isUserLoading: boolean;
-  isProfileLoading: boolean;
-  userError: Error | null;
-}
-
-export interface UserHookResult {
-  user: User | null;
-  profile: UserProfile | null;
-  isUserLoading: boolean;
-  isProfileLoading: boolean;
-  userError: Error | null;
 }
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
@@ -65,21 +47,23 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     user: null,
     profile: null,
     isUserLoading: true,
-    isProfileLoading: false,
+    isProfileLoading: true, // Start true for initial boot
     userError: null,
   });
 
   useEffect(() => {
     if (!auth || !firestore) {
-      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
+      setUserAuthState(prev => ({ ...prev, isUserLoading: false, isProfileLoading: false }));
       return;
     }
+
+    // Set persistence to LOCAL for presentation consistency
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
 
     const unsubscribeAuth = onAuthStateChanged(
       auth,
       (firebaseUser) => {
         if (firebaseUser) {
-          // Set user immediately, but keep loading profile
           setUserAuthState(prev => ({ 
             ...prev, 
             user: firebaseUser, 
@@ -87,7 +71,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             isProfileLoading: true 
           }));
 
-          // Subscribe to profile
           const profileRef = doc(firestore, 'users', firebaseUser.uid);
           const unsubscribeProfile = onSnapshot(
             profileRef,
@@ -101,7 +84,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               }));
             },
             (error) => {
-              console.error("Profile fetch error:", error);
               setUserAuthState(prev => ({
                 ...prev,
                 isProfileLoading: false,
@@ -141,11 +123,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       firebaseApp: servicesAvailable ? firebaseApp : null,
       firestore: servicesAvailable ? firestore : null,
       auth: servicesAvailable ? auth : null,
-      user: userAuthState.user,
-      profile: userAuthState.profile,
-      isUserLoading: userAuthState.isUserLoading,
-      isProfileLoading: userAuthState.isProfileLoading,
-      userError: userAuthState.userError,
+      ...userAuthState,
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
 
@@ -189,7 +167,7 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T & 
   return memoized;
 }
 
-export const useUser = (): UserHookResult => {
+export const useUser = () => {
   const { user, profile, isUserLoading, isProfileLoading, userError } = useFirebase();
   return { user, profile, isUserLoading, isProfileLoading, userError };
 };

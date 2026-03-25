@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -31,6 +30,7 @@ import { Order, Product } from '@/lib/types';
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const statusData = [
   { name: 'Mon', value: 30 },
@@ -41,7 +41,7 @@ const statusData = [
 ];
 
 export default function DashboardPage() {
-  const { profile, user } = useUser();
+  const { profile, user, isProfileLoading } = useUser();
   const db = useFirestore();
 
   // Seller Queries
@@ -55,14 +55,14 @@ export default function DashboardPage() {
     );
   }, [db, user, profile]);
 
-  const { data: sellerOrders } = useCollection<Order>(sellerOrdersQuery);
+  const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
 
   // Customer Queries
   const productsQuery = useMemoFirebase(() => {
     return query(collection(db, 'products'), limit(6));
   }, [db]);
 
-  const { data: products } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
 
   const stats = [
     { label: 'Total Revenue', value: 'KES 45,200', sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-600', bg: 'bg-teal-50' },
@@ -104,6 +104,26 @@ export default function DashboardPage() {
     });
     toast({ title: "Order Placed!", description: `Successfully ordered ${product.name}.` });
   };
+
+  if (isProfileLoading) {
+    return (
+      <Shell>
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
+          <Skeleton className="h-96 rounded-xl" />
+        </div>
+      </Shell>
+    );
+  }
 
   if (profile?.role === 'seller') {
     return (
@@ -157,7 +177,16 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sellerOrders?.map((order) => (
+                  {isOrdersLoading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="pl-6"><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell className="text-right pr-6"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : sellerOrders?.map((order) => (
                     <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
                       <TableCell className="font-bold pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
                       <TableCell className="font-medium text-slate-600">{order.customerName}</TableCell>
@@ -227,7 +256,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products?.map((product) => (
+        {isProductsLoading ? (
+          Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-96 rounded-2xl" />)
+        ) : products?.map((product) => (
           <Card key={product.id} className="border-none shadow-sm overflow-hidden group">
             <div className="relative h-64 w-full">
               <Image 

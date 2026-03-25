@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -19,6 +18,7 @@ interface UserAuthState {
   user: User | null;
   profile: UserProfile | null;
   isUserLoading: boolean;
+  isProfileLoading: boolean;
   userError: Error | null;
 }
 
@@ -30,6 +30,7 @@ export interface FirebaseContextState {
   user: User | null;
   profile: UserProfile | null;
   isUserLoading: boolean;
+  isProfileLoading: boolean;
   userError: Error | null;
 }
 
@@ -40,6 +41,7 @@ export interface FirebaseServicesAndUser {
   user: User | null;
   profile: UserProfile | null;
   isUserLoading: boolean;
+  isProfileLoading: boolean;
   userError: Error | null;
 }
 
@@ -47,6 +49,7 @@ export interface UserHookResult {
   user: User | null;
   profile: UserProfile | null;
   isUserLoading: boolean;
+  isProfileLoading: boolean;
   userError: Error | null;
 }
 
@@ -62,6 +65,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     user: null,
     profile: null,
     isUserLoading: true,
+    isProfileLoading: false,
     userError: null,
   });
 
@@ -75,36 +79,55 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (firebaseUser) {
+          // Set user immediately, but keep loading profile
+          setUserAuthState(prev => ({ 
+            ...prev, 
+            user: firebaseUser, 
+            isUserLoading: false,
+            isProfileLoading: true 
+          }));
+
           // Subscribe to profile
           const profileRef = doc(firestore, 'users', firebaseUser.uid);
           const unsubscribeProfile = onSnapshot(
             profileRef,
             (docSnap) => {
               const profileData = docSnap.exists() ? (docSnap.data() as UserProfile) : null;
-              setUserAuthState({
-                user: firebaseUser,
+              setUserAuthState(prev => ({
+                ...prev,
                 profile: profileData,
-                isUserLoading: false,
+                isProfileLoading: false,
                 userError: null
-              });
+              }));
             },
             (error) => {
               console.error("Profile fetch error:", error);
-              setUserAuthState({
-                user: firebaseUser,
-                profile: null,
-                isUserLoading: false,
+              setUserAuthState(prev => ({
+                ...prev,
+                isProfileLoading: false,
                 userError: error
-              });
+              }));
             }
           );
           return () => unsubscribeProfile();
         } else {
-          setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: null });
+          setUserAuthState({ 
+            user: null, 
+            profile: null, 
+            isUserLoading: false, 
+            isProfileLoading: false,
+            userError: null 
+          });
         }
       },
       (error) => {
-        setUserAuthState({ user: null, profile: null, isUserLoading: false, userError: error });
+        setUserAuthState({ 
+          user: null, 
+          profile: null, 
+          isUserLoading: false, 
+          isProfileLoading: false,
+          userError: error 
+        });
       }
     );
 
@@ -121,6 +144,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       user: userAuthState.user,
       profile: userAuthState.profile,
       isUserLoading: userAuthState.isUserLoading,
+      isProfileLoading: userAuthState.isProfileLoading,
       userError: userAuthState.userError,
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
@@ -148,6 +172,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     profile: context.profile,
     isUserLoading: context.isUserLoading,
+    isProfileLoading: context.isProfileLoading,
     userError: context.userError,
   };
 };
@@ -165,6 +190,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T & 
 }
 
 export const useUser = (): UserHookResult => {
-  const { user, profile, isUserLoading, userError } = useFirebase();
-  return { user, profile, isUserLoading, userError };
+  const { user, profile, isUserLoading, isProfileLoading, userError } = useFirebase();
+  return { user, profile, isUserLoading, isProfileLoading, userError };
 };

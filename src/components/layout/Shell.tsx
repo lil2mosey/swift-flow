@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -22,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ShellProps {
   children: React.ReactNode;
@@ -32,7 +32,7 @@ export function Shell({ children, userRole }: ShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile, isUserLoading } = useUser();
+  const { user, profile, isUserLoading, isProfileLoading } = useUser();
   const auth = useAuth();
 
   useEffect(() => {
@@ -61,8 +61,6 @@ export function Shell({ children, userRole }: ShellProps) {
 
   const activeRole = userRole || profile?.role || 'customer';
   const navItems = activeRole === 'seller' ? sellerNav : customerNav;
-
-  if (isUserLoading) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -102,11 +100,13 @@ export function Shell({ children, userRole }: ShellProps) {
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
             <UserIcon className="h-3 w-3 text-teal-400" />
             <span className="text-xs font-medium text-slate-300 truncate max-w-[100px]">
-              {profile?.fullName || user?.email?.split('@')[0] || 'Guest'}
+              {isProfileLoading ? <Skeleton className="h-3 w-16 bg-slate-700" /> : (profile?.fullName || user?.email?.split('@')[0] || 'Guest')}
             </span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider hidden sm:inline">
-              {activeRole}
-            </span>
+            {!isProfileLoading && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider hidden sm:inline">
+                {activeRole}
+              </span>
+            )}
           </div>
           <Button 
             onClick={handleLogout}

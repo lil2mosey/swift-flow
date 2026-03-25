@@ -1,9 +1,8 @@
-
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Package, 
@@ -14,11 +13,13 @@ import {
   Settings,
   Menu,
   X,
-  CreditCard
+  CreditCard,
+  User as UserIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 interface ShellProps {
   children: React.ReactNode;
@@ -28,6 +29,20 @@ interface ShellProps {
 export function Shell({ children, userRole = 'seller' }: ShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (!isUserLoading && !user && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, pathname, router]);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   const sellerNav = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -44,6 +59,10 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
   ];
 
   const navItems = userRole === 'seller' ? sellerNav : customerNav;
+
+  if (isUserLoading) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -80,17 +99,22 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
-            <span className="text-xs font-medium text-slate-300">musaa</span>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider">
+            <UserIcon className="h-3 w-3 text-teal-400" />
+            <span className="text-xs font-medium text-slate-300 truncate max-w-[100px]">
+              {user?.email?.split('@')[0] || 'Guest'}
+            </span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider hidden sm:inline">
               {userRole}
             </span>
           </div>
           <Button 
+            onClick={handleLogout}
             variant="secondary" 
             size="sm" 
             className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 font-bold"
           >
-            Logout
+            <LogOut className="h-3 w-3 mr-2 sm:mr-0" />
+            <span className="hidden sm:inline">Logout</span>
           </Button>
         </div>
       </header>

@@ -1,11 +1,12 @@
-
 export type UserRole = 'seller' | 'customer';
 
 export interface UserProfile {
-  uid: string;
+  id: string;
   email: string;
   role: UserRole;
-  displayName?: string;
+  fullName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Product {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -33,8 +33,13 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
+    } catch (error: any) {
       setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please try again.",
+      });
     }
   };
 
@@ -46,16 +51,22 @@ export default function LoginPage() {
       const uid = userCredential.user.uid;
       
       const profileRef = doc(firestore, 'users', uid);
+      // 'id' field must match the 'userId' in path for security rules to allow creation
       setDocumentNonBlocking(profileRef, {
-        uid,
+        id: uid,
         email,
         fullName: fullName || email.split('@')[0],
         role,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
-    } catch (error) {
+    } catch (error: any) {
       setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.message || "Could not create account.",
+      });
     }
   };
 

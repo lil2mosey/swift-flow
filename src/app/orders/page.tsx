@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import React from 'react';
 import { Shell } from '@/components/layout/Shell';
@@ -24,18 +23,21 @@ import {
 import { cn } from '@/lib/utils';
 import { Printer, Eye, AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/lib/types';
+import { FirebaseService } from '@/services/firebase-service';
 
 export default function OrdersPage() {
   const db = useFirestore();
   const { user, profile } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user || !profile) return null;
-    // Determine the field to filter by based on the user's role
-    const filterField = profile.role === 'seller' ? 'sellerId' : 'customerId';
-    return query(collection(db, 'orders'), where(filterField, '==', user.uid));
+    if (!db || !user || !profile?.role) return null;
+    
+    // Use optimized service queries based on confirmed role to ensure security rule compliance
+    return profile.role === 'seller' 
+      ? FirebaseService.getSellerOrdersQuery(db, user.uid)
+      : FirebaseService.getCustomerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
   
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
@@ -124,7 +126,7 @@ export default function OrdersPage() {
                   <TableRow key={order.id} className="hover:bg-slate-50 border-slate-100 group">
                     <TableCell className="font-bold text-slate-900 pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
                     <TableCell className="font-medium text-slate-900">
-                      {isSeller ? (order.customerName || 'Anonymous') : `${order.items.length} items`}
+                      {isSeller ? (order.customerName || 'Anonymous') : `${order.items?.length || 0} items`}
                     </TableCell>
                     <TableCell>
                       <span className={cn(

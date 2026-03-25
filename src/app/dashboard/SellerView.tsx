@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -39,13 +38,13 @@ const chartData = [
 ];
 
 export default function SellerView() {
-  const { user } = useUser();
+  const { user, profile } = useUser();
   const db = useFirestore();
 
   const sellerOrdersQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || profile?.role !== 'seller') return null;
     return FirebaseService.getSellerOrdersQuery(db, user.uid);
-  }, [db, user]);
+  }, [db, user, profile]);
 
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,17 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, LogIn, UserPlus, ShieldCheck } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { auth, firebaseApp } = useAuth() as any; // Cast as any if hook types are strict
+  const { auth } = useFirebase();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const db = getFirestore(firebaseApp);
 
   useEffect(() => {
     if (user && !isUserLoading) {
@@ -34,10 +31,8 @@ export default function LoginPage() {
     try {
       initiateEmailSignIn(auth, email, password);
     } catch (error) {
-      console.error("Sign in error", error);
-    } finally {
-      // In a real app we'd wait for the auth state change
-      setTimeout(() => setIsLoading(false), 2000);
+      // Errors are handled by the global listener, but we reset loading state
+      setIsLoading(false);
     }
   };
 
@@ -47,11 +42,8 @@ export default function LoginPage() {
     try {
       // For this prototype, we'll auto-assign 'seller' role to new signups
       initiateEmailSignUp(auth, email, password);
-      // In a real app, we'd use a server action or a separate function to set the role in Firestore
     } catch (error) {
-      console.error("Sign up error", error);
-    } finally {
-      setTimeout(() => setIsLoading(false), 2000);
+      setIsLoading(false);
     }
   };
 

@@ -1,47 +1,59 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useUser } from '@/firebase';
-import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase/non-blocking-login';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, LogIn, UserPlus, ShieldCheck } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { auth } = useFirebase();
-  const { user, isUserLoading } = useUser();
+  const { auth, firestore } = useFirebase();
+  const { user, isUserLoading, profile } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && !isUserLoading) {
+    if (user && !isUserLoading && profile) {
       router.push('/dashboard');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, profile, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      initiateEmailSignIn(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      // Errors are handled by the global listener, but we reset loading state
       setIsLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent, role: 'seller' | 'customer') => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // For this prototype, we'll auto-assign 'seller' role to new signups
-      initiateEmailSignUp(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      
+      // Create profile
+      await setDoc(doc(firestore, 'users', uid), {
+        uid,
+        email,
+        fullName: fullName || email.split('@')[0],
+        role,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
     } catch (error) {
       setIsLoading(false);
     }
@@ -116,43 +128,62 @@ export default function LoginPage() {
 
           <TabsContent value="register">
             <Card className="border-none shadow-xl rounded-2xl">
-              <form onSubmit={handleSignUp}>
-                <CardHeader>
-                  <CardTitle className="text-xl">Create Account</CardTitle>
-                  <CardDescription>Join SwiftFlow and start selling today.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-email">Email</Label>
-                    <Input 
-                      id="reg-email" 
-                      type="email" 
-                      placeholder="name@example.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required 
-                      className="bg-slate-50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-password">Password</Label>
-                    <Input 
-                      id="reg-password" 
-                      type="password" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required 
-                      className="bg-slate-50"
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="w-full h-11 bg-primary hover:bg-slate-800 text-white font-bold gap-2" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                    Create Account
-                  </Button>
-                </CardFooter>
-              </form>
+              <CardHeader>
+                <CardTitle className="text-xl">Create Account</CardTitle>
+                <CardDescription>Choose your role and join SwiftFlow.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input 
+                    id="fullName" 
+                    placeholder="John Doe" 
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="bg-slate-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-email">Email</Label>
+                  <Input 
+                    id="reg-email" 
+                    type="email" 
+                    placeholder="name@example.com" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required 
+                    className="bg-slate-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">Password</Label>
+                  <Input 
+                    id="reg-password" 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required 
+                    className="bg-slate-50"
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col gap-3">
+                <Button 
+                  onClick={(e) => handleSignUp(e, 'seller')} 
+                  className="w-full h-11 bg-primary hover:bg-slate-800 text-white font-bold gap-2" 
+                  disabled={isLoading}
+                >
+                  Register as Seller
+                </Button>
+                <Button 
+                  onClick={(e) => handleSignUp(e, 'customer')} 
+                  variant="outline"
+                  className="w-full h-11 border-slate-200 text-slate-700 font-bold gap-2" 
+                  disabled={isLoading}
+                >
+                  Register as Customer
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>

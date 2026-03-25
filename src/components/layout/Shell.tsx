@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -10,11 +11,12 @@ import {
   ClipboardList, 
   MessageSquare, 
   LogOut,
-  Settings,
   Menu,
   X,
   CreditCard,
-  User as UserIcon
+  User as UserIcon,
+  ShieldCheck,
+  ShoppingBag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,11 +28,11 @@ interface ShellProps {
   userRole?: 'seller' | 'customer';
 }
 
-export function Shell({ children, userRole = 'seller' }: ShellProps) {
+export function Shell({ children, userRole }: ShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const auth = useAuth();
 
   useEffect(() => {
@@ -48,25 +50,22 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Orders', href: '/orders', icon: ClipboardList },
     { name: 'Inventory', href: '/inventory', icon: Package },
-    { name: 'Messages', href: '/messages', icon: MessageSquare },
     { name: 'Payments', href: '/payments', icon: CreditCard },
   ];
 
   const customerNav = [
-    { name: 'Shop', href: '/shop', icon: ShoppingCart },
+    { name: 'Storefront', href: '/dashboard', icon: ShoppingBag },
     { name: 'My Orders', href: '/orders', icon: ClipboardList },
     { name: 'Messages', href: '/messages', icon: MessageSquare },
   ];
 
-  const navItems = userRole === 'seller' ? sellerNav : customerNav;
+  const activeRole = userRole || profile?.role || 'customer';
+  const navItems = activeRole === 'seller' ? sellerNav : customerNav;
 
-  if (isUserLoading) {
-    return null;
-  }
+  if (isUserLoading) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Top Navigation Bar */}
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#0f172a] text-white flex items-center justify-between px-6 shadow-md">
         <div className="flex items-center gap-8">
           <Button 
@@ -77,7 +76,8 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
           >
             {isMobileMenuOpen ? <X /> : <Menu />}
           </Button>
-          <Link href="/" className="text-xl font-bold tracking-tight">
+          <Link href="/" className="text-xl font-bold tracking-tight flex items-center gap-2">
+            <ShieldCheck className="h-6 w-6 text-teal-400" />
             Swift<span className="text-teal-400">Flow</span>
           </Link>
 
@@ -87,10 +87,11 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
                 key={item.href} 
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-teal-400",
+                  "text-sm font-medium transition-colors hover:text-teal-400 flex items-center gap-2",
                   pathname === item.href ? "text-white" : "text-slate-400"
                 )}
               >
+                <item.icon className="h-4 w-4" />
                 {item.name}
               </Link>
             ))}
@@ -101,10 +102,10 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
             <UserIcon className="h-3 w-3 text-teal-400" />
             <span className="text-xs font-medium text-slate-300 truncate max-w-[100px]">
-              {user?.email?.split('@')[0] || 'Guest'}
+              {profile?.fullName || user?.email?.split('@')[0] || 'Guest'}
             </span>
             <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider hidden sm:inline">
-              {userRole}
+              {activeRole}
             </span>
           </div>
           <Button 
@@ -113,20 +114,17 @@ export function Shell({ children, userRole = 'seller' }: ShellProps) {
             size="sm" 
             className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 font-bold"
           >
-            <LogOut className="h-3 w-3 mr-2 sm:mr-0" />
-            <span className="hidden sm:inline">Logout</span>
+            <LogOut className="h-3 w-3" />
           </Button>
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="pt-20 pb-12">
         <div className="max-w-[1400px] mx-auto px-6">
           {children}
         </div>
       </main>
 
-      {/* Mobile Nav Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-[#0f172a]/95 pt-20 px-6 md:hidden">
           <div className="flex flex-col gap-4">

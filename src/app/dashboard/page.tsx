@@ -1,9 +1,9 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { 
@@ -18,10 +18,12 @@ import {
   Mail,
   CreditCard,
   ArrowRight,
-  Activity
+  Activity,
+  Plus,
+  ShoppingCart,
+  Heart
 } from 'lucide-react';
 import { 
-  Tooltip, 
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -31,177 +33,250 @@ import {
   BarChart,
   Bar
 } from 'recharts';
+import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, addDoc, limit } from 'firebase/firestore';
+import { Order, Product } from '@/lib/types';
+import Image from 'next/image';
+import { toast } from '@/hooks/use-toast';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const statusData = [
-  { name: 'Pending', value: 30 },
-  { name: 'Processing', value: 45 },
-  { name: 'Shipped', value: 20 },
-  { name: 'Completed', value: 55 },
-];
-
-const inventoryData = [
-  { name: 'Stock A', value: 400 },
-  { name: 'Stock B', value: 300 },
-  { name: 'Stock C', value: 200 },
-  { name: 'Stock D', value: 100 },
+  { name: 'Mon', value: 30 },
+  { name: 'Tue', value: 45 },
+  { name: 'Wed', value: 20 },
+  { name: 'Thu', value: 55 },
+  { name: 'Fri', value: 40 },
 ];
 
 export default function DashboardPage() {
+  const { profile, user } = useUser();
+  const db = useFirestore();
+
+  // Seller Queries
+  const sellerOrdersQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'seller') return null;
+    return query(
+      collection(db, 'orders'), 
+      where('sellerId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(10)
+    );
+  }, [db, user, profile]);
+
+  const { data: sellerOrders } = useCollection<Order>(sellerOrdersQuery);
+
+  // Customer Queries
+  const productsQuery = useMemoFirebase(() => {
+    return query(collection(db, 'products'), limit(6));
+  }, [db]);
+
+  const { data: products } = useCollection<Product>(productsQuery);
+
   const stats = [
-    { label: 'Total Orders', value: '1', sub: 'Total', icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Pending Orders', value: '1', sub: 'PENDING', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Completed', value: '0', sub: 'COMPLETED', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Low Stock', value: '0', sub: 'LOW', icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50' },
-    { label: 'Revenue', value: 'KES 0', sub: 'REVENUE', icon: DollarSign, color: 'text-slate-600', bg: 'bg-slate-100' },
-    { label: 'Unread Messages', value: '3', sub: 'UNREAD', icon: MessageSquare, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { label: 'Total Revenue', value: 'KES 45,200', sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-600', bg: 'bg-teal-50' },
+    { label: 'Pending Orders', value: sellerOrders?.filter(o => o.status === 'pending').length || 0, sub: 'PENDING', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Completed', value: sellerOrders?.filter(o => o.status === 'completed').length || 0, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'Unread', value: '3', sub: 'MESSAGES', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50' },
   ];
 
+  const handleQuickAddOrder = async () => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'orders'), {
+        sellerId: user.uid,
+        customerId: 'manual-dm',
+        customerName: 'Instagram DM Customer',
+        totalAmount: 500,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        items: [{ productName: 'Hoodie', quantity: 1, priceAtOrder: 500 }],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      toast({ title: "Order Added", description: "Manual DM order created successfully." });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const placeOrder = async (product: Product) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, 'orders'), {
+        customerId: user.uid,
+        customerName: profile?.fullName || user.email?.split('@')[0],
+        sellerId: 'system-seller', // Default for prototype
+        items: [{ productId: product.id, productName: product.name, quantity: 1, priceAtOrder: product.price }],
+        totalAmount: product.price,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      toast({ title: "Order Placed!", description: `Successfully ordered ${product.name}.` });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (profile?.role === 'seller') {
+    return (
+      <Shell userRole="seller">
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+              Seller Command Center <span className="animate-pulse">🚀</span>
+            </h1>
+            <p className="text-slate-500 font-medium">Monitoring Instagram & Store traffic</p>
+          </div>
+          <Button onClick={handleQuickAddOrder} className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11">
+            <PlusCircle className="h-4 w-4" /> Quick Add DM Order
+          </Button>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat, i) => (
+            <Card key={i} className="border-none shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className={cn("p-2 rounded-lg", stat.bg)}>
+                    <stat.icon className={cn("h-4 w-4", stat.color)} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.sub}</span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+                <p className="text-[10px] text-slate-500 font-medium mt-1">{stat.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Master Orders Table */}
+          <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold">Recent Live Orders</CardTitle>
+                <CardDescription>Real-time sync enabled</CardDescription>
+              </div>
+              <Activity className="h-4 w-4 text-teal-500" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-slate-100">
+                    <TableHead className="font-bold pl-6">Order ID</TableHead>
+                    <TableHead className="font-bold">Customer</TableHead>
+                    <TableHead className="font-bold">Status</TableHead>
+                    <TableHead className="font-bold text-right pr-6">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sellerOrders?.map((order) => (
+                    <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <TableCell className="font-bold pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                      <TableCell className="font-medium text-slate-600">{order.customerName}</TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
+                          order.status === 'pending' ? "bg-amber-100 text-amber-700" : "bg-teal-100 text-teal-700"
+                        )}>
+                          {order.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-bold pr-6">KES {order.totalAmount.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Performance Summary */}
+          <div className="space-y-6">
+            <Card className="border-none shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-bold">Sales Volume</CardTitle>
+              </CardHeader>
+              <CardContent className="h-[180px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={statusData}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Area type="monotone" dataKey="value" stroke="#2dd4bf" fillOpacity={1} fill="url(#colorValue)" strokeWidth={3} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm bg-primary text-white">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <Package className="h-6 w-6 text-teal-400" />
+                  <span className="text-[10px] font-bold text-slate-400">INVENTORY HEALTH</span>
+                </div>
+                <h3 className="text-lg font-bold">Stable</h3>
+                <p className="text-xs text-slate-400 mt-1">All hot products in stock</p>
+                <Button variant="outline" className="w-full mt-4 border-slate-700 text-xs text-teal-400 hover:bg-slate-800">
+                  Manage Inventory
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Customer View (Instagram Bridge)
   return (
-    <Shell userRole="seller">
+    <Shell userRole="customer">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-          Welcome back, musaa! <span className="animate-bounce">👋</span>
-        </h1>
-        <p className="text-slate-500 font-medium">Here&apos;s what&apos;s happening with your store today</p>
+        <h1 className="text-3xl font-bold text-slate-900">SwiftFlow Shop</h1>
+        <p className="text-slate-500 font-medium italic">Handpicked trends for you ✨</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className={cn("p-2 rounded-lg", stat.bg)}>
-                  <stat.icon className={cn("h-4 w-4", stat.color)} />
-                </div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.sub}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products?.map((product) => (
+          <Card key={product.id} className="border-none shadow-sm overflow-hidden group">
+            <div className="relative h-64 w-full">
+              <Image 
+                src={product.imageUrl || `https://picsum.photos/seed/${product.id}/600/400`} 
+                alt={product.name} 
+                fill 
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute top-3 right-3">
+                <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-9 w-9 shadow-sm hover:text-rose-500">
+                  <Heart className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="text-xl font-bold text-slate-900">{stat.value}</div>
-              <p className="text-[10px] text-slate-500 font-medium mt-1">{stat.label}</p>
+            </div>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-teal-600 uppercase tracking-widest">{product.category}</span>
+                <span className="text-xs font-bold text-slate-900">KES {product.price.toLocaleString()}</span>
+              </div>
+              <CardTitle className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors">{product.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={() => placeOrder(product)}
+                className="w-full bg-primary hover:bg-slate-800 text-white font-bold h-12 rounded-xl gap-2 shadow-lg shadow-slate-200"
+              >
+                <ShoppingCart className="h-4 w-4" /> Place Order
+              </Button>
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Quick Actions */}
-        <Card className="lg:col-span-2 border-none shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-slate-400" />
-              <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
-            </div>
-            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">4 available</span>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <Button className="h-24 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700 shadow-blue-200 shadow-lg border-none rounded-xl">
-                <PlusCircle className="h-6 w-6" />
-                <span className="text-xs font-bold">New Order</span>
-              </Button>
-              <Button className="h-24 flex flex-col gap-2 bg-green-600 hover:bg-green-700 shadow-green-200 shadow-lg border-none rounded-xl">
-                <Package className="h-6 w-6" />
-                <span className="text-xs font-bold">Add Stock</span>
-              </Button>
-              <Button className="h-24 flex flex-col gap-2 bg-purple-600 hover:bg-purple-700 shadow-purple-200 shadow-lg border-none rounded-xl">
-                <Mail className="h-6 w-6" />
-                <span className="text-xs font-bold">View Messages</span>
-              </Button>
-              <Button className="h-24 flex flex-col gap-2 bg-orange-600 hover:bg-orange-700 shadow-orange-200 shadow-lg border-none rounded-xl">
-                <CreditCard className="h-6 w-6" />
-                <span className="text-xs font-bold">Payments</span>
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 p-4 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Average Order Value</p>
-                <p className="text-sm font-bold text-slate-900 mt-1">KES 0</p>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Completion Rate</p>
-                <p className="text-sm font-bold text-slate-900 mt-1">0%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="border-none shadow-sm flex flex-col">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-slate-400" />
-              <CardTitle className="text-base font-bold">Recent Activity</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <div className="space-y-4">
-              {[
-                { label: 'New orders today', value: '0' },
-                { label: 'Messages to reply', value: '3' },
-                { label: 'Low stock items', value: '0' },
-                { label: 'Pending payments', value: '1' },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center py-1">
-                  <span className="text-sm text-slate-600 font-medium">{item.label}</span>
-                  <span className="text-sm font-bold text-slate-900">{item.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 border-t border-slate-100 pt-4">
-              <Button variant="link" className="text-blue-600 p-0 h-auto text-xs font-bold flex items-center justify-between w-full">
-                View all orders <ArrowRight className="h-3 w-3" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Charts */}
-        <Card className="border-none shadow-sm">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <CardTitle className="text-base font-bold">Order Status Breakdown</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={statusData}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <Area type="monotone" dataKey="value" stroke="#22c55e" fillOpacity={1} fill="url(#colorValue)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-blue-500" />
-              <CardTitle className="text-base font-bold">Inventory Status</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={inventoryData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </div>
     </Shell>
   );

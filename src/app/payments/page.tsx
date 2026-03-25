@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,9 +15,20 @@ import {
   Filter,
   CreditCard,
   Wallet,
-  Clock
+  Clock,
+  Smartphone,
+  Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 import { 
   Table, 
   TableBody, 
@@ -27,8 +38,9 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
-const transactions = [
+const initialTransactions = [
   { id: 'TXN-001', orderId: 'ORD-101', date: 'Oct 24, 2023', customer: 'Alice Johnson', amount: 15400, method: 'M-Pesa', status: 'completed' },
   { id: 'TXN-002', orderId: 'ORD-102', date: 'Oct 25, 2023', customer: 'Bob Smith', amount: 8200, method: 'Card', status: 'pending' },
   { id: 'TXN-003', orderId: 'ORD-103', date: 'Oct 26, 2023', customer: 'Charlie Davis', amount: 12100, method: 'M-Pesa', status: 'completed' },
@@ -37,11 +49,39 @@ const transactions = [
 ];
 
 export default function PaymentsPage() {
+  const [transactions, setTransactions] = useState(initialTransactions);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedTxn, setSelectedTxn] = useState<typeof initialTransactions[0] | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('0712345678');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const openPaymentDialog = (txn: typeof initialTransactions[0]) => {
+    setSelectedTxn(txn);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleMpesaPrompt = () => {
+    if (!selectedTxn) return;
+    
+    setIsProcessing(true);
+    
+    // Simulate STK Push
+    setTimeout(() => {
+      setTransactions(prev => prev.map(t => t.id === selectedTxn.id ? { ...t, status: 'completed' } : t));
+      setIsProcessing(false);
+      setIsPaymentDialogOpen(false);
+      toast({
+        title: "M-Pesa Payment Received",
+        description: `Payment for ${selectedTxn.orderId} has been confirmed.`,
+      });
+    }, 2500);
+  };
+
   return (
     <Shell userRole="seller">
       <PageHeader 
         title="Payments & Finances" 
-        description="Monitor your earnings, payouts, and transaction history."
+        description="Monitor your earnings, process pending payments, and view history."
         action={
           <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2">
             <Download className="h-4 w-4" /> Export CSV
@@ -110,17 +150,16 @@ export default function PaymentsPage() {
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow className="border-slate-100">
-                  <TableHead className="font-bold text-slate-800 pl-6">ID</TableHead>
+                  <TableHead className="font-bold text-slate-800 pl-6">ID / Order</TableHead>
                   <TableHead className="font-bold text-slate-800">Date</TableHead>
                   <TableHead className="font-bold text-slate-800">Customer</TableHead>
-                  <TableHead className="font-bold text-slate-800">Method</TableHead>
                   <TableHead className="font-bold text-slate-800">Status</TableHead>
-                  <TableHead className="font-bold text-slate-800 text-right pr-6">Amount</TableHead>
+                  <TableHead className="font-bold text-slate-800 text-right pr-6">Action / Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.map((txn) => (
-                  <TableRow key={txn.id} className="hover:bg-slate-50 border-slate-100 transition-colors">
+                  <TableRow key={txn.id} className="hover:bg-slate-50 border-slate-100 transition-colors group">
                     <TableCell className="font-bold text-slate-900 pl-6">
                       <div className="flex flex-col">
                         <span>{txn.id}</span>
@@ -129,7 +168,6 @@ export default function PaymentsPage() {
                     </TableCell>
                     <TableCell className="text-slate-500 font-medium">{txn.date}</TableCell>
                     <TableCell className="font-medium text-slate-900">{txn.customer}</TableCell>
-                    <TableCell className="font-medium text-slate-600">{txn.method}</TableCell>
                     <TableCell>
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1",
@@ -138,8 +176,22 @@ export default function PaymentsPage() {
                         {txn.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-bold text-teal-accent pr-6">
-                      KES {txn.amount.toLocaleString()}
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-3">
+                        {txn.status === 'pending' && (
+                          <Button 
+                            onClick={() => openPaymentDialog(txn)}
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-4"
+                          >
+                            Pay
+                          </Button>
+                        )}
+                        <span className="font-bold text-teal-accent">
+                          KES {txn.amount.toLocaleString()}
+                        </span>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -148,6 +200,54 @@ export default function PaymentsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-teal-600" />
+              M-Pesa Payment Prompt
+            </DialogTitle>
+            <DialogDescription>
+              Process payment for transaction {selectedTxn?.id}. A STK push will be sent to the customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Customer Phone Number</Label>
+              <Input 
+                id="phone" 
+                value={phoneNumber} 
+                onChange={(e) => setPhoneNumber(e.target.value)} 
+                placeholder="07XXXXXXXX"
+                className="bg-slate-50 border-slate-200"
+              />
+            </div>
+            <div className="bg-teal-50 p-4 rounded-xl border border-teal-100">
+              <div className="flex justify-between items-center text-sm font-bold text-teal-900">
+                <span>Amount Due:</span>
+                <span>KES {selectedTxn?.amount.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-11"
+              onClick={handleMpesaPrompt}
+              disabled={isProcessing}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Sending Prompt...
+                </>
+              ) : (
+                "Trigger Payment Request"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Shell>
   );
 }

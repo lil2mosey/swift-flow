@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user within the system, capable of being either a Customer or a Seller. This entity stores profile information linked to an external authentication system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary email address of the user, used for identification and communication.",
+          "format": "email"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the system, e.g., 'Customer' or 'Seller'."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user account was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "fullName",
+        "role",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles, including their role (Customer/Seller) and essential details. The 'userId' directly maps to Firebase Authentication UIDs for path-based ownership. Includes 'role' for DBAC.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user, matching Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Contains product listings available for sale. Includes denormalized 'sellerId' for authorization independence, allowing sellers to manage their own products securely and customers to browse all products (QAP for listing).",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier for the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores details for each customer order. Includes denormalized 'customerId' and 'sellerId' for authorization independence, enabling customers to track their orders and sellers to manage orders for their products (QAP for listing on both sides). Contains 'status' and 'paymentStatus' for explicit state modeling.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": {
+          "entityName": "Conversation",
+          "schema": {
+            "$ref": "#/backend/entities/Conversation"
+          },
+          "description": "Represents a direct message conversation between a customer and a seller. Includes denormalized 'customerId', 'sellerId', and a 'members' map for authorization independence, allowing participants to access the conversation (QAP for listing).",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier for the conversation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores individual messages within a conversation. Includes denormalized 'customerId' and 'sellerId' from the parent conversation for authorization independence, allowing participants to read/write messages without querying the parent conversation document.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier of the parent conversation."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/admin_roles/{adminId}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/AdminRole"
+          },
+          "description": "Dedicated collection for system-wide administrators. Authorization is based on the existence of a document with the user's UID (DBAC - Existence over Content).",
+          "params": [
+            {
+              "name": "adminId",
+              "description": "The unique identifier of the administrator, matching Firebase Authentication UID."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed with a strong emphasis on Authorization Independence and supporting Query-Aware Security Rules (QAPs), as mandated by the core design principles. This is primarily achieved through strategic denormalization and structural segregation.\n\n**Authorization Independence via Denormalization:**\n1.  **Products (`/products/{productId}`):** Each product document explicitly includes a `sellerId` field. This denormalization allows security rules to instantly verify if `request.auth.uid` matches `resource.data.sellerId` for write operations (create, update, delete) without performing a `get()` call to a parent `Seller` or `User` document. This enables atomic operations and simplifies rule logic.\n2.  **Orders (`/orders/{orderId}`):** Each order document denormalizes both `customerId` and `sellerId`. This is critical for empowering both customer-side order tracking and seller-side order management. Security rules can directly check `request.auth.uid == resource.data.customerId` or `request.auth.uid == resource.data.sellerId` to grant access, ensuring that neither customer nor seller rules rely on `get()` calls to other documents.\n3.  **Conversations (`/conversations/{conversationId}`):** Conversation documents contain a `members` map, explicitly listing the `customerId` and `sellerId` involved. This map, along with the individual `customerId` and `sellerId` fields, provides the necessary context for rules to verify if a user is part of the conversation without external reads.\n4.  **Messages (`/conversations/{conversationId}/messages/{messageId}`):** Crucially, each message document *also* denormalizes the `customerId` and `sellerId` from its parent conversation. This ensures that when a user attempts to read or write a message, the security rules can evaluate access by checking `request.auth.uid` against these denormalized fields directly on the message document, completely eliminating any `get()` calls to the parent `conversation` document.\n\n**Query-Aware Security Rules (QAPs) Support:**\n1.  **User Profiles (`/users/{userId}`):** User profiles are path-based, meaning a user can only access their own profile (`request.auth.uid == userId`), fulfilling the QAP for individual private data.\n2.  **Products:** The `/products` collection is designed for broad customer readability, allowing `list` operations for browsing. For sellers, the `sellerId` field enables secure listing of *only their own products* by querying `products.where('sellerId', '==', request.auth.uid)`. Rules enforce that write operations must match the `sellerId` of the document with `request.auth.uid`, preventing unauthorized modifications.\n3.  **Orders:** By including `customerId` and `sellerId` in every order document, both customer-specific and seller-specific order lists are efficiently supported with QAPs. Customers can query `orders.where('customerId', '==', request.auth.uid)`, and sellers can query `orders.where('sellerId', '==', request.auth.uid)`. Security rules will enforce that only the relevant customer or seller can access their respective orders, making `list` operations secure by construction.\n4.  **Conversations & Messages:** The denormalized `members` map (or `customerId`/`sellerId`) on both `conversation` and `message` documents allows users to securely list and access *only* their conversations and messages by filtering on these fields. This avoids rules needing to perform costly and potentially insecure filtering after a broad query.\n\n**Structural Segregation and DBAC:**\n*   **User Roles (`/users/{userId}.role`):** The `role` field on the `User` document serves as the primary mechanism for Database Access Control (DBAC) for 'Customer' and 'Seller' roles, allowing rules to differentiate permissions based on `resource.data.role`.\n*   **Admin Roles (`/admin_roles/{adminId}`):** A dedicated collection is used for system-level administrators. Authorization for admins is based on the *existence* of a document at `/admin_roles/$(request.auth.uid)`, ensuring distinct and easily auditable administrative privileges.\n*   **Homogeneous Security Posture:** Each collection maintains a homogeneous security posture. For example, all documents in `/products` are globally readable (for customers) but write-restricted to the `sellerId` owner. This simplifies security rules greatly by moving complexity from rule logic to the data structure itself.\n\nThis architecture minimizes rule complexity, enhances debuggability by making authorization intent explicit, and supports atomic operations, crucial for a secure and scalable Order Management System."
+  }
+}

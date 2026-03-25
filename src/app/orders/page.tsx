@@ -23,13 +23,20 @@ import {
 } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { Printer, Eye, AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/lib/types';
 
 export default function OrdersPage() {
   const db = useFirestore();
-  const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
+  const { user } = useUser();
+  
+  const ordersQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    // Filter by sellerId since this is the seller portal view
+    return query(collection(db, 'orders'), where('sellerId', '==', user.uid));
+  }, [db, user]);
+  
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
   const unpaidCount = orders?.filter(o => o.paymentStatus === 'unpaid').length || 0;

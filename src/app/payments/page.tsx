@@ -39,13 +39,20 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { Order } from '@/lib/types';
 
 export default function PaymentsPage() {
   const db = useFirestore();
-  const ordersQuery = useMemoFirebase(() => collection(db, 'orders'), [db]);
+  const { user } = useUser();
+  
+  const ordersQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    // Filter by sellerId to satisfy security rules for the seller portal
+    return query(collection(db, 'orders'), where('sellerId', '==', user.uid));
+  }, [db, user]);
+  
   const { data: orders, isLoading } = useCollection<Order>(ordersQuery);
 
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -47,12 +47,19 @@ export default function SellerView() {
 
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
 
-  const stats = [
-    { label: 'Total Revenue', value: 'KES 45,200', sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-600', bg: 'bg-teal-50' },
-    { label: 'Pending Orders', value: sellerOrders?.filter(o => o.status === 'pending').length || 0, sub: 'PENDING', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Completed', value: sellerOrders?.filter(o => o.status === 'completed').length || 0, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Unread', value: '3', sub: 'MESSAGES', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50' },
-  ];
+  // Memoize stats to prevent re-filtering on every minor UI shift
+  const stats = useMemo(() => {
+    const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
+    const completed = sellerOrders?.filter(o => o.status === 'completed').length || 0;
+    const revenue = sellerOrders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
+
+    return [
+      { label: 'Total Revenue', value: `KES ${revenue.toLocaleString()}`, sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-600', bg: 'bg-teal-50' },
+      { label: 'Pending Orders', value: pending, sub: 'PENDING', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+      { label: 'Completed', value: completed, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+      { label: 'Unread', value: '3', sub: 'MESSAGES', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50' },
+    ];
+  }, [sellerOrders]);
 
   const handleQuickAddOrder = () => {
     if (!user) return;
@@ -62,14 +69,14 @@ export default function SellerView() {
 
   return (
     <>
-      <div className="mb-8 flex justify-between items-center">
+      <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
             Seller Command Center <span className="animate-pulse">🚀</span>
           </h1>
           <p className="text-slate-500 font-medium">Real-time business synchronization</p>
         </div>
-        <Button onClick={handleQuickAddOrder} className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11">
+        <Button onClick={handleQuickAddOrder} className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 w-full sm:w-auto">
           <PlusCircle className="h-4 w-4" /> Quick Add DM Order
         </Button>
       </div>
@@ -84,8 +91,8 @@ export default function SellerView() {
                 </div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.sub}</span>
               </div>
-              <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-              <p className="text-[10px] text-slate-500 font-medium mt-1">{stat.label}</p>
+              <div className="text-xl sm:text-2xl font-bold text-slate-900">{stat.value}</div>
+              <p className="text-[10px] text-slate-500 font-medium mt-1 uppercase">{stat.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -120,9 +127,15 @@ export default function SellerView() {
                       <TableCell className="text-right pr-6"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
                     </TableRow>
                   ))
+                ) : sellerOrders?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-slate-400 font-medium italic">
+                      No recent orders found.
+                    </TableCell>
+                  </TableRow>
                 ) : sellerOrders?.map((order) => (
                   <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-bold pl-6">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                    <TableCell className="font-bold pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
                     <TableCell className="font-medium text-slate-600">{order.customerName}</TableCell>
                     <TableCell>
                       <span className={cn(
@@ -169,10 +182,10 @@ export default function SellerView() {
                 <Package className="h-6 w-6 text-teal-400" />
                 <span className="text-[10px] font-bold text-slate-400">STOCK ANALYSIS</span>
               </div>
-              <h3 className="text-lg font-bold">Healthy</h3>
-              <p className="text-xs text-slate-400 mt-1">All trending items in stock</p>
+              <h3 className="text-lg font-bold">Inventory Healthy</h3>
+              <p className="text-xs text-slate-400 mt-1">AI indicates all trending items are currently in stock.</p>
               <Button variant="outline" className="w-full mt-4 border-slate-700 text-xs text-teal-400 hover:bg-slate-800">
-                Optimize Inventory
+                Run Optimization
               </Button>
             </CardContent>
           </Card>

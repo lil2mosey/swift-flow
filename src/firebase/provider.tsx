@@ -1,6 +1,6 @@
 'use client';
 
-import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect, useRef } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, browserLocalPersistence, setPersistence } from 'firebase/auth';
@@ -47,18 +47,24 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     user: null,
     profile: null,
     isUserLoading: true,
-    isProfileLoading: true, // Start true for initial boot
+    isProfileLoading: true,
     userError: null,
   });
 
+  // Use a ref to track initialization to prevent double-initialization in strict mode
+  const initialized = useRef(false);
+
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     if (!auth || !firestore) {
       setUserAuthState(prev => ({ ...prev, isUserLoading: false, isProfileLoading: false }));
       return;
     }
 
-    // Set persistence to LOCAL for presentation consistency
-    setPersistence(auth, browserLocalPersistence).catch(console.error);
+    // Set persistence once
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
 
     const unsubscribeAuth = onAuthStateChanged(
       auth,
@@ -125,7 +131,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth: servicesAvailable ? auth : null,
       ...userAuthState,
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [firebaseApp, firestore, auth, userAuthState.user, userAuthState.profile, userAuthState.isUserLoading, userAuthState.isProfileLoading, userAuthState.userError]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -168,6 +174,12 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T & 
 }
 
 export const useUser = () => {
-  const { user, profile, isUserLoading, isProfileLoading, userError } = useFirebase();
-  return { user, profile, isUserLoading, isProfileLoading, userError };
+  const context = useFirebase();
+  return { 
+    user: context.user, 
+    profile: context.profile, 
+    isUserLoading: context.isUserLoading, 
+    isProfileLoading: context.isProfileLoading, 
+    userError: context.userError 
+  };
 };

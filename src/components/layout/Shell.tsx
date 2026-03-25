@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -36,7 +37,7 @@ export function Shell({ children, userRole }: ShellProps) {
   const auth = useAuth();
 
   useEffect(() => {
-    if (!isUserLoading && !user && pathname !== '/login') {
+    if (!isUserLoading && !user && pathname !== '/login' && pathname !== '/') {
       router.push('/login');
     }
   }, [user, isUserLoading, pathname, router]);
@@ -54,9 +55,9 @@ export function Shell({ children, userRole }: ShellProps) {
   ];
 
   const customerNav = [
-    { name: 'Storefront', href: '/dashboard', icon: ShoppingBag },
+    { name: 'Shop', href: '/shop', icon: ShoppingBag },
     { name: 'My Orders', href: '/orders', icon: ClipboardList },
-    { name: 'Messages', href: '/messages', icon: MessageSquare },
+    { name: 'Chat', href: '/messages', icon: MessageSquare },
   ];
 
   const activeRole = userRole || profile?.role || 'customer';
@@ -64,7 +65,7 @@ export function Shell({ children, userRole }: ShellProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#0f172a] text-white flex items-center justify-between px-6 shadow-md">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#0f172a] text-white flex items-center justify-between px-6 shadow-md border-b border-slate-800">
         <div className="flex items-center gap-8">
           <Button 
             variant="ghost" 
@@ -85,11 +86,11 @@ export function Shell({ children, userRole }: ShellProps) {
                 key={item.href} 
                 href={item.href}
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-teal-400 flex items-center gap-2",
-                  pathname === item.href ? "text-white" : "text-slate-400"
+                  "text-xs font-bold uppercase tracking-wider transition-colors hover:text-teal-400 flex items-center gap-2",
+                  pathname === item.href ? "text-teal-400" : "text-slate-400"
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-3.5 w-3.5" />
                 {item.name}
               </Link>
             ))}
@@ -99,46 +100,55 @@ export function Shell({ children, userRole }: ShellProps) {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
             <UserIcon className="h-3 w-3 text-teal-400" />
-            <span className="text-xs font-medium text-slate-300 truncate max-w-[100px]">
+            <span className="text-[10px] font-bold text-slate-300 truncate max-w-[80px] uppercase">
               {isProfileLoading ? <Skeleton className="h-3 w-16 bg-slate-700" /> : (profile?.fullName || user?.email?.split('@')[0] || 'Guest')}
             </span>
-            {!isProfileLoading && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-teal-500/20 text-teal-400 rounded uppercase tracking-wider hidden sm:inline">
-                {activeRole}
-              </span>
-            )}
           </div>
-          <Button 
-            onClick={handleLogout}
-            variant="secondary" 
-            size="sm" 
-            className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 font-bold"
-          >
-            <LogOut className="h-3 w-3" />
-          </Button>
+          {user && (
+            <Button 
+              onClick={handleLogout}
+              variant="secondary" 
+              size="sm" 
+              className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 w-8 p-0 rounded-full"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </header>
 
-      <main className="pt-20 pb-12">
-        <div className="max-w-[1400px] mx-auto px-6">
+      <main className="pt-24 pb-12">
+        <div className="max-w-[1200px] mx-auto px-6">
           {children}
         </div>
       </main>
 
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-[#0f172a]/95 pt-20 px-6 md:hidden">
-          <div className="flex flex-col gap-4">
+        <div className="fixed inset-0 z-40 bg-[#0f172a]/98 pt-20 px-8 md:hidden animate-in fade-in zoom-in duration-200">
+          <div className="flex flex-col gap-6">
             {navItems.map((item) => (
               <Link 
                 key={item.href} 
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-3 py-3 text-lg font-medium text-slate-300 border-b border-slate-800"
+                className={cn(
+                  "flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest border-b border-slate-800",
+                  pathname === item.href ? "text-teal-400" : "text-slate-500"
+                )}
               >
                 <item.icon className="h-5 w-5" />
                 {item.name}
               </Link>
             ))}
+            {user && (
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest text-rose-500"
+              >
+                <LogOut className="h-5 w-5" />
+                Sign Out
+              </button>
+            )}
           </div>
         </div>
       )}

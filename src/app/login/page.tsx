@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -24,7 +25,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user && !isUserLoading && profile) {
-      router.push('/dashboard');
+      if (profile.role === 'seller') {
+        router.push('/dashboard');
+      } else {
+        router.push('/shop');
+      }
     }
   }, [user, isUserLoading, profile, router]);
 
@@ -51,7 +56,6 @@ export default function LoginPage() {
       const uid = userCredential.user.uid;
       
       const profileRef = doc(firestore, 'users', uid);
-      // 'id' field must match the 'userId' in path for security rules to allow creation
       setDocumentNonBlocking(profileRef, {
         id: uid,
         email,
@@ -86,7 +90,7 @@ export default function LoginPage() {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">SwiftFlow</h1>
-          <p className="text-slate-500 mt-2 font-medium">Log in to manage your orders and inventory</p>
+          <p className="text-slate-500 mt-2 font-medium">Enter your shared portal credentials</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -100,7 +104,7 @@ export default function LoginPage() {
               <form onSubmit={handleSignIn}>
                 <CardHeader>
                   <CardTitle className="text-xl">Welcome Back</CardTitle>
-                  <CardDescription>Enter your credentials to access your portal.</CardDescription>
+                  <CardDescription>Single core auth for all roles.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -130,7 +134,7 @@ export default function LoginPage() {
                 <CardFooter>
                   <Button type="submit" className="w-full h-11 bg-primary hover:bg-slate-800 text-white font-bold gap-2" disabled={isLoading}>
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                    Sign In
+                    Enter Portal
                   </Button>
                 </CardFooter>
               </form>
@@ -141,7 +145,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-xl rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-xl">Create Account</CardTitle>
-                <CardDescription>Choose your role and join SwiftFlow.</CardDescription>
+                <CardDescription>Choose your role to get started.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -184,7 +188,7 @@ export default function LoginPage() {
                   className="w-full h-11 bg-primary hover:bg-slate-800 text-white font-bold gap-2" 
                   disabled={isLoading}
                 >
-                  Register as Seller
+                  Join as Seller (Admin)
                 </Button>
                 <Button 
                   onClick={(e) => handleSignUp(e, 'customer')} 
@@ -192,16 +196,12 @@ export default function LoginPage() {
                   className="w-full h-11 border-slate-200 text-slate-700 font-bold gap-2" 
                   disabled={isLoading}
                 >
-                  Register as Customer
+                  Join as Customer (Storefront)
                 </Button>
               </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
-
-        <p className="text-center text-xs text-slate-400">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
-        </p>
       </div>
     </div>
   );

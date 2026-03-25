@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -11,7 +12,8 @@ import {
   MessageSquare,
   PlusCircle,
   Activity,
-  Package
+  Package,
+  TrendingUp
 } from 'lucide-react';
 import { 
   ResponsiveContainer,
@@ -47,17 +49,16 @@ export default function SellerView() {
 
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
 
-  // Memoize stats to prevent re-filtering on every minor UI shift
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
     const completed = sellerOrders?.filter(o => o.status === 'completed').length || 0;
     const revenue = sellerOrders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
 
     return [
-      { label: 'Total Revenue', value: `KES ${revenue.toLocaleString()}`, sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-600', bg: 'bg-teal-50' },
-      { label: 'Pending Orders', value: pending, sub: 'PENDING', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-      { label: 'Completed', value: completed, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-      { label: 'Unread', value: '3', sub: 'MESSAGES', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50' },
+      { label: 'Total Revenue', value: `KES ${revenue.toLocaleString()}`, sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-400', bg: 'bg-teal-500/10' },
+      { label: 'Pending Orders', value: pending, sub: 'LIVE', icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+      { label: 'Completed', value: completed, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10' },
+      { label: 'Customer Chat', value: '3', sub: 'UNREAD', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     ];
   }, [sellerOrders]);
 
@@ -68,22 +69,22 @@ export default function SellerView() {
   };
 
   return (
-    <>
-      <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-            Seller Command Center <span className="animate-pulse">🚀</span>
+            Seller Command Center <TrendingUp className="h-6 w-6 text-teal-500" />
           </h1>
-          <p className="text-slate-500 font-medium">Real-time business synchronization</p>
+          <p className="text-slate-500 font-medium italic">Synchronizing your Instagram sales flow</p>
         </div>
-        <Button onClick={handleQuickAddOrder} className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 w-full sm:w-auto">
+        <Button onClick={handleQuickAddOrder} className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 w-full sm:w-auto shadow-lg shadow-slate-200">
           <PlusCircle className="h-4 w-4" /> Quick Add DM Order
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm">
+          <Card key={i} className="border-none shadow-sm bg-[#0f172a] text-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className={cn("p-2 rounded-lg", stat.bg)}>
@@ -91,8 +92,8 @@ export default function SellerView() {
                 </div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.sub}</span>
               </div>
-              <div className="text-xl sm:text-2xl font-bold text-slate-900">{stat.value}</div>
-              <p className="text-[10px] text-slate-500 font-medium mt-1 uppercase">{stat.label}</p>
+              <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
+              <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase">{stat.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -102,10 +103,12 @@ export default function SellerView() {
         <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
           <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold">Recent Live Orders</CardTitle>
-              <CardDescription>Direct Instagram Bridge active</CardDescription>
+              <CardTitle className="text-lg font-bold">Recent Store Activity</CardTitle>
+              <CardDescription>Real-time order synchronization active</CardDescription>
             </div>
-            <Activity className="h-4 w-4 text-teal-500" />
+            <div className="flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
+              <span className="h-2 w-2 bg-teal-500 rounded-full animate-pulse" /> LIVE SYNC
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -129,8 +132,8 @@ export default function SellerView() {
                   ))
                 ) : sellerOrders?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-slate-400 font-medium italic">
-                      No recent orders found.
+                    <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">
+                      No recent store activity found.
                     </TableCell>
                   </TableRow>
                 ) : sellerOrders?.map((order) => (
@@ -156,7 +159,7 @@ export default function SellerView() {
         <div className="space-y-6">
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">Sales Volume</CardTitle>
+              <CardTitle className="text-base font-bold">Sales Trends</CardTitle>
             </CardHeader>
             <CardContent className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -176,21 +179,21 @@ export default function SellerView() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-primary text-white">
+          <Card className="border-none shadow-sm bg-[#0f172a] text-white">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <Package className="h-6 w-6 text-teal-400" />
-                <span className="text-[10px] font-bold text-slate-400">STOCK ANALYSIS</span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Inventory Health</span>
               </div>
-              <h3 className="text-lg font-bold">Inventory Healthy</h3>
-              <p className="text-xs text-slate-400 mt-1">AI indicates all trending items are currently in stock.</p>
-              <Button variant="outline" className="w-full mt-4 border-slate-700 text-xs text-teal-400 hover:bg-slate-800">
-                Run Optimization
+              <h3 className="text-lg font-bold">Stock Optimized</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">AI suggests no immediate reorders required for trending hoodies.</p>
+              <Button variant="outline" className="w-full mt-6 border-slate-700 text-xs text-teal-400 hover:bg-slate-800 font-bold h-10">
+                Run AI Audit
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 }

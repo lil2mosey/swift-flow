@@ -1,53 +1,130 @@
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // 1. Users can read/write their own profile
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset implements a strict identity-based authorization model designed for a marketplace 
+     * connecting customers and sellers. It prioritizes Authorization Independence by using 
+     * denormalized fields (like customerId and sellerId) directly on documents to ensure rules 
+     * are performant and queries are naturally scoped.
+     *
+     * DATA STRUCTURE
+     * - /userProfiles/{userId}: Private user data, accessible only by the owner.
+     * - /products/{productId}: Publicly readable items, manageable only by the owning seller.
+     * - /orders/{orderId}: Shared documents accessible by both the customer and the seller.
+     * - /messages/{messageId}: Private communications accessible by the sender and receiver.
+     *
+     * KEY SECURITY DECISIONS
+     * - Denormalization for Authorization: Critical IDs (customerId, sellerId) are duplicated into 
+     *   subcollections (orderItems, payments) to avoid expensive get() calls and allow secure listing.
+     * - Flexible Schemas: During this prototyping phase, data types and non-authorization fields 
+     *   are not validated to allow for rapid iteration.
+     * - Query Security: Listing is restricted to documents where the user's UID matches a 
+     *   participant field, resolving "Missing or insufficient permissions" errors on collection reads.
+     */
+
+    // --- Global Helper Functions ---
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // 2. Orders logic:
-    match /orders/{orderId} {
-      // Allow any logged-in user to create an order
-      allow create: if request.auth != null;
-      
-      // Ownership-based reading (Supports Query-Aware Permission proved by query filters)
-      // Consolidated for performance and to ensure QAP optimization for both roles
-      allow read: if request.auth != null && (
-        resource.data.customerId == request.auth.uid ||
-        resource.data.sellerId == request.auth.uid
-      );
-      
-      // Update/Delete: Restricted to the seller or owner
-      // We check for seller role via a get() call for mutations, which is safe
-      allow update, delete: if request.auth != null && (
-        resource.data.sellerId == request.auth.uid ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller'
-      );
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // 3. Products logic:
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    function isDataOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isOrderParticipant(data) {
+      return isSignedIn() && (request.auth.uid == data.customerId || request.auth.uid == data.sellerId);
+    }
+
+    function isMessageParticipant(data) {
+      return isSignedIn() && (request.auth.uid == data.senderId || request.auth.uid == data.receiverId);
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for user profile management. Ensures users can only access their own profile.
+     * @path /userProfiles/{userId}
+     * @allow (create) User 'abc' creates profile with ID 'abc'.
+     * @deny (read) User 'abc' attempts to read profile 'xyz'.
+     * @principle Ownership: The document ID must match the authenticated user's UID.
+     */
+    match /userProfiles/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Global product catalog. Publicly readable by all signed-in users.
+     * @path /products/{productId}
+     * @allow (list) Any signed-in user browsing the store.
+     * @deny (update) User 'abc' tries to edit a product owned by seller 'seller_123'.
+     * @principle Public Read / Owner Write: Uses 'sellerId' field to authorize modifications.
+     */
     match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+      allow get, list: if isSignedIn();
+      allow create: if isDataOwner(request.resource.data.sellerId);
+      allow update: if isDataOwner(resource.data.sellerId) && request.resource.data.sellerId == resource.data.sellerId;
+      allow delete: if resource != null && isDataOwner(resource.data.sellerId);
     }
 
-    // 4. Conversations logic:
-    match /conversations/{conversationId} {
-      allow read, write: if request.auth != null && 
-        (resource.data.customerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
-        
-      match /messages/{messageId} {
-        allow read, write: if request.auth != null && 
-          (resource.data.customerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+    /**
+     * @description Transactional orders. Shared between the specific customer and seller involved.
+     * @path /orders/{orderId}
+     * @allow (list) Customer 'c1' fetches their order history.
+     * @deny (get) Seller 's2' tries to view an order between 'c1' and seller 's1'.
+     * @principle Shared Access: Validates UID against 'customerId' or 'sellerId' fields.
+     */
+    match /orders/{orderId} {
+      allow get, list: if isOrderParticipant(resource.data);
+      allow create: if isOrderParticipant(request.resource.data);
+      allow update: if isOrderParticipant(resource.data) && request.resource.data.customerId == resource.data.customerId && request.resource.data.sellerId == resource.data.sellerId;
+      allow delete: if false; // Orders are generally immutable or archived, not deleted.
+
+      /**
+       * @description Order sub-entities. Uses denormalized parent IDs for authorization independence.
+       * @path /orders/{orderId}/orderItems/{orderItemId}
+       * @path /orders/{orderId}/payments/{paymentId}
+       */
+      match /orderItems/{itemId} {
+        allow get, list: if isOrderParticipant(resource.data);
+        allow create: if isOrderParticipant(request.resource.data);
+        allow update: if isOrderParticipant(resource.data) && request.resource.data.customerId == resource.data.customerId;
+        allow delete: if false;
+      }
+
+      match /payments/{paymentId} {
+        allow get, list: if isOrderParticipant(resource.data);
+        allow create: if isOrderParticipant(request.resource.data);
+        allow update: if isOrderParticipant(resource.data);
+        allow delete: if false;
       }
     }
 
-    // 5. Admin Roles logic:
-    match /admin_roles/{adminId} {
-      allow read: if request.auth != null;
-      allow write: if false; // System-managed
+    /**
+     * @description Direct messaging between users.
+     * @path /messages/{messageId}
+     * @allow (create) User 'abc' sends a message where 'senderId' is 'abc'.
+     * @deny (list) User 'xyz' attempts to list messages they are not a sender or receiver of.
+     * @principle Shared Access: Restricts access to participants identified by sender/receiver fields.
+     */
+    match /messages/{messageId} {
+      allow get, list: if isMessageParticipant(resource.data);
+      allow create: if isDataOwner(request.resource.data.senderId);
+      allow update: if isMessageParticipant(resource.data) && request.resource.data.senderId == resource.data.senderId;
+      allow delete: if false;
     }
   }
 }

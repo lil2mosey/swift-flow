@@ -11,11 +11,13 @@ service cloud.firestore {
       // Allow any logged-in user to create an order (The Instagram Customer)
       allow create: if request.auth != null;
       
-      // Allow the Admin (Seller) to see ALL orders, 
+      // Allow the Admin (Seller) to see ALL orders (list/get), 
       // and Customers to see ONLY their own orders.
+      // We check the 'role' field in the user's document for admin-level access.
       allow read: if request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller' ||
-        resource.data.customerId == request.auth.uid
+        resource.data.customerId == request.auth.uid ||
+        resource.data.sellerId == request.auth.uid
       );
       
       // Only the Admin (Seller) can update or delete orders

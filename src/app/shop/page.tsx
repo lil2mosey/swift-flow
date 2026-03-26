@@ -99,16 +99,23 @@ export default function ShopPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
       const uid = userCredential.user.uid;
       
+      const nameParts = authData.fullName.split(' ');
+      const firstName = nameParts[0] || 'User';
+      const lastName = nameParts.slice(1).join(' ') || 'Member';
+
       const newProfile = {
         id: uid,
+        authSystemId: uid,
         email: authData.email,
+        firstName,
+        lastName,
         fullName: authData.fullName,
         role: 'customer' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      const profileRef = doc(db, 'users', uid);
+      const profileRef = doc(db, 'userProfiles', uid);
       setDocumentNonBlocking(profileRef, newProfile, { merge: true });
 
       // Close auth dialog and proceed with order

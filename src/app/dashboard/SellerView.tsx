@@ -45,7 +45,7 @@ export default function SellerView() {
 
   const sellerOrdersQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'seller') return null;
-    return FirebaseService.getSellerOrdersQuery(db, user.uid);
+    return FirebaseService.getSellerOrdersQuery(db);
   }, [db, user, profile]);
 
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);

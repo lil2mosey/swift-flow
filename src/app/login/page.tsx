@@ -54,11 +54,18 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
       
+      const nameParts = fullName.split(' ');
+      const firstName = nameParts[0] || 'User';
+      const lastName = nameParts.slice(1).join(' ') || 'Member';
+
       const profileRef = doc(firestore, 'userProfiles', uid);
       setDocumentNonBlocking(profileRef, {
         id: uid,
+        authSystemId: uid,
         email,
-        fullName: fullName || email.split('@')[0],
+        firstName,
+        lastName,
+        fullName, // Keep for UI convenience
         role,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -115,7 +122,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required 
-                      className="bg-slate-50"
+                      className="bg-slate-50 h-11 rounded-xl border-none"
                     />
                   </div>
                   <div className="space-y-2">
@@ -126,12 +133,12 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required 
-                      className="bg-slate-50"
+                      className="bg-slate-50 h-11 rounded-xl border-none"
                     />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full h-11 bg-primary hover:bg-slate-800 text-white font-bold gap-2" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl" disabled={isLoading}>
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                     Enter Portal
                   </Button>
@@ -154,7 +161,7 @@ export default function LoginPage() {
                     placeholder="John Doe" 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="bg-slate-50"
+                    className="bg-slate-50 h-11 rounded-xl border-none"
                   />
                 </div>
                 <div className="space-y-2">
@@ -166,7 +173,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required 
-                    className="bg-slate-50"
+                    className="bg-slate-50 h-11 rounded-xl border-none"
                   />
                 </div>
                 <div className="space-y-2">
@@ -177,14 +184,14 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required 
-                    className="bg-slate-50"
+                    className="bg-slate-50 h-11 rounded-xl border-none"
                   />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3">
                 <Button 
                   onClick={(e) => handleSignUp(e, 'seller')} 
-                  className="w-full h-11 bg-primary hover:bg-slate-800 text-white font-bold gap-2" 
+                  className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl" 
                   disabled={isLoading}
                 >
                   Join as Seller (Admin)
@@ -192,7 +199,7 @@ export default function LoginPage() {
                 <Button 
                   onClick={(e) => handleSignUp(e, 'customer')} 
                   variant="outline"
-                  className="w-full h-11 border-slate-200 text-slate-700 font-bold gap-2" 
+                  className="w-full h-12 border-slate-200 text-slate-700 font-bold gap-2 rounded-xl" 
                   disabled={isLoading}
                 >
                   Join as Customer (Storefront)

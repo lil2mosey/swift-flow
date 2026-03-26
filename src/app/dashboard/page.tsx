@@ -3,8 +3,11 @@
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Shell } from '@/components/layout/Shell';
-import { useUser } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
 import { BrandLoader } from '@/components/layout/BrandLoader';
+import { Button } from '@/components/ui/button';
+import { signOut } from 'firebase/auth';
+import { LogOut, RefreshCcw } from 'lucide-react';
 
 // Decoupled Views using Lazy Loading (next/dynamic)
 const SellerView = dynamic(() => import('./SellerView'), { 
@@ -19,19 +22,41 @@ const CustomerView = dynamic(() => import('./CustomerView'), {
 
 export default function DashboardPage() {
   const { profile, isProfileLoading, isUserLoading, user } = useUser();
+  const auth = useAuth();
 
   if (isUserLoading || isProfileLoading) {
     return <BrandLoader />;
   }
 
   // Choose the view based on the confirmed role
-  // If no role is found yet (e.g. profile doc still creating), show a minimal loader within the shell
+  // If no role is found yet (e.g. profile doc still creating or missing), show a recovery screen
   if (!profile || !profile.role) {
     return (
       <Shell>
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <BrandLoader />
-          <p className="text-slate-400 font-medium">Initializing your workspace...</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-6 text-center max-w-md mx-auto">
+          <div className="p-4 bg-amber-50 rounded-2xl">
+            <RefreshCcw className="h-10 w-10 text-amber-600 animate-spin-slow" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Setting up your profile...</h2>
+            <p className="text-slate-500 mt-2">If this takes more than a few seconds, there might be a synchronization delay.</p>
+          </div>
+          <div className="flex gap-4 w-full">
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline" 
+              className="flex-1 rounded-xl h-11 border-slate-200"
+            >
+              Retry Sync
+            </Button>
+            <Button 
+              onClick={() => signOut(auth)} 
+              variant="ghost" 
+              className="flex-1 rounded-xl h-11 text-rose-600 hover:bg-rose-50"
+            >
+              <LogOut className="h-4 w-4 mr-2" /> Sign Out
+            </Button>
+          </div>
         </div>
       </Shell>
     );

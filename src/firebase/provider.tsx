@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -13,14 +14,12 @@ interface FirebaseProviderProps {
   auth: Auth;
 }
 
-// Internal state for user authentication
 interface UserAuthState {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
-// Combined state for the Firebase context
 export interface FirebaseContextState {
   areServicesAvailable: boolean;
   firebaseApp: FirebaseApp | null;
@@ -67,14 +66,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   const [profile, setProfile] = useState<any | null>(null);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   useEffect(() => {
-    if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
@@ -88,10 +82,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   useEffect(() => {
-    if (userAuthState.isUserLoading) {
-      setIsProfileLoading(true);
-      return;
-    }
+    if (userAuthState.isUserLoading) return;
 
     if (!userAuthState.user) {
       setProfile(null);
@@ -99,25 +90,22 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       return;
     }
 
-    if (firestore) {
-      setIsProfileLoading(true);
-      // Ensure we are using 'userProfiles' collection
-      const profileRef = doc(firestore, 'userProfiles', userAuthState.user.uid);
-      
-      const unsubscribe = onSnapshot(profileRef, (snapshot) => {
-        if (snapshot.exists()) {
-          setProfile(snapshot.data());
-        } else {
-          setProfile(null);
-        }
-        setIsProfileLoading(false);
-      }, (error) => {
-        console.error("FirebaseProvider: Profile fetch error:", error);
-        setIsProfileLoading(false);
-      });
-      
-      return () => unsubscribe();
-    }
+    setIsProfileLoading(true);
+    const profileRef = doc(firestore, 'userProfiles', userAuthState.user.uid);
+    
+    const unsubscribe = onSnapshot(profileRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setProfile(snapshot.data());
+      } else {
+        setProfile(null);
+      }
+      setIsProfileLoading(false);
+    }, (error) => {
+      console.error("FirebaseProvider: Profile fetch error:", error);
+      setIsProfileLoading(false);
+    });
+    
+    return () => unsubscribe();
   }, [userAuthState.user, userAuthState.isUserLoading, firestore]);
 
   const contextValue = useMemo((): FirebaseContextState => {
@@ -145,19 +133,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
-
-  if (context === undefined) {
-    throw new Error('useFirebase must be used within a FirebaseProvider.');
-  }
-
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available.');
-  }
-
+  if (context === undefined) throw new Error('useFirebase must be used within a FirebaseProvider.');
   return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
+    firebaseApp: context.firebaseApp!,
+    firestore: context.firestore!,
+    auth: context.auth!,
     user: context.user,
     profile: context.profile,
     isUserLoading: context.isUserLoading,
@@ -166,29 +146,16 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   };
 };
 
-export const useAuth = (): Auth => {
-  const { auth } = useFirebase();
-  return auth;
-};
-
-export const useFirestore = (): Firestore => {
-  const { firestore } = useFirebase();
-  return firestore;
-};
-
-export const useFirebaseApp = (): FirebaseApp => {
-  const { firebaseApp } = useFirebase();
-  return firebaseApp;
-};
+export const useAuth = (): Auth => useFirebase().auth;
+export const useFirestore = (): Firestore => useFirebase().firestore;
+export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
   const memoized = useMemo(factory, deps);
-  
   if(typeof memoized !== 'object' || memoized === null) return memoized;
   (memoized as MemoFirebase<T>).__memo = true;
-  
   return memoized;
 }
 

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -24,10 +25,14 @@ export default function LoginPage() {
 
   // Unified redirect logic
   useEffect(() => {
-    if (user && !isUserLoading && profile && !isProfileLoading) {
-      if (profile.role === 'seller') {
+    // We only redirect if we are sure about the auth state
+    if (isUserLoading) return;
+
+    if (user && !isProfileLoading) {
+      if (profile?.role === 'seller') {
         router.push('/dashboard');
-      } else {
+      } else if (profile?.role === 'customer' || !profile) {
+        // Fallback to shop for customers or newly registered users who don't have a profile doc yet
         router.push('/shop');
       }
     }
@@ -38,7 +43,6 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Redirection is handled by the useEffect above
     } catch (error: any) {
       setIsLoading(false);
       toast({
@@ -61,6 +65,8 @@ export default function LoginPage() {
       const lastName = nameParts.slice(1).join(' ') || 'Member';
 
       const profileRef = doc(firestore, 'userProfiles', uid);
+      
+      // Use fire-and-forget for the profile creation
       setDocumentNonBlocking(profileRef, {
         id: uid,
         authSystemId: uid,
@@ -73,7 +79,6 @@ export default function LoginPage() {
         updatedAt: new Date().toISOString()
       }, { merge: true });
       
-      // The loading state stays true until the redirect useEffect takes over
     } catch (error: any) {
       setIsLoading(false);
       toast({
@@ -84,7 +89,8 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading) {
+  // Only show the global spinner during initial auth check or when an action is explicitly processing
+  if (isUserLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
@@ -143,8 +149,7 @@ export default function LoginPage() {
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                    Sign In
+                    <LogIn className="h-4 w-4" /> Sign In
                   </Button>
                 </CardFooter>
               </form>

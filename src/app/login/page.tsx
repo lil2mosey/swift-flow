@@ -23,8 +23,8 @@ export default function LoginPage() {
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
 
+  // Unified redirect logic
   useEffect(() => {
-    // Only attempt redirect if we have confirmed the user and their profile/role
     if (isUserLoading || isProfileLoading) return;
 
     if (user && profile) {
@@ -69,8 +69,6 @@ export default function LoginPage() {
 
       const profileRef = doc(firestore, 'userProfiles', uid);
       
-      // Crucial: Wait for the profile document to be written before allowing the loader to stop
-      // This ensures the redirect logic in useEffect has a profile to read.
       await setDocumentNonBlocking(profileRef, {
         id: uid,
         authSystemId: uid,
@@ -93,7 +91,6 @@ export default function LoginPage() {
     }
   };
 
-  // Show BrandLoader if auth or profile is in transit
   if (isUserLoading || (user && isProfileLoading) || isLoading) {
     return <BrandLoader />;
   }

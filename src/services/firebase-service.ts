@@ -29,7 +29,7 @@ export const FirebaseService = {
     return addDocumentNonBlocking(ordersRef, {
       customerId: customerId,
       customerName: profile?.fullName || 'Anonymous Customer',
-      sellerId: 'system-seller', 
+      sellerId: product.sellerId || 'system-seller', 
       items: [{ 
         productId: product.id, 
         productName: product.name, 
@@ -72,10 +72,11 @@ export const FirebaseService = {
   },
 
   /** Adds a new inventory item (Product or Raw Material) */
-  addProduct: (db: Firestore, productData: Omit<Product, 'id'>) => {
+  addProduct: (db: Firestore, sellerId: string, productData: Omit<Product, 'id' | 'sellerId'>) => {
     const productsRef = collection(db, 'products');
     return addDocumentNonBlocking(productsRef, {
       ...productData,
+      sellerId: sellerId,
       itemType: productData.itemType || 'product',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -114,8 +115,10 @@ export const FirebaseService = {
 
   /** Query for seller's orders. */
   getSellerOrdersQuery: (db: Firestore, sellerId: string) => {
+    // We can filter by sellerId to make the query Query-Aware
     return query(
       collection(db, 'orders'),
+      where('sellerId', '==', sellerId),
       orderBy('createdAt', 'desc'),
       limit(50)
     );

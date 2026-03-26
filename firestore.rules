@@ -8,18 +8,20 @@ service cloud.firestore {
 
     // 2. Orders logic:
     match /orders/{orderId} {
-      // Allow any logged-in user to create an order (The Instagram Customer)
+      // Allow any logged-in user to create an order
       allow create: if request.auth != null;
       
-      // Allow the Seller (Mose) to see orders they manage, 
-      // and Customers to see ONLY their own orders.
+      // Ownership-based reading (Supports Query-Aware Permission proved by query filters)
       allow read: if request.auth != null && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller' ||
         resource.data.customerId == request.auth.uid ||
         resource.data.sellerId == request.auth.uid
       );
       
-      // Only the Seller can update or delete orders
+      // Role-based reading (Administrative/Seller access via existence and role check)
+      allow read: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+      
+      // Update/Delete: Only the Seller can manage order status and fulfillment
       allow update, delete: if request.auth != null && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
     }

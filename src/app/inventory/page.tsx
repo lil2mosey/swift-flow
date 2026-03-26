@@ -43,13 +43,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { intelligentInventoryRecommendation } from '@/ai/flows/intelligent-inventory-recommendation';
 import { type IntelligentInventoryRecommendationOutput } from '@/ai/flows/intelligent-inventory-recommendation';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { Product, InventoryItemType } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [recommendations, setRecommendations] = useState<IntelligentInventoryRecommendationOutput | null>(null);
@@ -105,13 +106,13 @@ export default function InventoryPage() {
   };
 
   const handleAddProduct = async () => {
-    if (!formData.name) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Item name is required." });
+    if (!formData.name || !user) {
+      toast({ variant: "destructive", title: "Action Required", description: formData.name ? "Please log in." : "Item name is required." });
       return;
     }
 
     try {
-      await FirebaseService.addProduct(db, {
+      await FirebaseService.addProduct(db, user.uid, {
         name: formData.name,
         sku: formData.sku,
         description: formData.description,
@@ -128,7 +129,7 @@ export default function InventoryPage() {
         itemType: formData.itemType
       });
 
-      toast({ title: "Item Added", description: `${formData.name} has been added to ${formData.itemType === 'product' ? 'finished goods' : 'raw materials'}.` });
+      toast({ title: "Item Added", description: `${formData.name} has been added to your ${formData.itemType === 'product' ? 'finished goods' : 'raw materials'}.` });
       setIsAddDialogOpen(false);
       setFormData({
         name: '',

@@ -28,6 +28,7 @@ export interface Product {
   averageDailySales: number;
   leadTimeDays: number;
   itemType?: InventoryItemType;
+  sellerId?: string;
 }
 
 export interface OrderItem {

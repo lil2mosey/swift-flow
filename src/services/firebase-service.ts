@@ -22,11 +22,15 @@ import { OrderStatus, Product, UserProfile, OrderItem } from '@/lib/types';
 export const FirebaseService = {
   // --- Orders ---
   
-  placeOrder: (db: Firestore, customerId: string, profile: UserProfile | null, product: Product) => {
+  /**
+   * Places a new order from the storefront.
+   * @param customerName Passed directly to avoid "Anonymous" during race conditions.
+   */
+  placeOrder: (db: Firestore, customerId: string, customerName: string, product: Product) => {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
       customerId: customerId,
-      customerName: profile?.fullName || 'Anonymous Customer',
+      customerName: customerName || 'Valued Customer',
       sellerId: product.sellerId || 'system-seller', 
       items: [{ 
         productId: product.id, 
@@ -106,12 +110,12 @@ export const FirebaseService = {
 
   // --- Queries ---
 
-  /** Administrative query for sellers to see all orders */
+  /** Administrative query for sellers to see all orders across the platform */
   getSellerOrdersQuery: (db: Firestore) => {
     return query(
       collection(db, 'orders'),
       orderBy('createdAt', 'desc'),
-      limit(100)
+      limit(200)
     );
   },
 

@@ -35,7 +35,7 @@ export default function ShopPage() {
   const [cart, setCart] = useState<{ id: string, name: string, price: number, quantity: number }[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('0712345678');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Auth form state for guests
@@ -79,13 +79,18 @@ export default function ShopPage() {
       return;
     }
 
+    if (!phoneNumber) {
+      toast({ variant: "destructive", title: "Phone Required", description: "Please enter your M-Pesa number." });
+      return;
+    }
+
     // If guest, open the auth prompt first
     if (!user) {
       setIsAuthDialogOpen(true);
       return;
     }
     
-    await proceedWithOrder(user.uid, profile);
+    await proceedWithOrder(user.uid, profile?.fullName || user.email?.split('@')[0] || 'Customer');
   };
 
   const handleGuestRegistrationAndOrder = async () => {
@@ -120,7 +125,7 @@ export default function ShopPage() {
 
       // Close auth dialog and proceed with order
       setIsAuthDialogOpen(false);
-      await proceedWithOrder(uid, newProfile);
+      await proceedWithOrder(uid, authData.fullName);
       
     } catch (error: any) {
       setIsProcessing(false);
@@ -128,12 +133,15 @@ export default function ShopPage() {
     }
   };
 
-  const proceedWithOrder = async (uid: string, userProfile: any) => {
+  const proceedWithOrder = async (uid: string, customerName: string) => {
     setIsProcessing(true);
     try {
-      await FirebaseService.placeOrder(db, uid, userProfile, {
+      // Create a composite product name for the order summary if multiple items exist
+      const orderTitle = cart.length > 1 ? `${cart[0].name} & ${cart.length - 1} more` : cart[0].name;
+
+      await FirebaseService.placeOrder(db, uid, customerName, {
         id: cart[0].id,
-        name: cart.length > 1 ? `${cart[0].name} & others` : cart[0].name,
+        name: orderTitle,
         price: cartTotal,
         category: 'Mixed',
         currentStock: 0,

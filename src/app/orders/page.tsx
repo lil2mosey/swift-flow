@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -80,12 +79,16 @@ export default function OrdersPage() {
   });
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user || !profile?.role) return null;
+    if (!db || !user) return null;
     
-    return profile.role === 'seller' 
-      ? FirebaseService.getSellerOrdersQuery(db, user.uid)
-      : FirebaseService.getCustomerOrdersQuery(db, user.uid);
-  }, [db, user, profile]);
+    // We try to use the role-based query as soon as profile is available
+    if (profile?.role === 'seller') {
+      return FirebaseService.getSellerOrdersQuery(db);
+    }
+    
+    // Default to customer-specific history
+    return FirebaseService.getCustomerOrdersQuery(db, user.uid);
+  }, [db, user, profile?.role]);
   
   const productsQuery = useMemoFirebase(() => {
     return FirebaseService.getProductsQuery(db);
@@ -94,7 +97,7 @@ export default function OrdersPage() {
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
   const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
   
-  const isLoading = isProfileLoading || isOrdersLoading;
+  const isLoading = isProfileLoading || (user && isOrdersLoading);
 
   const unpaidCount = orders?.filter(o => o.paymentStatus !== 'paid').length || 0;
   const pendingFulfillment = orders?.filter(o => o.status === 'pending' || o.status === 'processing').length || 0;

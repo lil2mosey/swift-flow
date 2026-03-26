@@ -17,7 +17,8 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle2,
-  Package as PackageIcon
+  Package as PackageIcon,
+  X
 } from 'lucide-react';
 import { 
   Table, 
@@ -35,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { intelligentInventoryRecommendation } from '@/ai/flows/intelligent-inventory-recommendation';
 import { type IntelligentInventoryRecommendationOutput } from '@/ai/flows/intelligent-inventory-recommendation';
@@ -113,8 +115,8 @@ export default function InventoryPage() {
         supplier: formData.supplier,
         lowStockThreshold: Number(formData.lowStockThreshold),
         criticalThreshold: Number(formData.criticalThreshold),
-        averageDailySales: 0, // Initial state
-        leadTimeDays: 7, // Default
+        averageDailySales: 0,
+        leadTimeDays: 7,
       });
 
       toast({ title: "Item Added", description: `${formData.name} has been added to inventory.` });
@@ -148,7 +150,7 @@ export default function InventoryPage() {
               onClick={getAiRecommendations} 
               disabled={isAiLoading || isProductsLoading || !products?.length}
               variant="outline" 
-              className="border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2"
+              className="border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 rounded-xl"
             >
               {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               AI Recommendations
@@ -156,140 +158,110 @@ export default function InventoryPage() {
             
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2">
+                <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 px-6 shadow-lg shadow-slate-200">
                   <Plus className="h-4 w-4" /> Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col rounded-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold">Add New Item</DialogTitle>
-                  <DialogDescription>
+              <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+                <div className="p-8 pb-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <DialogTitle className="text-3xl font-bold text-slate-900 tracking-tight">Add New Item</DialogTitle>
+                    <DialogClose className="rounded-full h-8 w-8 flex items-center justify-center hover:bg-slate-100 transition-colors">
+                      <X className="h-4 w-4 text-slate-400" />
+                    </DialogClose>
+                  </div>
+                  <DialogDescription className="text-slate-500 text-sm font-medium">
                     Enter the details of the new material or product to track in your inventory.
                   </DialogDescription>
-                </DialogHeader>
+                </div>
                 
-                <ScrollArea className="flex-1 pr-4 py-4">
-                  <div className="grid gap-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Material Name *</Label>
-                        <Input 
-                          placeholder="e.g. Gold Clasps" 
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">SKU (Optional)</Label>
-                        <Input 
-                          placeholder="e.g. GC-001" 
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.sku}
-                          onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Description</Label>
-                      <Textarea 
-                        placeholder="Brief description of the material" 
-                        className="bg-slate-50 border-slate-100 rounded-xl min-h-[80px]"
-                        value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                <div className="px-8 py-4 space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Material Name *</Label>
+                      <Input 
+                        placeholder="e.g. Gold Clasps" 
+                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
                       />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Price (KES) *</Label>
-                        <Input 
-                          type="number"
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.price}
-                          onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Cost (KES)</Label>
-                        <Input 
-                          type="number"
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.cost}
-                          onChange={(e) => setFormData({...formData, cost: Number(e.target.value)})}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Initial Quantity *</Label>
-                        <Input 
-                          type="number"
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.currentStock}
-                          onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Location</Label>
-                        <Input 
-                          placeholder="e.g. Shelf A-12" 
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.location}
-                          onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Category</Label>
-                        <Input 
-                          placeholder="e.g. Findings" 
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.category}
-                          onChange={(e) => setFormData({...formData, category: e.target.value})}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Supplier</Label>
-                        <Input 
-                          placeholder="e.g. Supplier Name" 
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.supplier}
-                          onChange={(e) => setFormData({...formData, supplier: e.target.value})}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Low Stock Threshold</Label>
-                        <Input 
-                          type="number"
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.lowStockThreshold}
-                          onChange={(e) => setFormData({...formData, lowStockThreshold: Number(e.target.value)})}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase text-slate-500">Critical Threshold</Label>
-                        <Input 
-                          type="number"
-                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                          value={formData.criticalThreshold}
-                          onChange={(e) => setFormData({...formData, criticalThreshold: Number(e.target.value)})}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">SKU (Optional)</Label>
+                      <Input 
+                        placeholder="e.g. GC-001" 
+                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        value={formData.sku}
+                        onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                      />
                     </div>
                   </div>
-                </ScrollArea>
 
-                <DialogFooter className="pt-4 border-t">
-                  <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl">Cancel</Button>
-                  <Button onClick={handleAddProduct} className="bg-primary hover:bg-slate-800 text-white font-bold h-11 px-8 rounded-xl shadow-lg shadow-slate-200">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Description</Label>
+                    <Textarea 
+                      placeholder="Brief description of the material" 
+                      className="bg-slate-50/50 border-none rounded-xl min-h-[100px] focus-visible:ring-1 focus-visible:ring-slate-200"
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Price (KES) *</Label>
+                      <Input 
+                        type="number"
+                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        value={formData.price}
+                        onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Cost (KES)</Label>
+                      <Input 
+                        type="number"
+                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        value={formData.cost}
+                        onChange={(e) => setFormData({...formData, cost: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 pb-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Initial Quantity *</Label>
+                      <Input 
+                        type="number"
+                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        value={formData.currentStock}
+                        onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Location</Label>
+                      <Input 
+                        placeholder="e.g. Shelf A-12" 
+                        className="h-12 bg-slate-50/50 border-none border-b-2 border-slate-900 rounded-none focus-visible:ring-0 focus-visible:border-slate-700"
+                        value={formData.location}
+                        onChange={(e) => setFormData({...formData, location: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="p-8 pt-0 flex flex-row items-center justify-end gap-4">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setIsAddDialogOpen(false)} 
+                    className="text-slate-900 font-bold hover:bg-transparent hover:text-slate-600 h-12"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddProduct} 
+                    className="bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                  >
                     Add Item
                   </Button>
                 </DialogFooter>
@@ -345,7 +317,7 @@ export default function InventoryPage() {
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input className="pl-9 bg-slate-50 border-slate-100" placeholder="Search materials, SKUs, locations..." />
+            <Input className="pl-9 bg-slate-50 border-slate-100 rounded-xl h-10" placeholder="Search materials, SKUs, locations..." />
           </div>
           <Button variant="ghost" size="icon" className="text-slate-400">
             <Filter className="h-4 w-4" />

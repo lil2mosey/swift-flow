@@ -44,7 +44,6 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { Product } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function InventoryPage() {
   const db = useFirestore();
@@ -162,7 +161,7 @@ export default function InventoryPage() {
                   <Plus className="h-4 w-4" /> Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+              <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                 <div className="p-8 pb-4">
                   <div className="flex justify-between items-start mb-2">
                     <DialogTitle className="text-3xl font-bold text-slate-900 tracking-tight">Add New Item</DialogTitle>
@@ -178,19 +177,19 @@ export default function InventoryPage() {
                 <div className="px-8 py-4 space-y-6">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Material Name *</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">Material Name <span className="text-teal-500">*</span></Label>
                       <Input 
                         placeholder="e.g. Gold Clasps" 
-                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        className="h-12 bg-slate-50/70 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-teal-200 text-slate-900 font-medium"
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">SKU (Optional)</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">SKU (Optional)</Label>
                       <Input 
                         placeholder="e.g. GC-001" 
-                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        className="h-12 bg-slate-50/70 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-teal-200 text-slate-900 font-medium"
                         value={formData.sku}
                         onChange={(e) => setFormData({...formData, sku: e.target.value})}
                       />
@@ -198,10 +197,10 @@ export default function InventoryPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Description</Label>
+                    <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">Description</Label>
                     <Textarea 
                       placeholder="Brief description of the material" 
-                      className="bg-slate-50/50 border-none rounded-xl min-h-[100px] focus-visible:ring-1 focus-visible:ring-slate-200"
+                      className="bg-slate-50/70 border-none rounded-xl min-h-[100px] focus-visible:ring-1 focus-visible:ring-teal-200 text-slate-900 font-medium placeholder:text-slate-400"
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                     />
@@ -209,19 +208,19 @@ export default function InventoryPage() {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Price (KES) *</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">Price (KES) <span className="text-teal-500">*</span></Label>
                       <Input 
                         type="number"
-                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        className="h-12 bg-slate-50/70 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-teal-200 text-slate-900 font-bold"
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Cost (KES)</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">Cost (KES)</Label>
                       <Input 
                         type="number"
-                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        className="h-12 bg-slate-50/70 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-teal-200 text-slate-900 font-bold"
                         value={formData.cost}
                         onChange={(e) => setFormData({...formData, cost: Number(e.target.value)})}
                       />
@@ -230,19 +229,19 @@ export default function InventoryPage() {
 
                   <div className="grid grid-cols-2 gap-6 pb-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Initial Quantity *</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">Initial Quantity <span className="text-teal-500">*</span></Label>
                       <Input 
                         type="number"
-                        className="h-12 bg-slate-50/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-slate-200"
+                        className="h-12 bg-slate-50/70 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-teal-200 text-slate-900 font-bold"
                         value={formData.currentStock}
                         onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Location</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600/70 tracking-wider">Location</Label>
                       <Input 
                         placeholder="e.g. Shelf A-12" 
-                        className="h-12 bg-slate-50/50 border-none border-b-2 border-slate-900 rounded-none focus-visible:ring-0 focus-visible:border-slate-700"
+                        className="h-12 bg-slate-50/70 border-none border-b-2 border-teal-500 rounded-none focus-visible:ring-0 focus-visible:border-teal-400 text-slate-900 font-medium placeholder:text-slate-400"
                         value={formData.location}
                         onChange={(e) => setFormData({...formData, location: e.target.value})}
                       />
@@ -250,17 +249,17 @@ export default function InventoryPage() {
                   </div>
                 </div>
 
-                <DialogFooter className="p-8 pt-0 flex flex-row items-center justify-end gap-4">
+                <DialogFooter className="p-8 pt-0 flex flex-row items-center justify-end gap-6">
                   <Button 
                     variant="ghost" 
                     onClick={() => setIsAddDialogOpen(false)} 
-                    className="text-slate-900 font-bold hover:bg-transparent hover:text-slate-600 h-12"
+                    className="text-slate-900 font-bold hover:bg-slate-50 hover:text-teal-600 h-12 transition-colors"
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleAddProduct} 
-                    className="bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                    className="bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-2xl shadow-xl shadow-teal-500/10 transition-all active:scale-[0.98]"
                   >
                     Add Item
                   </Button>

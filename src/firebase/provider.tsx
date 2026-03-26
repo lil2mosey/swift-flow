@@ -98,20 +98,38 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Effect to fetch user profile whenever the user changes
   useEffect(() => {
-    if (userAuthState.user && firestore) {
+    // If auth is still loading, we stay in profile loading state
+    if (userAuthState.isUserLoading) {
+      setIsProfileLoading(true);
+      return;
+    }
+
+    // If no user is logged in, profile is null and loading is false
+    if (!userAuthState.user) {
+      setProfile(null);
+      setIsProfileLoading(false);
+      return;
+    }
+
+    // User is logged in, start profile snapshot
+    if (firestore) {
       setIsProfileLoading(true);
       const profileRef = doc(firestore, 'userProfiles', userAuthState.user.uid);
+      
       const unsubscribe = onSnapshot(profileRef, (snapshot) => {
-        setProfile(snapshot.exists() ? snapshot.data() : null);
+        if (snapshot.exists()) {
+          setProfile(snapshot.data());
+        } else {
+          // Document might not exist yet if the user just registered
+          setProfile(null);
+        }
         setIsProfileLoading(false);
       }, (error) => {
         console.error("FirebaseProvider: Profile fetch error:", error);
         setIsProfileLoading(false);
       });
+      
       return () => unsubscribe();
-    } else {
-      setProfile(null);
-      setIsProfileLoading(userAuthState.isUserLoading);
     }
   }, [userAuthState.user, userAuthState.isUserLoading, firestore]);
 

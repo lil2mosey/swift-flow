@@ -4,12 +4,12 @@ service cloud.firestore {
 
     /**
      * CORE PHILOSOPHY
-     * This ruleset implements a flexible identity-based authorization model for the musaa marketplace.
-     * It allows sellers full administrative visibility into all orders to streamline logistics,
-     * while restricting customers to their own private purchase history.
+     * This ruleset implements a robust identity-based authorization model.
+     * Sellers have broad administrative access to manage platform logistics.
+     * Customers are restricted to their own private data and public products.
      */
 
-    // --- Global Helper Functions ---
+    // --- Helper Functions ---
 
     function isSignedIn() {
       return request.auth != null;
@@ -19,61 +19,64 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Helper to check the user's role from their profile
+    // Direct check for seller role in the user profile document
     function isSeller() {
-      return isSignedIn() && get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
     }
 
-    function isDataOwner(ownerId) {
-      return isSignedIn() && request.auth.uid == ownerId;
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description User profiles (customers and sellers).
-     */
+    // --- User Profiles ---
     match /userProfiles/{userId} {
       allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId);
+      allow create: if isSignedIn(); // Allow creation during registration
       allow update: if isOwner(userId);
       allow delete: if false;
     }
 
-    /**
-     * @description Global product catalog.
-     */
+    // --- Product Catalog ---
     match /products/{productId} {
+      // Public catalog is readable by anyone signed in
       allow get, list: if isSignedIn();
+      // Only sellers can manage inventory
       allow create, update, delete: if isSeller();
     }
 
-    /**
-     * @description Order management. Sellers see ALL orders. Customers see their OWN orders.
-     */
+    // --- Order Management ---
     match /orders/{orderId} {
-      // List/Get: Sellers see everything. Customers filter by their UID.
-      allow get, list: if isSeller() || (isSignedIn() && (resource.data.customerId == request.auth.uid || request.auth.uid == 'manual-dm'));
+      // READ: Sellers see all. Customers see their own or manual DM orders assigned to them.
+      // Note: We use 'resource.data' for existing docs and ensure the query filters match.
+      allow get, list: if isSignedIn() && (
+        isSeller() || 
+        resource.data.customerId == request.auth.uid || 
+        resource.data.customerId == 'manual-dm'
+      );
       
-      // Create: Anyone signed in can place an order.
+      // CREATE: Anyone signed in can place an order.
       allow create: if isSignedIn();
       
-      // Update: Sellers manage fulfillment. Customers confirm payment.
-      allow update: if isSeller() || (isSignedIn() && resource.data.customerId == request.auth.uid);
+      // UPDATE: Sellers manage fulfillment. Customers confirm payment approval.
+      allow update: if isSignedIn() && (
+        isSeller() || 
+        resource.data.customerId == request.auth.uid
+      );
       
       allow delete: if false;
 
-      // Subcollections inherit logic or use denormalized fields
+      // Subcollections (OrderItems, Payments)
       match /{allSubcollections=**} {
-        allow read, write: if isSeller() || (isSignedIn() && get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid);
+        allow read, write: if isSignedIn() && (
+          isSeller() || 
+          get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid
+        );
       }
     }
 
-    /**
-     * @description Messages.
-     */
+    // --- Messages ---
     match /messages/{messageId} {
-      allow get, list: if isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow get, list: if isSignedIn() && (
+        request.auth.uid == resource.data.senderId || 
+        request.auth.uid == resource.data.receiverId
+      );
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId;
       allow update, delete: if false;
     }

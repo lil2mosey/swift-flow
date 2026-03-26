@@ -24,7 +24,8 @@ export default function DashboardPage() {
   const { profile, isProfileLoading, isUserLoading, user } = useUser();
   const auth = useAuth();
 
-  if (isUserLoading || isProfileLoading) {
+  // If initial auth or profile fetch is happening, show the loader
+  if (isUserLoading || (user && isProfileLoading)) {
     return <BrandLoader />;
   }
 
@@ -39,7 +40,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900">Setting up your profile...</h2>
-            <p className="text-slate-500 mt-2">If this takes more than a few seconds, there might be a synchronization delay.</p>
+            <p className="text-slate-500 mt-2">We're finalizing your account details. This usually takes just a few seconds.</p>
           </div>
           <div className="flex gap-4 w-full">
             <Button 

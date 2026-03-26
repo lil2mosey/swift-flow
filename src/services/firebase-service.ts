@@ -7,15 +7,13 @@ import {
   where, 
   orderBy, 
   limit, 
-  Timestamp,
-  Firestore,
-  CollectionReference
+  Firestore 
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking 
 } from '@/firebase';
-import { Order, OrderStatus, Product, UserProfile } from '@/lib/types';
+import { OrderStatus, Product, UserProfile } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
@@ -31,7 +29,7 @@ export const FirebaseService = {
     return addDocumentNonBlocking(ordersRef, {
       customerId: customerId,
       customerName: profile?.fullName || 'Anonymous Customer',
-      sellerId: 'system-seller', // In a multi-seller app, this would be product.sellerId
+      sellerId: 'system-seller', // Shared ID for the store admin
       items: [{ 
         productId: product.id, 
         productName: product.name, 
@@ -83,13 +81,15 @@ export const FirebaseService = {
 
   // --- Queries ---
 
-  /** Query for seller's orders */
+  /** 
+   * Query for seller's orders. 
+   * For the SwiftFlow prototype, we allow sellers to see all orders in the shared pool.
+   */
   getSellerOrdersQuery: (db: Firestore, sellerId: string) => {
     return query(
       collection(db, 'orders'),
-      where('sellerId', '==', sellerId),
       orderBy('createdAt', 'desc'),
-      limit(20)
+      limit(50)
     );
   },
 

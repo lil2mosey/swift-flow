@@ -236,7 +236,7 @@ export default function OrdersPage() {
                       />
                     </div>
                     <div className="relative">
-                      MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         placeholder="Delivery Location" 
                         className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"

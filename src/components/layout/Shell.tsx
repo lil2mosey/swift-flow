@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -16,7 +15,8 @@ import {
   CreditCard,
   User as UserIcon,
   ShieldCheck,
-  ShoppingBag
+  ShoppingBag,
+  LogIn
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,11 +36,14 @@ export function Shell({ children, userRole }: ShellProps) {
   const { user, profile, isUserLoading, isProfileLoading } = useUser();
   const auth = useAuth();
 
+  // Define public routes that don't require authentication
+  const isPublicRoute = pathname === '/shop' || pathname === '/' || pathname === '/login';
+
   useEffect(() => {
-    if (!isUserLoading && !user && pathname !== '/login' && pathname !== '/') {
+    if (!isUserLoading && !user && !isPublicRoute) {
       router.push('/login');
     }
-  }, [user, isUserLoading, pathname, router]);
+  }, [user, isUserLoading, pathname, router, isPublicRoute]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -60,6 +63,7 @@ export function Shell({ children, userRole }: ShellProps) {
     { name: 'Chat', href: '/messages', icon: MessageSquare },
   ];
 
+  // For guests, we show the customer nav but restricted
   const activeRole = userRole || profile?.role || 'customer';
   const navItems = activeRole === 'seller' ? sellerNav : customerNav;
 
@@ -98,20 +102,28 @@ export function Shell({ children, userRole }: ShellProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
-            <UserIcon className="h-3 w-3 text-teal-400" />
-            <span className="text-[10px] font-bold text-slate-300 truncate max-w-[80px] uppercase">
-              {isProfileLoading ? <Skeleton className="h-3 w-16 bg-slate-700" /> : (profile?.fullName || user?.email?.split('@')[0] || 'Guest')}
-            </span>
-          </div>
-          {user && (
-            <Button 
-              onClick={handleLogout}
-              variant="secondary" 
-              size="sm" 
-              className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 w-8 p-0 rounded-full"
-            >
-              <LogOut className="h-3.5 w-3.5" />
+          {user ? (
+            <>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
+                <UserIcon className="h-3 w-3 text-teal-400" />
+                <span className="text-[10px] font-bold text-slate-300 truncate max-w-[80px] uppercase">
+                  {isProfileLoading ? <Skeleton className="h-3 w-16 bg-slate-700" /> : (profile?.fullName || user?.email?.split('@')[0] || 'Guest')}
+                </span>
+              </div>
+              <Button 
+                onClick={handleLogout}
+                variant="secondary" 
+                size="sm" 
+                className="bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border-none h-8 w-8 p-0 rounded-full"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button asChild variant="ghost" className="text-teal-400 font-bold text-xs uppercase gap-2 hover:bg-slate-800">
+              <Link href="/login">
+                <LogIn className="h-4 w-4" /> Sign In
+              </Link>
             </Button>
           )}
         </div>
@@ -140,7 +152,7 @@ export function Shell({ children, userRole }: ShellProps) {
                 {item.name}
               </Link>
             ))}
-            {user && (
+            {user ? (
               <button 
                 onClick={handleLogout}
                 className="flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest text-rose-500"
@@ -148,6 +160,15 @@ export function Shell({ children, userRole }: ShellProps) {
                 <LogOut className="h-5 w-5" />
                 Sign Out
               </button>
+            ) : (
+              <Link 
+                href="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest text-teal-400"
+              >
+                <LogIn className="h-5 w-5" />
+                Sign In
+              </Link>
             )}
           </div>
         </div>

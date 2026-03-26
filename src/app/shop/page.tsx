@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -6,7 +5,7 @@ import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package } from 'lucide-react';
+import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -20,19 +19,31 @@ import {
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
 import { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useAuth } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function ShopPage() {
   const { user, profile } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   
   const [cart, setCart] = useState<{ id: string, name: string, price: number, quantity: number }[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('0712345678');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Auth form state for guests
+  const [authData, setAuthData] = useState({
+    email: '',
+    password: '',
+    fullName: ''
+  });
 
   // Fetch real products from Firestore
   const productsQuery = useMemoFirebase(() => {
@@ -63,16 +74,57 @@ export default function ShopPage() {
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleMpesaCheckout = async () => {
-    if (cart.length === 0 || !user) {
-      toast({ variant: "destructive", title: "Error", description: "Cart is empty or you are not logged in." });
+    if (cart.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "Cart is empty." });
+      return;
+    }
+
+    // If guest, open the auth prompt first
+    if (!user) {
+      setIsAuthDialogOpen(true);
       return;
     }
     
+    await proceedWithOrder(user.uid, profile);
+  };
+
+  const handleGuestRegistrationAndOrder = async () => {
+    if (!authData.email || !authData.password || !authData.fullName) {
+      toast({ variant: "destructive", title: "Missing Info", description: "Please fill in all details to continue." });
+      return;
+    }
+
     setIsProcessing(true);
-    
     try {
-      // Shared logic: write order to Firestore
-      await FirebaseService.placeOrder(db, user.uid, profile, {
+      const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
+      const uid = userCredential.user.uid;
+      
+      const newProfile = {
+        id: uid,
+        email: authData.email,
+        fullName: authData.fullName,
+        role: 'customer' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const profileRef = doc(db, 'users', uid);
+      setDocumentNonBlocking(profileRef, newProfile, { merge: true });
+
+      // Close auth dialog and proceed with order
+      setIsAuthDialogOpen(false);
+      await proceedWithOrder(uid, newProfile);
+      
+    } catch (error: any) {
+      setIsProcessing(false);
+      toast({ variant: "destructive", title: "Registration Failed", description: error.message || "Could not create account." });
+    }
+  };
+
+  const proceedWithOrder = async (uid: string, userProfile: any) => {
+    setIsProcessing(true);
+    try {
+      await FirebaseService.placeOrder(db, uid, userProfile, {
         id: cart[0].id,
         name: cart.length > 1 ? `${cart[0].name} & others` : cart[0].name,
         price: cartTotal,
@@ -83,16 +135,15 @@ export default function ShopPage() {
         sku: 'SHOP-ORDER'
       } as any);
 
-      // Simulate STK Push delay
       setTimeout(() => {
         setIsProcessing(false);
         setIsCheckoutOpen(false);
         setCart([]);
         toast({
           title: "Order Submitted!",
-          description: "Syncing with seller dashboard. Awaiting payment.",
+          description: "Syncing with seller dashboard. Awaiting payment notification.",
         });
-      }, 2000);
+      }, 1500);
     } catch (error) {
       setIsProcessing(false);
       toast({ variant: "destructive", title: "Checkout Failed", description: "Please try again later." });
@@ -184,6 +235,7 @@ export default function ShopPage() {
         </div>
       </div>
 
+      {/* Checkout Dialog */}
       <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
         <DialogContent className="sm:max-w-[420px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
           <div className="bg-teal-50/50 p-8 border-b border-teal-100">
@@ -259,6 +311,65 @@ export default function ShopPage() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Guest Auth Dialog */}
+      <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
+          <div className="bg-[#0f172a] p-8 text-white">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+                <UserPlus className="h-6 w-6 text-teal-400" />
+                Join SwiftFlow
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 font-medium">
+                Create a quick account to track your orders and earn loyalty points.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="p-8 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Full Name</Label>
+              <Input 
+                placeholder="John Doe" 
+                className="bg-slate-50 h-11 border-none rounded-xl"
+                value={authData.fullName}
+                onChange={(e) => setAuthData({...authData, fullName: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Email Address</Label>
+              <Input 
+                type="email" 
+                placeholder="name@example.com" 
+                className="bg-slate-50 h-11 border-none rounded-xl"
+                value={authData.email}
+                onChange={(e) => setAuthData({...authData, email: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Create Password</Label>
+              <Input 
+                type="password" 
+                placeholder="••••••••" 
+                className="bg-slate-50 h-11 border-none rounded-xl"
+                value={authData.password}
+                onChange={(e) => setAuthData({...authData, password: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 pt-0 bg-slate-50/50">
+            <Button 
+              className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 rounded-xl transition-all"
+              onClick={handleGuestRegistrationAndOrder}
+              disabled={isProcessing}
+            >
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Register & Complete Order"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Shell>

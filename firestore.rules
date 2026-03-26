@@ -12,18 +12,18 @@ service cloud.firestore {
       allow create: if request.auth != null;
       
       // Ownership-based reading (Supports Query-Aware Permission proved by query filters)
+      // Consolidated for performance and to ensure QAP optimization for both roles
       allow read: if request.auth != null && (
         resource.data.customerId == request.auth.uid ||
         resource.data.sellerId == request.auth.uid
       );
       
-      // Role-based reading (Administrative/Seller access via existence and role check)
-      allow read: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
-      
-      // Update/Delete: Only the Seller can manage order status and fulfillment
-      allow update, delete: if request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
+      // Update/Delete: Restricted to the seller or owner
+      // We check for seller role via a get() call for mutations, which is safe
+      allow update, delete: if request.auth != null && (
+        resource.data.sellerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller'
+      );
     }
 
     // 3. Products logic:
@@ -42,6 +42,12 @@ service cloud.firestore {
         allow read, write: if request.auth != null && 
           (resource.data.customerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       }
+    }
+
+    // 5. Admin Roles logic:
+    match /admin_roles/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if false; // System-managed
     }
   }
 }

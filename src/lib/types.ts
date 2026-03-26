@@ -14,10 +14,15 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  cost?: number;
   currentStock: number;
   sku: string;
   imageUrl?: string;
   category: string;
+  location?: string;
+  supplier?: string;
+  lowStockThreshold?: number;
+  criticalThreshold?: number;
   averageDailySales: number;
   leadTimeDays: number;
 }

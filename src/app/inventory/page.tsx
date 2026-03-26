@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -7,6 +6,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { 
   Plus, 
@@ -16,7 +17,7 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle2,
-  ArrowRight
+  Package as PackageIcon
 } from 'lucide-react';
 import { 
   Table, 
@@ -26,30 +27,62 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { intelligentInventoryRecommendation } from '@/ai/flows/intelligent-inventory-recommendation';
 import { type IntelligentInventoryRecommendationOutput } from '@/ai/flows/intelligent-inventory-recommendation';
-
-const initialProducts = [
-  { id: 'P001', name: 'Premium Espresso Beans', sku: 'COF-EPS-01', stock: 120, sales: 15.5, lead: 5, price: 2500 },
-  { id: 'P002', name: 'Ceramic Pour Over Set', sku: 'ACC-PO-02', stock: 15, sales: 4.2, lead: 10, price: 4500 },
-  { id: 'P003', name: 'Stainless Steel Tamper', sku: 'ACC-TMP-03', stock: 8, sales: 2.1, lead: 7, price: 3200 },
-  { id: 'P004', name: 'Gooseneck Kettle', sku: 'ACC-KET-04', stock: 45, sales: 8.4, lead: 14, price: 8900 },
-];
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { Product } from '@/lib/types';
+import { FirebaseService } from '@/services/firebase-service';
+import { toast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function InventoryPage() {
+  const db = useFirestore();
+  const { user } = useUser();
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [recommendations, setRecommendations] = useState<IntelligentInventoryRecommendationOutput | null>(null);
 
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    description: '',
+    price: 0,
+    cost: 0,
+    currentStock: 0,
+    location: '',
+    category: '',
+    supplier: '',
+    lowStockThreshold: 20,
+    criticalThreshold: 10
+  });
+
+  const productsQuery = useMemoFirebase(() => {
+    return FirebaseService.getProductsQuery(db);
+  }, [db]);
+
+  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
+
   const getAiRecommendations = async () => {
+    if (!products) return;
     setIsAiLoading(true);
     try {
       const input = {
-        products: initialProducts.map(p => ({
+        products: products.map(p => ({
           productId: p.id,
           productName: p.name,
-          currentStock: p.stock,
-          averageDailySales: p.sales,
-          leadTimeDays: p.lead,
+          currentStock: p.currentStock,
+          averageDailySales: p.averageDailySales || 1,
+          leadTimeDays: p.leadTimeDays || 5,
         }))
       };
       const result = await intelligentInventoryRecommendation(input);
@@ -58,6 +91,49 @@ export default function InventoryPage() {
       console.error("AI Recommendation error:", error);
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  const handleAddProduct = async () => {
+    if (!formData.name) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Material name is required." });
+      return;
+    }
+
+    try {
+      await FirebaseService.addProduct(db, {
+        name: formData.name,
+        sku: formData.sku,
+        description: formData.description,
+        price: Number(formData.price),
+        cost: Number(formData.cost),
+        currentStock: Number(formData.currentStock),
+        location: formData.location,
+        category: formData.category,
+        supplier: formData.supplier,
+        lowStockThreshold: Number(formData.lowStockThreshold),
+        criticalThreshold: Number(formData.criticalThreshold),
+        averageDailySales: 0, // Initial state
+        leadTimeDays: 7, // Default
+      });
+
+      toast({ title: "Item Added", description: `${formData.name} has been added to inventory.` });
+      setIsAddDialogOpen(false);
+      setFormData({
+        name: '',
+        sku: '',
+        description: '',
+        price: 0,
+        cost: 0,
+        currentStock: 0,
+        location: '',
+        category: '',
+        supplier: '',
+        lowStockThreshold: 20,
+        criticalThreshold: 10
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not add item to inventory." });
     }
   };
 
@@ -70,16 +146,155 @@ export default function InventoryPage() {
           <div className="flex gap-2">
             <Button 
               onClick={getAiRecommendations} 
-              disabled={isAiLoading}
+              disabled={isAiLoading || isProductsLoading || !products?.length}
               variant="outline" 
               className="border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2"
             >
               {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               AI Recommendations
             </Button>
-            <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2">
-              <Plus className="h-4 w-4" /> Add Product
-            </Button>
+            
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2">
+                  <Plus className="h-4 w-4" /> Add Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col rounded-3xl">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold">Add New Item</DialogTitle>
+                  <DialogDescription>
+                    Enter the details of the new material or product to track in your inventory.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <ScrollArea className="flex-1 pr-4 py-4">
+                  <div className="grid gap-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Material Name *</Label>
+                        <Input 
+                          placeholder="e.g. Gold Clasps" 
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.name}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">SKU (Optional)</Label>
+                        <Input 
+                          placeholder="e.g. GC-001" 
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.sku}
+                          onChange={(e) => setFormData({...formData, sku: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label className="text-xs font-bold uppercase text-slate-500">Description</Label>
+                      <Textarea 
+                        placeholder="Brief description of the material" 
+                        className="bg-slate-50 border-slate-100 rounded-xl min-h-[80px]"
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Price (KES) *</Label>
+                        <Input 
+                          type="number"
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Cost (KES)</Label>
+                        <Input 
+                          type="number"
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.cost}
+                          onChange={(e) => setFormData({...formData, cost: Number(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Initial Quantity *</Label>
+                        <Input 
+                          type="number"
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.currentStock}
+                          onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Location</Label>
+                        <Input 
+                          placeholder="e.g. Shelf A-12" 
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.location}
+                          onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Category</Label>
+                        <Input 
+                          placeholder="e.g. Findings" 
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.category}
+                          onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Supplier</Label>
+                        <Input 
+                          placeholder="e.g. Supplier Name" 
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.supplier}
+                          onChange={(e) => setFormData({...formData, supplier: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Low Stock Threshold</Label>
+                        <Input 
+                          type="number"
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.lowStockThreshold}
+                          onChange={(e) => setFormData({...formData, lowStockThreshold: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label className="text-xs font-bold uppercase text-slate-500">Critical Threshold</Label>
+                        <Input 
+                          type="number"
+                          className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                          value={formData.criticalThreshold}
+                          onChange={(e) => setFormData({...formData, criticalThreshold: Number(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+
+                <DialogFooter className="pt-4 border-t">
+                  <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl">Cancel</Button>
+                  <Button onClick={handleAddProduct} className="bg-primary hover:bg-slate-800 text-white font-bold h-11 px-8 rounded-xl shadow-lg shadow-slate-200">
+                    Add Item
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         }
       />
@@ -130,7 +345,7 @@ export default function InventoryPage() {
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input className="pl-9 bg-slate-50 border-slate-100" placeholder="Search products, SKUs..." />
+            <Input className="pl-9 bg-slate-50 border-slate-100" placeholder="Search materials, SKUs, locations..." />
           </div>
           <Button variant="ghost" size="icon" className="text-slate-400">
             <Filter className="h-4 w-4" />
@@ -140,27 +355,52 @@ export default function InventoryPage() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-slate-100">
-                <TableHead className="font-bold text-slate-800">Product</TableHead>
-                <TableHead className="font-bold text-slate-800">SKU</TableHead>
+                <TableHead className="font-bold text-slate-800">Item Name</TableHead>
+                <TableHead className="font-bold text-slate-800">SKU / Category</TableHead>
+                <TableHead className="font-bold text-slate-800">Location</TableHead>
                 <TableHead className="font-bold text-slate-800">Stock</TableHead>
-                <TableHead className="font-bold text-slate-800 text-right">Unit Price</TableHead>
+                <TableHead className="font-bold text-slate-800 text-right">Selling Price</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {initialProducts.map((product) => (
+              {isProductsLoading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={6} className="text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading inventory...</TableCell>
+                  </TableRow>
+                ))
+              ) : !products || products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-20">
+                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                      <PackageIcon className="h-10 w-10 opacity-20" />
+                      <p className="font-medium italic">No items in your inventory yet.</p>
+                      <Button variant="link" onClick={() => setIsAddDialogOpen(true)}>Add your first item</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : products.map((product) => (
                 <TableRow key={product.id} className="hover:bg-slate-50 transition-colors border-slate-100">
                   <TableCell className="font-medium text-slate-900">{product.name}</TableCell>
-                  <TableCell className="text-slate-500 font-medium">{product.sku}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-slate-500 font-medium">{product.sku || 'No SKU'}</span>
+                      <span className="text-[10px] uppercase text-slate-400 font-bold">{product.category}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-500 font-medium">
+                    {product.location || 'Unassigned'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "font-bold",
-                        product.stock < 20 ? "text-amber-600" : "text-slate-700"
+                        product.currentStock < (product.lowStockThreshold || 20) ? "text-amber-600" : "text-slate-700"
                       )}>
-                        {product.stock}
+                        {product.currentStock}
                       </span>
-                      {product.stock < 20 && (
+                      {product.currentStock < (product.lowStockThreshold || 20) && (
                         <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">
                           Low
                         </span>

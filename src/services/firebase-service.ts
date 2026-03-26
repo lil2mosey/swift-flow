@@ -68,6 +68,16 @@ export const FirebaseService = {
     });
   },
 
+  /** Adds a new product to the inventory */
+  addProduct: (db: Firestore, productData: Omit<Product, 'id'>) => {
+    const productsRef = collection(db, 'products');
+    return addDocumentNonBlocking(productsRef, {
+      ...productData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  },
+
   /** Updates the fulfillment status of an order */
   updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {
     const orderRef = doc(db, 'orders', orderId);

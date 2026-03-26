@@ -26,14 +26,13 @@ import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking
 import { doc } from 'firebase/firestore';
 import { Order, OrderStatus } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
+import { toast } from '@/hooks/use-toast';
 
 export default function OrdersPage() {
   const db = useFirestore();
   const { user, profile, isProfileLoading } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
-    // CRITICAL: Guard the query. Firestore rules will REJECT any query 
-    // that doesn't include the required filters (sellerId/customerId).
     if (!db || !user || !profile?.role) return null;
     
     return profile.role === 'seller' 
@@ -51,6 +50,13 @@ export default function OrdersPage() {
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { status: newStatus, updatedAt: new Date().toISOString() });
+  };
+
+  const handlePrintReceipt = (order: Order) => {
+    toast({
+      title: "Printing Receipt",
+      description: `Generating document for Order #${order.id.slice(0,8).toUpperCase()}...`,
+    });
   };
 
   const isSeller = profile?.role === 'seller';
@@ -165,13 +171,24 @@ export default function OrdersPage() {
                       KES {order.totalAmount.toLocaleString()}
                     </TableCell>
                     <TableCell className="pr-6">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
-                          <Printer className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {order.paymentStatus === 'paid' ? (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8 border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 px-3 shadow-sm transition-all active:scale-95"
+                            onClick={() => handlePrintReceipt(order)}
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            Receipt
+                          </Button>
+                        ) : (
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

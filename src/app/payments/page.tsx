@@ -14,7 +14,8 @@ import {
   Wallet,
   Clock,
   Smartphone,
-  Loader2
+  Loader2,
+  Printer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,7 +46,6 @@ export default function PaymentsPage() {
   const { user, profile, isProfileLoading } = useUser();
   
   const ordersQuery = useMemoFirebase(() => {
-    // Only fetch if profile is loaded and the user is a seller to prevent permission errors
     if (!db || !user || profile?.role !== 'seller') return null;
     return FirebaseService.getSellerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
@@ -68,16 +68,23 @@ export default function PaymentsPage() {
     
     setIsProcessing(true);
     
-    // Simulate STK Push Confirmation
+    // Simulate STK Push Confirmation from customer
     setTimeout(async () => {
       FirebaseService.processPayment(db, selectedOrder.id);
       setIsProcessing(false);
       setIsPaymentDialogOpen(false);
       toast({
-        title: "M-Pesa Payment Confirmed",
-        description: `Order ${selectedOrder.id.slice(0,8).toUpperCase()} is now marked as Completed.`,
+        title: "Payment Received",
+        description: `Customer confirmed payment for ${selectedOrder.id.slice(0,8).toUpperCase()}. Receipt ready.`,
       });
     }, 2500);
+  };
+
+  const handlePrintReceipt = (order: Order) => {
+    toast({
+      title: "Printing Receipt",
+      description: `Printing for Order #${order.id.slice(0,8).toUpperCase()}...`,
+    });
   };
 
   const totalRevenue = orders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
@@ -89,7 +96,7 @@ export default function PaymentsPage() {
         title="Payments & Finances" 
         description="Monitor your earnings, process pending payments, and view history."
         action={
-          <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2">
+          <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11">
             <Download className="h-4 w-4" /> Export CSV
           </Button>
         }
@@ -193,14 +200,24 @@ export default function PaymentsPage() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex items-center justify-end gap-3">
-                          {order.paymentStatus === 'unpaid' && (
+                          {order.paymentStatus === 'paid' ? (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-4 gap-2"
+                              onClick={() => handlePrintReceipt(order)}
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              Receipt
+                            </Button>
+                          ) : (
                             <Button 
                               onClick={() => openPaymentDialog(order)}
                               size="sm" 
                               variant="outline" 
                               className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-4"
                             >
-                              Pay
+                              Trigger Pay
                             </Button>
                           )}
                           <span className="font-bold text-teal-accent">
@@ -218,47 +235,50 @@ export default function PaymentsPage() {
       </Card>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-teal-600" />
-              M-Pesa Payment Prompt
+              M-Pesa STK Push
             </DialogTitle>
             <DialogDescription>
-              Confirm payment for order {selectedOrder?.id.slice(0,8).toUpperCase()}. A simulated STK push will be triggered.
+              Initiating payment request for {selectedOrder?.customerName}. The customer will receive a prompt on their phone.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Customer Phone Number</Label>
-              <Input 
-                id="phone" 
-                value={phoneNumber} 
-                onChange={(e) => setPhoneNumber(e.target.value)} 
-                placeholder="07XXXXXXXX"
-                className="bg-slate-50 border-slate-200"
-              />
+              <Label htmlFor="phone" className="text-[10px] font-bold uppercase text-slate-400">Customer Mobile Number</Label>
+              <div className="relative">
+                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input 
+                  id="phone" 
+                  value={phoneNumber} 
+                  onChange={(e) => setPhoneNumber(e.target.value)} 
+                  placeholder="07XXXXXXXX"
+                  className="pl-9 bg-slate-50 border-none h-11 rounded-xl"
+                />
+              </div>
             </div>
             <div className="bg-teal-50 p-4 rounded-xl border border-teal-100">
               <div className="flex justify-between items-center text-sm font-bold text-teal-900">
-                <span>Amount Due:</span>
+                <span className="uppercase text-[10px] tracking-wider">Amount Due</span>
                 <span>KES {selectedOrder?.totalAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button 
-              className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-11"
+              className="w-full bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 rounded-xl"
               onClick={handleMpesaPrompt}
               disabled={isProcessing}
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Confirming Payment...
+                  Awaiting Customer...
                 </>
               ) : (
-                "Trigger Payment Request"
+                "Send STK Push Request"
               )}
             </Button>
           </DialogFooter>

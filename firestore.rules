@@ -27,8 +27,9 @@ service cloud.firestore {
 
     // --- User Profiles ---
     match /userProfiles/{userId} {
-      allow get, list: if isOwner(userId);
-      allow create: if isSignedIn(); // Allow creation during registration
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId) || (isSignedIn() && isSeller());
+      allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isOwner(userId);
       allow delete: if false;
     }
@@ -43,18 +44,18 @@ service cloud.firestore {
 
     // --- Order Management ---
     match /orders/{orderId} {
-      // READ: Sellers see all. Customers see their own or manual DM orders assigned to them.
-      // Note: We use 'resource.data' for existing docs and ensure the query filters match.
+      // Sellers see all. Customers see their own or manual DM orders.
+      // List rules are Query-Aware: queries must include a 'customerId' filter for customers.
       allow get, list: if isSignedIn() && (
         isSeller() || 
         resource.data.customerId == request.auth.uid || 
         resource.data.customerId == 'manual-dm'
       );
       
-      // CREATE: Anyone signed in can place an order.
+      // Anyone signed in can place an order.
       allow create: if isSignedIn();
       
-      // UPDATE: Sellers manage fulfillment. Customers confirm payment approval.
+      // Sellers manage fulfillment. Customers confirm payment approval.
       allow update: if isSignedIn() && (
         isSeller() || 
         resource.data.customerId == request.auth.uid
@@ -75,7 +76,8 @@ service cloud.firestore {
     match /messages/{messageId} {
       allow get, list: if isSignedIn() && (
         request.auth.uid == resource.data.senderId || 
-        request.auth.uid == resource.data.receiverId
+        request.auth.uid == resource.data.receiverId ||
+        isSeller()
       );
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId;
       allow update, delete: if false;

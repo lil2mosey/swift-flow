@@ -17,13 +17,11 @@ import { OrderStatus, Product, UserProfile, OrderItem } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Decouples business logic from UI components.
  */
 
 export const FirebaseService = {
   // --- Orders ---
   
-  /** Places a new order from a customer */
   placeOrder: (db: Firestore, customerId: string, profile: UserProfile | null, product: Product) => {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
@@ -44,7 +42,6 @@ export const FirebaseService = {
     });
   },
 
-  /** Manually adds an order (e.g., from Instagram DM) */
   addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
     customerName: string;
     customerPhone: string;
@@ -71,7 +68,6 @@ export const FirebaseService = {
     });
   },
 
-  /** Adds a new inventory item (Product or Raw Material) */
   addProduct: (db: Firestore, sellerId: string, productData: Omit<Product, 'id' | 'sellerId'>) => {
     const productsRef = collection(db, 'products');
     return addDocumentNonBlocking(productsRef, {
@@ -83,7 +79,6 @@ export const FirebaseService = {
     });
   },
 
-  /** Updates the fulfillment status of an order */
   updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { 
@@ -92,7 +87,6 @@ export const FirebaseService = {
     });
   },
 
-  /** Seller requests payment from customer (Trigger Pay) */
   requestPayment: (db: Firestore, orderId: string) => {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { 
@@ -101,7 +95,6 @@ export const FirebaseService = {
     });
   },
 
-  /** Customer confirms payment (After entering PIN) */
   confirmPayment: (db: Firestore, orderId: string) => {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { 
@@ -113,7 +106,7 @@ export const FirebaseService = {
 
   // --- Queries ---
 
-  /** Query for ALL orders (Admin/Seller view). No limitations as requested. */
+  /** Administrative query for sellers to see all orders */
   getSellerOrdersQuery: (db: Firestore) => {
     return query(
       collection(db, 'orders'),
@@ -122,7 +115,7 @@ export const FirebaseService = {
     );
   },
 
-  /** Query for customer's specific orders */
+  /** Personal query for customers to see their history */
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
     return query(
       collection(db, 'orders'),
@@ -131,7 +124,6 @@ export const FirebaseService = {
     );
   },
 
-  /** Query for product catalog */
   getProductsQuery: (db: Firestore) => {
     return query(collection(db, 'products'), limit(200));
   }

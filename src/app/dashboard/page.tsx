@@ -24,13 +24,12 @@ export default function DashboardPage() {
   const { profile, isProfileLoading, isUserLoading, user } = useUser();
   const auth = useAuth();
 
-  // If initial auth or profile fetch is happening, show the loader
+  // Show brand loader during initial auth/profile sync
   if (isUserLoading || (user && isProfileLoading)) {
     return <BrandLoader />;
   }
 
   // Choose the view based on the confirmed role
-  // If no role is found yet (e.g. profile doc still creating or missing), show a recovery screen
   if (!profile || !profile.role) {
     return (
       <Shell>
@@ -46,7 +45,7 @@ export default function DashboardPage() {
             <Button 
               onClick={() => window.location.reload()} 
               variant="outline" 
-              className="flex-1 rounded-xl h-11 border-slate-200"
+              className="flex-1 rounded-xl h-11"
             >
               Retry Sync
             </Button>

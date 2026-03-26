@@ -22,6 +22,7 @@ export default function LoginPage() {
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
 
+  // Unified redirect logic
   useEffect(() => {
     if (user && !isUserLoading && profile && !isProfileLoading) {
       if (profile.role === 'seller') {
@@ -37,12 +38,13 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Redirection is handled by the useEffect above
     } catch (error: any) {
       setIsLoading(false);
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        description: error.message || "Invalid credentials.",
       });
     }
   };
@@ -65,11 +67,13 @@ export default function LoginPage() {
         email,
         firstName,
         lastName,
-        fullName, // Keep for UI convenience
+        fullName,
         role,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
+      
+      // The loading state stays true until the redirect useEffect takes over
     } catch (error: any) {
       setIsLoading(false);
       toast({
@@ -80,7 +84,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading || isProfileLoading) {
+  if (isUserLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
@@ -96,13 +100,13 @@ export default function LoginPage() {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">SwiftFlow</h1>
-          <p className="text-slate-500 mt-2 font-medium">Enter your shared portal credentials</p>
+          <p className="text-slate-500 mt-2 font-medium">Logistics & Order Management</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Login</TabsTrigger>
-            <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Register</TabsTrigger>
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
@@ -110,7 +114,7 @@ export default function LoginPage() {
               <form onSubmit={handleSignIn}>
                 <CardHeader>
                   <CardTitle className="text-xl">Welcome Back</CardTitle>
-                  <CardDescription>Single core auth for all roles.</CardDescription>
+                  <CardDescription>Enter your credentials to access the portal.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -122,7 +126,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required 
-                      className="bg-slate-50 h-11 rounded-xl border-none"
+                      className="bg-slate-50 h-11 rounded-xl"
                     />
                   </div>
                   <div className="space-y-2">
@@ -133,14 +137,14 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required 
-                      className="bg-slate-50 h-11 rounded-xl border-none"
+                      className="bg-slate-50 h-11 rounded-xl"
                     />
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl" disabled={isLoading}>
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                    Enter Portal
+                    Sign In
                   </Button>
                 </CardFooter>
               </form>
@@ -151,7 +155,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-xl rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-xl">Create Account</CardTitle>
-                <CardDescription>Choose your role to get started.</CardDescription>
+                <CardDescription>Select your primary role to get started.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -161,7 +165,8 @@ export default function LoginPage() {
                     placeholder="John Doe" 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="bg-slate-50 h-11 rounded-xl border-none"
+                    required
+                    className="bg-slate-50 h-11 rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
@@ -173,7 +178,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required 
-                    className="bg-slate-50 h-11 rounded-xl border-none"
+                    className="bg-slate-50 h-11 rounded-xl"
                   />
                 </div>
                 <div className="space-y-2">
@@ -184,14 +189,14 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required 
-                    className="bg-slate-50 h-11 rounded-xl border-none"
+                    className="bg-slate-50 h-11 rounded-xl"
                   />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3">
                 <Button 
                   onClick={(e) => handleSignUp(e, 'seller')} 
-                  className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl" 
+                  className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold rounded-xl" 
                   disabled={isLoading}
                 >
                   Join as Seller (Admin)
@@ -199,7 +204,7 @@ export default function LoginPage() {
                 <Button 
                   onClick={(e) => handleSignUp(e, 'customer')} 
                   variant="outline"
-                  className="w-full h-12 border-slate-200 text-slate-700 font-bold gap-2 rounded-xl" 
+                  className="w-full h-12 border-slate-200 text-slate-700 font-bold rounded-xl" 
                   disabled={isLoading}
                 >
                   Join as Customer (Storefront)

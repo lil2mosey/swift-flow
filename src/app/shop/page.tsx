@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
@@ -19,12 +19,11 @@ import {
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, useAuth } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
 import { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
 export default function ShopPage() {
@@ -136,7 +135,6 @@ export default function ShopPage() {
   const proceedWithOrder = async (uid: string, customerName: string) => {
     setIsProcessing(true);
     try {
-      // Create a composite product name for the order summary if multiple items exist
       const orderTitle = cart.length > 1 ? `${cart[0].name} & ${cart.length - 1} more` : cart[0].name;
 
       await FirebaseService.placeOrder(db, uid, customerName, {

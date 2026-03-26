@@ -1,95 +1,74 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * CORE PHILOSOPHY
-     * This ruleset implements a robust identity-based authorization model.
-     * Sellers have broad administrative access to manage platform logistics.
-     * Customers are restricted to their own private data and public products.
-     */
-
-    // --- Helper Functions ---
-
-    function isSignedIn() {
+    // --- Helper functions ---
+    function isAuthenticated() {
       return request.auth != null;
     }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    
+    // Check role from the user's profile document
+    function hasRole(role) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == role;
     }
-
-    // Direct check for seller role in the user profile document
-    // We use exists() to prevent rule errors if the profile doc isn't created yet
+    
     function isSeller() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
+      return hasRole('seller');
     }
-
+    
+    function isCustomer() {
+      return hasRole('customer');
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
     // --- User Profiles ---
     match /userProfiles/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId) || isSeller();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if false;
+      allow read: if isAuthenticated() && (isOwner(userId) || isSeller());
+      allow write: if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && request.auth.uid == userId;
     }
-
-    // --- Product Catalog ---
-    match /products/{productId} {
-      // Public catalog is readable by anyone signed in
-      allow get, list: if isSignedIn();
-      // Only sellers can manage inventory
-      allow create, update, delete: if isSeller();
-    }
-
-    // --- Order Management ---
+    
+    // --- Orders ---
     match /orders/{orderId} {
-      // Rule optimization for List operations:
-      // Customers must use a filtered query matching their UID.
-      // Sellers can use unfiltered queries.
-      allow list: if isSignedIn() && (
-        (resource.data.customerId == request.auth.uid) || 
-        (resource.data.customerId == 'manual-dm' && isSeller()) ||
+      // Sellers can read all. Customers can read only their own.
+      // Important: Path for customers must be filtered by customerId in the query.
+      allow read: if isAuthenticated() && (
+        resource.data.customerId == request.auth.uid || 
+        resource.data.customerId == 'manual-dm' && isSeller() ||
         isSeller()
       );
       
-      allow get: if isSignedIn() && (
-        resource.data.customerId == request.auth.uid || 
-        isSeller() ||
-        resource.data.customerId == 'manual-dm'
+      // Customers can create their own orders.
+      allow create: if isAuthenticated() && (
+        request.resource.data.customerId == request.auth.uid
       );
       
-      // Anyone signed in can place an order.
-      allow create: if isSignedIn();
-      
-      // Sellers manage fulfillment. Customers confirm payment approval.
-      allow update: if isSignedIn() && (
+      // Sellers can update fulfillment.
+      allow update: if isAuthenticated() && (
         isSeller() || 
         resource.data.customerId == request.auth.uid
       );
       
       allow delete: if false;
-
-      // Subcollections (OrderItems, Payments)
-      match /{allSubcollections=**} {
-        allow read, write: if isSignedIn() && (
-          isSeller() || 
-          get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid
-        );
-      }
     }
-
+    
+    // --- Products ---
+    match /products/{productId} {
+      allow read: if true; // Public catalog
+      allow write: if isAuthenticated() && isSeller();
+    }
+    
     // --- Messages ---
     match /messages/{messageId} {
-      allow get, list: if isSignedIn() && (
+      allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.senderId || 
         request.auth.uid == resource.data.receiverId ||
         isSeller()
       );
-      allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId;
-      allow update, delete: if false;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
     }
   }
 }

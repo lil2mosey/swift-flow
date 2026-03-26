@@ -68,7 +68,8 @@ export default function LoginPage() {
 
       const profileRef = doc(firestore, 'userProfiles', uid);
       
-      setDocumentNonBlocking(profileRef, {
+      // We await this specific write to ensure the profile is created before the page redirects
+      await setDocumentNonBlocking(profileRef, {
         id: uid,
         authSystemId: uid,
         email,
@@ -98,7 +99,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-slate-900">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#0f172a] text-teal-400 mb-4 shadow-lg">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-teal-400 mb-4 shadow-lg">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">SwiftFlow</h1>

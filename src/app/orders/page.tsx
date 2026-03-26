@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,16 +80,16 @@ export default function OrdersPage() {
     amount: 0
   });
 
-  // Defensive Query Pattern: Step 6 - Wait for both user and profile status.
+  // Defensive Query Pattern: Wait until profile is fully confirmed
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user || isProfileLoading || !profile) return null;
+    if (!db || !user || !profile) return null;
     
     if (profile.role === 'seller') {
       return FirebaseService.getSellerOrdersQuery(db);
     }
     
     return FirebaseService.getCustomerOrdersQuery(db, user.uid);
-  }, [db, user, profile, isProfileLoading]);
+  }, [db, user, profile]);
   
   const productsQuery = useMemoFirebase(() => {
     return FirebaseService.getProductsQuery(db);
@@ -98,6 +98,7 @@ export default function OrdersPage() {
   const { data: orders, isLoading: isOrdersLoading, error: ordersError } = useCollection<Order>(ordersQuery);
   const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
   
+  // Loading state is only active if we're waiting for auth/profile OR if a query is actually pending
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
@@ -235,7 +236,7 @@ export default function OrdersPage() {
                       />
                     </div>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         placeholder="Delivery Location" 
                         className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"

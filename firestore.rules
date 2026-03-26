@@ -1,140 +1,37 @@
-rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * CORE PHILOSOPHY
-     * This ruleset implements a robust, identity-based security model designed for an e-commerce 
-     * ecosystem involving Customers, Sellers, and Administrators. It prioritizes Authorization 
-     * Independence by leveraging denormalized identifiers (e.g., sellerId, customerId) stored 
-     * directly on documents. This ensures that security checks are performant, atomic, and do 
-     * not require expensive cross-document lookups (get() calls) for standard operations.
-     *
-     * DATA STRUCTURE
-     * - /users/{userId}: Private user profiles mapped to Firebase Auth UIDs.
-     * - /products/{productId}: Publicly readable listings owned by Sellers.
-     * - /orders/{orderId}: Transactional records shared between a specific Customer and Seller.
-     * - /conversations/{conversationId}: Communication channels shared between two participants.
-     * - /admin_roles/{adminId}: A restricted collection identifying system administrators.
-     *
-     * KEY SECURITY DECISIONS
-     * 1. Path-Based Ownership: User profiles are strictly locked to the authenticated UID matching the path.
-     * 2. Denormalized Authorization: Products, Orders, and Messages contain explicit ownership fields 
-     *    (sellerId/customerId) to allow immediate authorization without traversing the document tree.
-     * 3. Shared Access: Orders and Conversations grant access to exactly two parties (the customer and the seller) 
-     *    based on the presence of their UIDs in the document data.
-     * 4. Admin Override: A dedicated existence-based check (/admin_roles) allows for system-wide management.
-     * 5. Prototyping Flexibility: While authorization is strictly enforced, data schemas (field types/counts) 
-     *    are kept flexible to allow for rapid frontend iteration.
-     */
-
-    // --- Helper Functions ---
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admin_roles/$(request.auth.uid));
-    }
-
-    // Helper to check if a user is one of the involved parties in a shared resource (Order/Conversation)
-    function isParticipant(data) {
-      return isSignedIn() && (request.auth.uid == data.customerId || request.auth.uid == data.sellerId);
-    }
-
-    // Helper for destructive operations to ensure document exists and belongs to the user
-    function isExistingOwner(ownerId) {
-      return resource != null && isSignedIn() && request.auth.uid == ownerId;
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the User collection. Maps 1:1 with Firebase Auth UIDs.
-     * @path /users/{userId}
-     * @allow Authenticated user can (get, list, create, update) their own profile.
-     * @deny Any user attempting to read or modify a profile that does not match their UID.
-     * @principle Enforces path-based ownership and relational integrity between Auth and DB.
-     */
+    
+    // 1. Users can read/write their own profile
     match /users/{userId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) && resource != null;
-      allow delete: if isAdmin();
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    /**
-     * @description Rules for Product listings. Publicly viewable, Seller-restricted writes.
-     * @path /products/{productId}
-     * @allow Any user (even guest) can (get, list) products. Only the assigned seller can (create, update, delete).
-     * @deny Non-sellers or mismatched sellers attempting to modify product data.
-     * @principle Public read with owner-only writes via denormalized sellerId.
-     */
-    match /products/{productId} {
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid;
-      allow update, delete: if isExistingOwner(resource.data.sellerId) || isAdmin();
-    }
-
-    /**
-     * @description Rules for Orders. Shared between the buying customer and the selling party.
-     * @path /orders/{orderId}
-     * @allow Both the customer and the seller can (get, list) the order.
-     * @deny Third parties not involved in the transaction attempting to view or modify order details.
-     * @principle Shared access pattern using denormalized participant IDs.
-     */
+    // 2. Orders logic:
     match /orders/{orderId} {
-      allow get, list: if isParticipant(resource.data) || isAdmin();
-      // On create, ensure the user identifies themselves correctly as the customer
-      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
-      allow update: if isParticipant(resource.data) || isAdmin();
-      allow delete: if isAdmin();
+      // Allow any logged-in user to create an order
+      allow create: if request.auth != null;
+      
+      // Allow Customers to see ONLY their own orders.
+      // Allow Sellers to see orders assigned to them or if they have the 'seller' role.
+      // This supports both filtered queries and broad access for management.
+      allow read: if request.auth != null && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.sellerId == request.auth.uid ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller'
+      );
+      
+      // Sellers can update or delete orders
+      allow update, delete: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
     }
 
-    /**
-     * @description Rules for Conversations. Secure messaging between customers and sellers.
-     * @path /conversations/{conversationId}
-     * @allow Participants listed in customerId/sellerId fields can (get, list).
-     * @deny Non-participants attempting to access the conversation metadata.
-     * @principle Closed collaborator pattern via denormalized identity fields.
-     */
-    match /conversations/{conversationId} {
-      allow get, list: if isParticipant(resource.data) || isAdmin();
-      allow create: if isSignedIn() && (request.resource.data.customerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid);
-      allow update: if isParticipant(resource.data) || isAdmin();
-      allow delete: if isAdmin();
-
-      /**
-       * @description Rules for individual Messages within a conversation.
-       * @path /conversations/{conversationId}/messages/{messageId}
-       * @allow Conversation participants can (get, list, create) messages.
-       * @deny External users reading private messages.
-       * @principle Authorization independence: Uses denormalized IDs on the message itself to avoid parent lookups.
-       */
-      match /messages/{messageId} {
-        // resource.data here contains denormalized customerId and sellerId as per IR
-        allow get, list: if isParticipant(resource.data) || isAdmin();
-        allow create: if isSignedIn() && (request.resource.data.customerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid);
-        allow update, delete: if isExistingOwner(resource.data.senderId) || isAdmin();
-      }
-    }
-
-    /**
-     * @description Rules for identifying System Administrators.
-     * @path /admin_roles/{adminId}
-     * @allow Admins can read their own role status. Global admin can list.
-     * @deny Standard users reading or writing to the admin authorization table.
-     * @principle Database Access Control (DBAC) via existence-based checks.
-     */
-    match /admin_roles/{adminId} {
-      allow get: if isOwner(adminId) || isAdmin();
-      allow list: if isAdmin();
-      allow create, update, delete: if false; // Managed via Admin SDK or manually for maximum security.
+    // 3. Products logic:
+    match /products/{productId} {
+      // Global read access for shopping
+      allow read: if true;
+      // Only sellers can manage products
+      allow write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller';
     }
   }
 }

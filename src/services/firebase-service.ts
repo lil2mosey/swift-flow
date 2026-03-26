@@ -13,7 +13,7 @@ import {
   addDocumentNonBlocking, 
   updateDocumentNonBlocking 
 } from '@/firebase';
-import { OrderStatus, Product, UserProfile } from '@/lib/types';
+import { OrderStatus, Product, UserProfile, OrderItem } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
@@ -45,16 +45,24 @@ export const FirebaseService = {
   },
 
   /** Manually adds an order (e.g., from Instagram DM) */
-  addManualOrder: (db: Firestore, sellerId: string) => {
+  addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
+    customerName: string;
+    customerPhone: string;
+    deliveryLocation: string;
+    items: OrderItem[];
+    totalAmount: number;
+  }) => {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
       sellerId: sellerId,
       customerId: 'manual-dm',
-      customerName: 'Instagram DM Customer',
-      totalAmount: 500,
+      customerName: orderDetails.customerName,
+      customerPhone: orderDetails.customerPhone,
+      deliveryLocation: orderDetails.deliveryLocation,
+      totalAmount: orderDetails.totalAmount,
       status: 'pending',
       paymentStatus: 'unpaid',
-      items: [{ productName: 'Manual Entry Item', quantity: 1, priceAtOrder: 500 }],
+      items: orderDetails.items,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -104,6 +112,6 @@ export const FirebaseService = {
 
   /** Query for product catalog */
   getProductsQuery: (db: Firestore) => {
-    return query(collection(db, 'products'), limit(12));
+    return query(collection(db, 'products'), limit(100));
   }
 };

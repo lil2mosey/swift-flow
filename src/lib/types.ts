@@ -23,7 +23,7 @@ export interface Product {
 }
 
 export interface OrderItem {
-  productId: string;
+  productId?: string;
   productName: string;
   quantity: number;
   priceAtOrder: number;
@@ -36,6 +36,8 @@ export interface Order {
   id: string;
   customerId: string;
   customerName: string;
+  customerPhone?: string;
+  deliveryLocation?: string;
   sellerId: string;
   items: OrderItem[];
   totalAmount: number;

@@ -1,18 +1,38 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { 
   DollarSign, 
-  Clock, 
   CheckCircle2, 
   MessageSquare,
   PlusCircle,
   Activity,
   Package,
-  TrendingUp
+  TrendingUp,
+  MapPin,
+  Phone,
+  User as UserIcon
 } from 'lucide-react';
 import { 
   ResponsiveContainer,
@@ -24,7 +44,7 @@ import {
 } from 'recharts';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Order } from '@/lib/types';
+import { Order, Product } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
@@ -41,12 +61,28 @@ export default function SellerView() {
   const { user, profile } = useUser();
   const db = useFirestore();
 
+  // --- State for New Order Form ---
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    customerName: '',
+    customerPhone: '',
+    deliveryLocation: '',
+    productId: '',
+    quantity: 1,
+    amount: 0
+  });
+
   const sellerOrdersQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'seller') return null;
     return FirebaseService.getSellerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
 
+  const productsQuery = useMemoFirebase(() => {
+    return FirebaseService.getProductsQuery(db);
+  }, [db]);
+
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
+  const { data: products } = useCollection<Product>(productsQuery);
 
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
@@ -61,10 +97,59 @@ export default function SellerView() {
     ];
   }, [sellerOrders]);
 
-  const handleQuickAddOrder = () => {
+  const handleProductSelect = (productId: string) => {
+    const product = products?.find(p => p.id === productId);
+    if (product) {
+      setNewOrder(prev => ({
+        ...prev,
+        productId,
+        amount: product.price * prev.quantity
+      }));
+    }
+  };
+
+  const handleQuantityChange = (qty: string) => {
+    const q = parseInt(qty) || 0;
+    const product = products?.find(p => p.id === newOrder.productId);
+    setNewOrder(prev => ({
+      ...prev,
+      quantity: q,
+      amount: product ? product.price * q : 0
+    }));
+  };
+
+  const handleCreateOrder = () => {
     if (!user) return;
-    FirebaseService.addManualOrder(db, user.uid);
-    toast({ title: "Order Added", description: "Manual DM order created successfully." });
+    if (!newOrder.customerName || !newOrder.productId) {
+      toast({ variant: "destructive", title: "Error", description: "Please fill in all required fields." });
+      return;
+    }
+
+    const selectedProduct = products?.find(p => p.id === newOrder.productId);
+    
+    FirebaseService.addManualOrder(db, user.uid, {
+      customerName: newOrder.customerName,
+      customerPhone: newOrder.customerPhone,
+      deliveryLocation: newOrder.deliveryLocation,
+      totalAmount: newOrder.amount,
+      items: [{
+        productId: newOrder.productId,
+        productName: selectedProduct?.name || 'Manual Item',
+        quantity: newOrder.quantity,
+        priceAtOrder: selectedProduct?.price || 0
+      }]
+    });
+
+    setIsOrderDialogOpen(false);
+    setNewOrder({
+      customerName: '',
+      customerPhone: '',
+      deliveryLocation: '',
+      productId: '',
+      quantity: 1,
+      amount: 0
+    });
+    toast({ title: "Order Created", description: `Order for ${newOrder.customerName} has been recorded.` });
   };
 
   return (
@@ -76,9 +161,111 @@ export default function SellerView() {
           </h1>
           <p className="text-slate-500 font-medium italic">Synchronizing your Instagram sales flow</p>
         </div>
-        <Button onClick={handleQuickAddOrder} className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 w-full sm:w-auto shadow-lg shadow-slate-200">
-          <PlusCircle className="h-4 w-4" /> Quick Add DM Order
-        </Button>
+
+        <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 w-full sm:w-auto shadow-lg shadow-slate-200">
+              <PlusCircle className="h-4 w-4" /> Create New Order
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[450px] rounded-3xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">Create New Order</DialogTitle>
+              <DialogDescription>
+                Record manual DM or direct sales into your shared logs.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-500">Customer Name</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input 
+                    id="name" 
+                    placeholder="Enter customer name (e.g., John Doe)" 
+                    className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                    value={newOrder.customerName}
+                    onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="phone" className="text-xs font-bold uppercase text-slate-500">Phone Number</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input 
+                      id="phone" 
+                      placeholder="07XXXXXXXX" 
+                      className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                      value={newOrder.customerPhone}
+                      onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="location" className="text-xs font-bold uppercase text-slate-500">Delivery Location</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input 
+                      id="location" 
+                      placeholder="e.g. Westlands, Nairobi" 
+                      className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                      value={newOrder.deliveryLocation}
+                      onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="item" className="text-xs font-bold uppercase text-slate-500">Select Item</Label>
+                <Select onValueChange={handleProductSelect}>
+                  <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl">
+                    <SelectValue placeholder="-- Select an item from inventory --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products?.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name} (KES {p.price.toLocaleString()})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="qty" className="text-xs font-bold uppercase text-slate-500">Quantity</Label>
+                  <Input 
+                    id="qty" 
+                    type="number" 
+                    className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                    value={newOrder.quantity}
+                    onChange={(e) => handleQuantityChange(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="amount" className="text-xs font-bold uppercase text-slate-500">Amount (KES)</Label>
+                  <Input 
+                    id="amount" 
+                    type="number" 
+                    className="h-11 bg-slate-50 border-slate-100 rounded-xl font-bold text-teal-600"
+                    value={newOrder.amount}
+                    onChange={(e) => setNewOrder({...newOrder, amount: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={handleCreateOrder}
+                className="w-full h-12 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold rounded-xl shadow-lg shadow-purple-200"
+              >
+                Create Order
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

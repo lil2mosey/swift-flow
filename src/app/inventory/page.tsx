@@ -19,8 +19,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Package as PackageIcon,
-  X,
-  Database
+  X
 } from 'lucide-react';
 import { 
   Table, 
@@ -51,7 +50,6 @@ export default function InventoryPage() {
   const db = useFirestore();
   const { user } = useUser();
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [recommendations, setRecommendations] = useState<IntelligentInventoryRecommendationOutput | null>(null);
 
@@ -95,19 +93,6 @@ export default function InventoryPage() {
       console.error("AI Recommendation error:", error);
     } finally {
       setIsAiLoading(false);
-    }
-  };
-
-  const handleSeedDatabase = async () => {
-    if (!user) return;
-    setIsSeeding(true);
-    try {
-      await FirebaseService.seedDatabase(db, user.uid);
-      toast({ title: "Database Seeded", description: "15 jewelry items and 8 mock orders have been created." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Seeding Failed", description: error.message });
-    } finally {
-      setIsSeeding(false);
     }
   };
 
@@ -158,25 +143,14 @@ export default function InventoryPage() {
     <Shell userRole="seller">
       <PageHeader 
         title="Inventory Management" 
-        description="Track stock levels, SKUs, and get AI-powered reorder insights."
+        description="Track live stock levels and receive AI-powered business intelligence."
         action={
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleSeedDatabase}
-              disabled={isSeeding || isProductsLoading}
-              variant="ghost"
-              className="text-slate-400 hover:text-teal-600 gap-2 h-11"
-              title="Developer tool to seed sample jewelry data"
-            >
-              {isSeeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              Seed Data
-            </Button>
-
+          <div className="flex gap-3">
             <Button 
               onClick={getAiRecommendations} 
               disabled={isAiLoading || isProductsLoading || !products?.length}
               variant="outline" 
-              className="border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 rounded-xl"
+              className="border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 rounded-xl h-11"
             >
               {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               AI Recommendations

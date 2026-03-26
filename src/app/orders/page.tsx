@@ -113,13 +113,13 @@ export default function OrdersPage() {
             </div>
           ) : (
             <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow className="border-slate-100 hover:bg-transparent">
-                  <TableHead className="font-bold text-slate-800 pl-6">Order ID</TableHead>
-                  <TableHead className="font-bold text-slate-800">{isSeller ? "Customer" : "Items"}</TableHead>
-                  <TableHead className="font-bold text-slate-800">Payment</TableHead>
-                  <TableHead className="font-bold text-slate-800">Status</TableHead>
-                  <TableHead className="font-bold text-slate-800 text-right">Total</TableHead>
+              <TableHeader className="bg-primary">
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableHead className="font-bold text-teal-400 pl-6 uppercase text-[10px] tracking-widest">Order ID</TableHead>
+                  <TableHead className="font-bold text-slate-200 uppercase text-[10px] tracking-widest">{isSeller ? "Customer" : "Items"}</TableHead>
+                  <TableHead className="font-bold text-slate-200 uppercase text-[10px] tracking-widest">Payment</TableHead>
+                  <TableHead className="font-bold text-slate-200 uppercase text-[10px] tracking-widest">Status</TableHead>
+                  <TableHead className="font-bold text-slate-200 text-right pr-6 uppercase text-[10px] tracking-widest">Total</TableHead>
                   <TableHead className="pr-6"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -161,7 +161,7 @@ export default function OrdersPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right font-bold text-teal-accent">
+                    <TableCell className="text-right font-bold text-teal-accent pr-6">
                       KES {order.totalAmount.toLocaleString()}
                     </TableCell>
                     <TableCell className="pr-6">

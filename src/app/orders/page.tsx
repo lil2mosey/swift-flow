@@ -79,16 +79,21 @@ export default function OrdersPage() {
   });
 
   const ordersQuery = useMemoFirebase(() => {
+    // Only attempt to query once we have a definitive auth state
     if (!db || !user) return null;
     
-    // We try to use the role-based query as soon as profile is available
+    // We strictly wait for the profile to load or be confirmed null to avoid permission race conditions
+    // If the profile is loading, we return null to hold off on the query
+    if (isProfileLoading) return null;
+
+    // Use the role-based query if we have the information
     if (profile?.role === 'seller') {
       return FirebaseService.getSellerOrdersQuery(db);
     }
     
-    // Default to customer-specific history
+    // Default to customer-specific history, ensuring the query matches our security rules exactly
     return FirebaseService.getCustomerOrdersQuery(db, user.uid);
-  }, [db, user, profile?.role]);
+  }, [db, user, profile?.role, isProfileLoading]);
   
   const productsQuery = useMemoFirebase(() => {
     return FirebaseService.getProductsQuery(db);

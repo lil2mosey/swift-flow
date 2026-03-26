@@ -20,15 +20,17 @@ service cloud.firestore {
     }
 
     // Direct check for seller role in the user profile document
+    // We use exists() to prevent rule errors if the profile doc isn't created yet
     function isSeller() {
       return isSignedIn() && 
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
     }
 
     // --- User Profiles ---
     match /userProfiles/{userId} {
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId) || (isSignedIn() && isSeller());
+      allow list: if isOwner(userId) || isSeller();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isOwner(userId);
       allow delete: if false;
@@ -44,11 +46,17 @@ service cloud.firestore {
 
     // --- Order Management ---
     match /orders/{orderId} {
-      // Sellers see all. Customers see their own or manual DM orders.
-      // List rules are Query-Aware: queries must include a 'customerId' filter for customers.
-      allow get, list: if isSignedIn() && (
-        isSeller() || 
-        resource.data.customerId == request.auth.uid || 
+      // Priority 1: Individual ownership (allows Query-Aware optimization for customers)
+      // Priority 2: Seller administrative access
+      allow list: if isSignedIn() && (
+        (resource.data.customerId == request.auth.uid) || 
+        (resource.data.customerId == 'manual-dm') ||
+        isSeller()
+      );
+      
+      allow get: if isSignedIn() && (
+        isOwner(resource.data.customerId) || 
+        isSeller() ||
         resource.data.customerId == 'manual-dm'
       );
       
@@ -58,7 +66,7 @@ service cloud.firestore {
       // Sellers manage fulfillment. Customers confirm payment approval.
       allow update: if isSignedIn() && (
         isSeller() || 
-        resource.data.customerId == request.auth.uid
+        isOwner(resource.data.customerId)
       );
       
       allow delete: if false;

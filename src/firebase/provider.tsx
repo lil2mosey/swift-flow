@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -82,6 +81,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   useEffect(() => {
+    // Wait until auth initialization is complete
     if (userAuthState.isUserLoading) return;
 
     if (!userAuthState.user) {
@@ -93,15 +93,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     setIsProfileLoading(true);
     const profileRef = doc(firestore, 'userProfiles', userAuthState.user.uid);
     
+    // Using a real-time listener for the profile to handle role changes instantly
     const unsubscribe = onSnapshot(profileRef, (snapshot) => {
       if (snapshot.exists()) {
         setProfile(snapshot.data());
       } else {
+        // Document might not exist yet if the user just registered
         setProfile(null);
       }
       setIsProfileLoading(false);
     }, (error) => {
-      console.error("FirebaseProvider: Profile fetch error:", error);
+      // Permission errors here usually mean the user is signed in but doc rules are failing
+      console.warn("FirebaseProvider: Profile fetch restricted or error:", error.message);
       setIsProfileLoading(false);
     });
     

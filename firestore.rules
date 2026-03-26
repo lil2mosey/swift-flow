@@ -33,20 +33,20 @@ service cloud.firestore {
     
     // --- Orders ---
     match /orders/{orderId} {
-      // Sellers can read all. Customers can read only their own.
-      // Important: Path for customers must be filtered by customerId in the query.
+      // Sellers can read ALL platform orders for logistics.
+      // Customers can read ONLY their own.
       allow read: if isAuthenticated() && (
-        resource.data.customerId == request.auth.uid || 
-        resource.data.customerId == 'manual-dm' && isSeller() ||
-        isSeller()
+        isSeller() || 
+        (resource.data.customerId == request.auth.uid) ||
+        (resource.data.customerId == 'manual-dm' && isSeller())
       );
       
       // Customers can create their own orders.
       allow create: if isAuthenticated() && (
-        request.resource.data.customerId == request.auth.uid
+        request.resource.data.customerId == request.auth.uid || isSeller()
       );
       
-      // Sellers can update fulfillment.
+      // Sellers can update fulfillment and payments.
       allow update: if isAuthenticated() && (
         isSeller() || 
         resource.data.customerId == request.auth.uid

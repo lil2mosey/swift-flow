@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -13,6 +12,7 @@ import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
+import { BrandLoader } from '@/components/layout/BrandLoader';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -25,14 +25,13 @@ export default function LoginPage() {
 
   // Unified redirect logic
   useEffect(() => {
-    // We only redirect if we are sure about the auth state
-    if (isUserLoading) return;
+    // Step 6: Wait until both auth and profile states are confirmed
+    if (isUserLoading || isProfileLoading) return;
 
-    if (user && !isProfileLoading) {
-      if (profile?.role === 'seller') {
+    if (user && profile) {
+      if (profile.role === 'seller') {
         router.push('/dashboard');
-      } else if (profile?.role === 'customer' || !profile) {
-        // Fallback to shop for customers or newly registered users who don't have a profile doc yet
+      } else if (profile.role === 'customer') {
         router.push('/shop');
       }
     }
@@ -43,13 +42,10 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Loading remains true until redirect occurs
     } catch (error: any) {
       setIsLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Login Failed",
-        description: error.message || "Invalid credentials.",
-      });
+      toast({ variant: "destructive", title: "Login Failed", description: error.message || "Invalid credentials." });
     }
   };
 
@@ -66,7 +62,6 @@ export default function LoginPage() {
 
       const profileRef = doc(firestore, 'userProfiles', uid);
       
-      // Use fire-and-forget for the profile creation
       setDocumentNonBlocking(profileRef, {
         id: uid,
         authSystemId: uid,
@@ -81,74 +76,50 @@ export default function LoginPage() {
       
     } catch (error: any) {
       setIsLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Registration Failed",
-        description: error.message || "Could not create account.",
-      });
+      toast({ variant: "destructive", title: "Registration Failed", description: error.message || "Could not create account." });
     }
   };
 
-  // Only show the global spinner during initial auth check or when an action is explicitly processing
-  if (isUserLoading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-      </div>
-    );
+  if (isUserLoading || (user && isProfileLoading) || isLoading) {
+    return <BrandLoader />;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-slate-900">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-teal-400 mb-4 shadow-lg">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#0f172a] text-teal-400 mb-4 shadow-lg">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">SwiftFlow</h1>
+          <h1 className="text-3xl font-bold tracking-tight">SwiftFlow</h1>
           <p className="text-slate-500 mt-2 font-medium">Logistics & Order Management</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login" className="rounded-lg">Login</TabsTrigger>
+            <TabsTrigger value="register" className="rounded-lg">Register</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
-            <Card className="border-none shadow-xl rounded-2xl">
+            <Card className="border-none shadow-xl rounded-2xl bg-white">
               <form onSubmit={handleSignIn}>
                 <CardHeader>
-                  <CardTitle className="text-xl">Welcome Back</CardTitle>
+                  <CardTitle className="text-xl font-bold">Welcome Back</CardTitle>
                   <CardDescription>Enter your credentials to access the portal.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="name@example.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required 
-                      className="bg-slate-50 h-11 rounded-xl"
-                    />
+                    <Input id="email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required 
-                      className="bg-slate-50 h-11 rounded-xl"
-                    />
+                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl" disabled={isLoading}>
+                  <Button type="submit" className="w-full h-12 bg-primary text-white font-bold gap-2 rounded-xl">
                     <LogIn className="h-4 w-4" /> Sign In
                   </Button>
                 </CardFooter>
@@ -157,61 +128,30 @@ export default function LoginPage() {
           </TabsContent>
 
           <TabsContent value="register">
-            <Card className="border-none shadow-xl rounded-2xl">
+            <Card className="border-none shadow-xl rounded-2xl bg-white">
               <CardHeader>
-                <CardTitle className="text-xl">Create Account</CardTitle>
+                <CardTitle className="text-xl font-bold">Create Account</CardTitle>
                 <CardDescription>Select your primary role to get started.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input 
-                    id="fullName" 
-                    placeholder="John Doe" 
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    className="bg-slate-50 h-11 rounded-xl"
-                  />
+                  <Input id="fullName" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reg-email">Email</Label>
-                  <Input 
-                    id="reg-email" 
-                    type="email" 
-                    placeholder="name@example.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required 
-                    className="bg-slate-50 h-11 rounded-xl"
-                  />
+                  <Input id="reg-email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reg-password">Password</Label>
-                  <Input 
-                    id="reg-password" 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required 
-                    className="bg-slate-50 h-11 rounded-xl"
-                  />
+                  <Input id="reg-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3">
-                <Button 
-                  onClick={(e) => handleSignUp(e, 'seller')} 
-                  className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold rounded-xl" 
-                  disabled={isLoading}
-                >
+                <Button onClick={(e) => handleSignUp(e, 'seller')} className="w-full h-12 bg-primary text-white font-bold rounded-xl">
                   Join as Seller (Admin)
                 </Button>
-                <Button 
-                  onClick={(e) => handleSignUp(e, 'customer')} 
-                  variant="outline"
-                  className="w-full h-12 border-slate-200 text-slate-700 font-bold rounded-xl" 
-                  disabled={isLoading}
-                >
+                <Button onClick={(e) => handleSignUp(e, 'customer')} variant="outline" className="w-full h-12 border-slate-200 text-slate-700 font-bold rounded-xl">
                   Join as Customer (Storefront)
                 </Button>
               </CardFooter>

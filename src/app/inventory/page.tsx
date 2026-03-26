@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -21,8 +20,7 @@ import {
   Package as PackageIcon,
   X,
   Layers,
-  ShoppingBag,
-  Database
+  ShoppingBag
 } from 'lucide-react';
 import { 
   Table, 
@@ -45,16 +43,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { intelligentInventoryRecommendation } from '@/ai/flows/intelligent-inventory-recommendation';
 import { type IntelligentInventoryRecommendationOutput } from '@/ai/flows/intelligent-inventory-recommendation';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Product, InventoryItemType } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
   const db = useFirestore();
-  const { user } = useUser();
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [recommendations, setRecommendations] = useState<IntelligentInventoryRecommendationOutput | null>(null);
   const [activeTab, setActiveTab] = useState<InventoryItemType>('product');
@@ -105,22 +101,6 @@ export default function InventoryPage() {
       console.error("AI Recommendation error:", error);
     } finally {
       setIsAiLoading(false);
-    }
-  };
-
-  const handleSeedMaterials = async () => {
-    setIsSeeding(true);
-    try {
-      const result = await FirebaseService.seedRawMaterials(db);
-      if (result.success) {
-        toast({ title: "Database Seeded", description: result.message });
-      } else {
-        toast({ variant: "destructive", title: "Seeding Skipped", description: result.message });
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Seeding Error", description: "Failed to populate raw materials." });
-    } finally {
-      setIsSeeding(false);
     }
   };
 
@@ -176,16 +156,6 @@ export default function InventoryPage() {
         description="Track live stock levels for finished goods and raw materials."
         action={
           <div className="flex gap-3">
-            <Button 
-              onClick={handleSeedMaterials} 
-              disabled={isSeeding || isProductsLoading}
-              variant="outline" 
-              className="border-slate-200 text-slate-600 bg-white hover:bg-slate-50 font-bold gap-2 rounded-xl h-11"
-            >
-              {isSeeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              Seed Materials
-            </Button>
-
             <Button 
               onClick={getAiRecommendations} 
               disabled={isAiLoading || isProductsLoading || !allItems?.length}

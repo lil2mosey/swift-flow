@@ -23,9 +23,7 @@ export default function LoginPage() {
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
 
-  // Unified redirect logic
   useEffect(() => {
-    // Step 6: Wait until both auth and profile states are confirmed
     if (isUserLoading || isProfileLoading) return;
 
     if (user && profile) {
@@ -42,15 +40,23 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Loading remains true until redirect occurs
     } catch (error: any) {
       setIsLoading(false);
-      toast({ variant: "destructive", title: "Login Failed", description: error.message || "Invalid credentials." });
+      toast({ 
+        variant: "destructive", 
+        title: "Login Failed", 
+        description: error.message || "Invalid credentials." 
+      });
     }
   };
 
   const handleSignUp = async (e: React.FormEvent, role: 'seller' | 'customer') => {
     e.preventDefault();
+    if (!fullName || !email || !password) {
+      toast({ variant: "destructive", title: "Missing Info", description: "Please fill in all fields." });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -76,7 +82,11 @@ export default function LoginPage() {
       
     } catch (error: any) {
       setIsLoading(false);
-      toast({ variant: "destructive", title: "Registration Failed", description: error.message || "Could not create account." });
+      toast({ 
+        variant: "destructive", 
+        title: "Registration Failed", 
+        description: error.message || "Could not create account." 
+      });
     }
   };
 

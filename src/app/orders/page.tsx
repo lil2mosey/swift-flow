@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,11 +20,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
-import { Printer, Eye, AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { 
+  Printer, 
+  Eye, 
+  AlertCircle, 
+  CheckCircle2, 
+  Clock, 
+  Loader2, 
+  PlusCircle, 
+  User as UserIcon, 
+  Phone, 
+  MapPin 
+} from 'lucide-react';
+import { 
+  useCollection, 
+  useFirestore, 
+  useMemoFirebase, 
+  updateDocumentNonBlocking, 
+  useUser 
+} from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Order, OrderStatus } from '@/lib/types';
+import { Order, OrderStatus, Product } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +60,17 @@ export default function OrdersPage() {
   const db = useFirestore();
   const { user, profile, isProfileLoading } = useUser();
   
+  // --- State for New Order Form ---
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    customerName: '',
+    customerPhone: '',
+    deliveryLocation: '',
+    productId: '',
+    quantity: 1,
+    amount: 0
+  });
+
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile?.role) return null;
     
@@ -40,7 +79,13 @@ export default function OrdersPage() {
       : FirebaseService.getCustomerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
   
+  const productsQuery = useMemoFirebase(() => {
+    return FirebaseService.getProductsQuery(db);
+  }, [db]);
+
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
+  
   const isLoading = isProfileLoading || isOrdersLoading;
 
   const unpaidCount = orders?.filter(o => o.paymentStatus === 'unpaid').length || 0;
@@ -59,6 +104,61 @@ export default function OrdersPage() {
     });
   };
 
+  const handleProductSelect = (productId: string) => {
+    const product = products?.find(p => p.id === productId);
+    if (product) {
+      setNewOrder(prev => ({
+        ...prev,
+        productId,
+        amount: product.price * prev.quantity
+      }));
+    }
+  };
+
+  const handleQuantityChange = (qty: string) => {
+    const q = parseInt(qty) || 1;
+    const product = products?.find(p => p.id === newOrder.productId);
+    setNewOrder(prev => ({
+      ...prev,
+      quantity: q,
+      amount: product ? product.price * q : 0
+    }));
+  };
+
+  const handleCreateOrder = () => {
+    if (!user) return;
+    if (!newOrder.customerName || !newOrder.productId) {
+      toast({ variant: "destructive", title: "Error", description: "Please fill in all required fields." });
+      return;
+    }
+
+    const selectedProduct = products?.find(p => p.id === newOrder.productId);
+    
+    FirebaseService.addManualOrder(db, user.uid, {
+      customerName: newOrder.customerName,
+      customerPhone: newOrder.customerPhone,
+      deliveryLocation: newOrder.deliveryLocation,
+      totalAmount: newOrder.amount,
+      items: [{
+        productId: newOrder.productId,
+        productName: selectedProduct?.name || 'Manual Item',
+        quantity: newOrder.quantity,
+        priceAtOrder: selectedProduct?.price || 0
+      }]
+    });
+
+    setIsOrderDialogOpen(false);
+    setNewOrder({
+      customerName: '',
+      customerPhone: '',
+      deliveryLocation: '',
+      productId: '',
+      quantity: 1,
+      amount: 0
+    });
+    toast({ title: "Order Created", description: `Order for ${newOrder.customerName} has been recorded.` });
+  };
+
   const isSeller = profile?.role === 'seller';
 
   return (
@@ -66,6 +166,114 @@ export default function OrdersPage() {
       <PageHeader 
         title={isSeller ? "Order Management" : "My Order History"} 
         description={isSeller ? "Update fulfillment status and track payment compliance." : "Track your recent purchases and delivery status."}
+        action={isSeller && (
+          <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 shadow-lg shadow-slate-200">
+                <PlusCircle className="h-4 w-4" /> Create New Order
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[480px] rounded-3xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">New Direct Order</DialogTitle>
+                <DialogDescription>
+                  Quickly record manual DM or direct sales into your logs.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-6 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-500">Customer Info</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input 
+                      id="name" 
+                      placeholder="Full Name" 
+                      className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                      value={newOrder.customerName}
+                      onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input 
+                        id="phone" 
+                        placeholder="Phone (07...)" 
+                        className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                        value={newOrder.customerPhone}
+                        onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input 
+                        id="location" 
+                        placeholder="Delivery Location" 
+                        className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                        value={newOrder.deliveryLocation}
+                        onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-xs font-bold uppercase text-slate-500">Select Item From Inventory</Label>
+                  <Select onValueChange={handleProductSelect}>
+                    <SelectTrigger className="h-12 bg-slate-50 border-slate-100 rounded-xl">
+                      <SelectValue placeholder={isProductsLoading ? "Loading inventory..." : "-- Select an item --"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products?.map(p => (
+                        <SelectItem key={p.id} value={p.id} className="py-3">
+                          <div className="flex flex-col">
+                            <span className="font-bold">{p.name}</span>
+                            <span className="text-[10px] text-slate-400 uppercase">Stock: {p.currentStock} • KES {p.price.toLocaleString()}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {!isProductsLoading && (!products || products.length === 0) && (
+                        <div className="p-4 text-center text-xs text-slate-400 italic">No items found in inventory.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label className="text-xs font-bold uppercase text-slate-500">Quantity</Label>
+                    <Input 
+                      type="number" 
+                      min="1"
+                      className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                      value={newOrder.quantity}
+                      onChange={(e) => handleQuantityChange(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-xs font-bold uppercase text-slate-500">Total KES</Label>
+                    <div className="h-11 flex items-center px-4 bg-teal-50 border border-teal-100 rounded-xl font-bold text-teal-600">
+                      KES {newOrder.amount.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  onClick={handleCreateOrder}
+                  className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-200"
+                >
+                  Confirm & Sync Order
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       />
 
       {isSeller && (

@@ -3,36 +3,14 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { 
   DollarSign, 
   CheckCircle2, 
   MessageSquare,
-  PlusCircle,
   Activity,
   Package,
   TrendingUp,
-  MapPin,
-  Phone,
-  User as UserIcon,
   Printer,
   Smartphone,
   Loader2
@@ -47,10 +25,11 @@ import {
 } from 'recharts';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Order, Product } from '@/lib/types';
+import { Order } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const chartData = [
   { name: 'Mon', value: 30 },
@@ -64,17 +43,6 @@ export default function SellerView() {
   const { user, profile } = useUser();
   const db = useFirestore();
 
-  // --- State for New Order Form ---
-  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
-  const [newOrder, setNewOrder] = useState({
-    customerName: '',
-    customerPhone: '',
-    deliveryLocation: '',
-    productId: '',
-    quantity: 1,
-    amount: 0
-  });
-
   // --- Payment State ---
   const [isProcessingPayment, setIsProcessingPayment] = useState<string | null>(null);
 
@@ -83,12 +51,7 @@ export default function SellerView() {
     return FirebaseService.getSellerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
 
-  const productsQuery = useMemoFirebase(() => {
-    return FirebaseService.getProductsQuery(db);
-  }, [db]);
-
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
-  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
 
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
@@ -102,61 +65,6 @@ export default function SellerView() {
       { label: 'Customer Chat', value: '3', sub: 'UNREAD', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     ];
   }, [sellerOrders]);
-
-  const handleProductSelect = (productId: string) => {
-    const product = products?.find(p => p.id === productId);
-    if (product) {
-      setNewOrder(prev => ({
-        ...prev,
-        productId,
-        amount: product.price * prev.quantity
-      }));
-    }
-  };
-
-  const handleQuantityChange = (qty: string) => {
-    const q = parseInt(qty) || 1;
-    const product = products?.find(p => p.id === newOrder.productId);
-    setNewOrder(prev => ({
-      ...prev,
-      quantity: q,
-      amount: product ? product.price * q : 0
-    }));
-  };
-
-  const handleCreateOrder = () => {
-    if (!user) return;
-    if (!newOrder.customerName || !newOrder.productId) {
-      toast({ variant: "destructive", title: "Error", description: "Please fill in all required fields." });
-      return;
-    }
-
-    const selectedProduct = products?.find(p => p.id === newOrder.productId);
-    
-    FirebaseService.addManualOrder(db, user.uid, {
-      customerName: newOrder.customerName,
-      customerPhone: newOrder.customerPhone,
-      deliveryLocation: newOrder.deliveryLocation,
-      totalAmount: newOrder.amount,
-      items: [{
-        productId: newOrder.productId,
-        productName: selectedProduct?.name || 'Manual Item',
-        quantity: newOrder.quantity,
-        priceAtOrder: selectedProduct?.price || 0
-      }]
-    });
-
-    setIsOrderDialogOpen(false);
-    setNewOrder({
-      customerName: '',
-      customerPhone: '',
-      deliveryLocation: '',
-      productId: '',
-      quantity: 1,
-      amount: 0
-    });
-    toast({ title: "Order Created", description: `Order for ${newOrder.customerName} has been recorded.` });
-  };
 
   const handleTriggerPayment = (order: Order) => {
     setIsProcessingPayment(order.id);
@@ -183,113 +91,10 @@ export default function SellerView() {
           </h1>
           <p className="text-slate-500 font-medium italic">Synchronizing your Instagram sales flow</p>
         </div>
-
-        <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 w-full sm:w-auto shadow-lg shadow-slate-200">
-              <PlusCircle className="h-4 w-4" /> Create New Order
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[480px] rounded-3xl">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">New Direct Order</DialogTitle>
-              <DialogDescription>
-                Quickly record manual DM or direct sales into your logs.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-6 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-500">Customer Info</Label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input 
-                    id="name" 
-                    placeholder="Full Name" 
-                    className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
-                    value={newOrder.customerName}
-                    onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input 
-                      id="phone" 
-                      placeholder="Phone (07...)" 
-                      className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
-                      value={newOrder.customerPhone}
-                      onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input 
-                      id="location" 
-                      placeholder="Delivery Location" 
-                      className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
-                      value={newOrder.deliveryLocation}
-                      onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label className="text-xs font-bold uppercase text-slate-500">Select Item From Inventory</Label>
-                <Select onValueChange={handleProductSelect}>
-                  <SelectTrigger className="h-12 bg-slate-50 border-slate-100 rounded-xl">
-                    <SelectValue placeholder={isProductsLoading ? "Loading inventory..." : "-- Select an item --"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products?.map(p => (
-                      <SelectItem key={p.id} value={p.id} className="py-3">
-                        <div className="flex flex-col">
-                          <span className="font-bold">{p.name}</span>
-                          <span className="text-[10px] text-slate-400 uppercase">Stock: {p.currentStock} • KES {p.price.toLocaleString()}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                    {!isProductsLoading && (!products || products.length === 0) && (
-                      <div className="p-4 text-center text-xs text-slate-400 italic">No items found in inventory.</div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label className="text-xs font-bold uppercase text-slate-500">Quantity</Label>
-                  <Input 
-                    type="number" 
-                    min="1"
-                    className="h-11 bg-slate-50 border-slate-100 rounded-xl"
-                    value={newOrder.quantity}
-                    onChange={(e) => handleQuantityChange(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label className="text-xs font-bold uppercase text-slate-500">Total KES</Label>
-                  <div className="h-11 flex items-center px-4 bg-teal-50 border border-teal-100 rounded-xl font-bold text-teal-600">
-                    KES {newOrder.amount.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                onClick={handleCreateOrder}
-                className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-200"
-              >
-                Confirm & Sync Order
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        
+        <Button asChild className="bg-primary hover:bg-slate-800 text-white font-bold rounded-xl h-11 w-full sm:w-auto shadow-lg shadow-slate-200">
+          <Link href="/orders">View All Orders</Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -346,7 +151,7 @@ export default function SellerView() {
                       No active orders found.
                     </TableCell>
                   </TableRow>
-                ) : sellerOrders?.map((order) => (
+                ) : sellerOrders?.slice(0, 8).map((order) => (
                   <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors group">
                     <TableCell className="font-bold pl-6 text-xs text-slate-400">{order.id.slice(0, 5).toUpperCase()}</TableCell>
                     <TableCell>
@@ -431,8 +236,8 @@ export default function SellerView() {
               </div>
               <h3 className="text-lg font-bold">Smart Audit</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">AI ready to analyze sales velocity and suggest safety stock points.</p>
-              <Button variant="outline" className="w-full mt-6 border-slate-700 text-xs text-teal-400 hover:bg-slate-800 font-bold h-10">
-                Run AI Optimization
+              <Button asChild variant="outline" className="w-full mt-6 border-slate-700 text-xs text-teal-400 hover:bg-slate-800 font-bold h-10">
+                <Link href="/inventory">Run AI Optimization</Link>
               </Button>
             </CardContent>
           </Card>

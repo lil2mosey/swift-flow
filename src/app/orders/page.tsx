@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -439,7 +440,7 @@ export default function OrdersPage() {
                                  Receipt
                                </Button>
                              ) : (
-                               <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Customer</span>
+                               <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                              )}
                            </>
                         ) : (

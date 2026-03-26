@@ -9,6 +9,8 @@ export interface UserProfile {
   updatedAt: string;
 }
 
+export type InventoryItemType = 'product' | 'material';
+
 export interface Product {
   id: string;
   name: string;
@@ -25,6 +27,7 @@ export interface Product {
   criticalThreshold?: number;
   averageDailySales: number;
   leadTimeDays: number;
+  itemType?: InventoryItemType;
 }
 
 export interface OrderItem {

@@ -46,16 +46,17 @@ service cloud.firestore {
 
     // --- Order Management ---
     match /orders/{orderId} {
-      // Priority 1: Individual ownership (allows Query-Aware optimization for customers)
-      // Priority 2: Seller administrative access
+      // Rule optimization for List operations:
+      // Customers must use a filtered query matching their UID.
+      // Sellers can use unfiltered queries.
       allow list: if isSignedIn() && (
         (resource.data.customerId == request.auth.uid) || 
-        (resource.data.customerId == 'manual-dm') ||
+        (resource.data.customerId == 'manual-dm' && isSeller()) ||
         isSeller()
       );
       
       allow get: if isSignedIn() && (
-        isOwner(resource.data.customerId) || 
+        resource.data.customerId == request.auth.uid || 
         isSeller() ||
         resource.data.customerId == 'manual-dm'
       );
@@ -66,7 +67,7 @@ service cloud.firestore {
       // Sellers manage fulfillment. Customers confirm payment approval.
       allow update: if isSignedIn() && (
         isSeller() || 
-        isOwner(resource.data.customerId)
+        resource.data.customerId == request.auth.uid
       );
       
       allow delete: if false;

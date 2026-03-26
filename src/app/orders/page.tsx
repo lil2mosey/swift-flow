@@ -78,22 +78,17 @@ export default function OrdersPage() {
     amount: 0
   });
 
+  // Defensive Query Pattern: Wait until BOTH auth and profile are confirmed
+  // This prevents permission errors caused by listing documents before roles are ready.
   const ordersQuery = useMemoFirebase(() => {
-    // Only attempt to query once we have a definitive auth state
-    if (!db || !user) return null;
+    if (!db || !user || isProfileLoading || !profile) return null;
     
-    // We strictly wait for the profile to load or be confirmed null to avoid permission race conditions
-    // If the profile is loading, we return null to hold off on the query
-    if (isProfileLoading) return null;
-
-    // Use the role-based query if we have the information
-    if (profile?.role === 'seller') {
+    if (profile.role === 'seller') {
       return FirebaseService.getSellerOrdersQuery(db);
     }
     
-    // Default to customer-specific history, ensuring the query matches our security rules exactly
     return FirebaseService.getCustomerOrdersQuery(db, user.uid);
-  }, [db, user, profile?.role, isProfileLoading]);
+  }, [db, user, profile, isProfileLoading]);
   
   const productsQuery = useMemoFirebase(() => {
     return FirebaseService.getProductsQuery(db);
@@ -102,7 +97,8 @@ export default function OrdersPage() {
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
   const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
   
-  const isLoading = isProfileLoading || (user && isOrdersLoading);
+  // Combine all loading states for the initial render
+  const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
   const unpaidCount = orders?.filter(o => o.paymentStatus !== 'paid').length || 0;
   const pendingFulfillment = orders?.filter(o => o.status === 'pending' || o.status === 'processing').length || 0;
@@ -329,7 +325,7 @@ export default function OrdersPage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Awaiting Compliance</p>
-                <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : unpaidCount}</p>
+                <p className="text-2xl font-bold text-slate-900">{isInitialLoading ? '...' : unpaidCount}</p>
               </div>
             </CardContent>
           </Card>
@@ -340,7 +336,7 @@ export default function OrdersPage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Pending Fulfillment</p>
-                <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : pendingFulfillment}</p>
+                <p className="text-2xl font-bold text-slate-900">{isInitialLoading ? '...' : pendingFulfillment}</p>
               </div>
             </CardContent>
           </Card>
@@ -351,7 +347,7 @@ export default function OrdersPage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">Completed</p>
-                <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : completedToday}</p>
+                <p className="text-2xl font-bold text-slate-900">{isInitialLoading ? '...' : completedToday}</p>
               </div>
             </CardContent>
           </Card>
@@ -360,10 +356,10 @@ export default function OrdersPage() {
 
       <Card className="border-none shadow-sm overflow-hidden min-h-[400px]">
         <CardContent className="p-0">
-          {isLoading ? (
+          {isInitialLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
-              <p className="text-sm font-medium text-slate-400">Loading orders...</p>
+              <p className="text-sm font-medium text-slate-400">Loading your history...</p>
             </div>
           ) : !orders || orders.length === 0 ? (
             <div className="text-center py-20">

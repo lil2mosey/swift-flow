@@ -38,7 +38,7 @@ export interface OrderItem {
 }
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'completed' | 'cancelled';
-export type PaymentStatus = 'unpaid' | 'paid';
+export type PaymentStatus = 'unpaid' | 'pending_approval' | 'paid';
 
 export interface Order {
   id: string;

@@ -68,16 +68,18 @@ export default function PaymentsPage() {
     
     setIsProcessing(true);
     
-    // Simulate STK Push Confirmation from customer
+    // Trigger the payment request in Firestore
+    FirebaseService.requestPayment(db, selectedOrder.id);
+    
+    // Simulate STK Push Confirmation delay for UX
     setTimeout(async () => {
-      FirebaseService.processPayment(db, selectedOrder.id);
       setIsProcessing(false);
       setIsPaymentDialogOpen(false);
       toast({
-        title: "Payment Received",
-        description: `Customer confirmed payment for ${selectedOrder.id.slice(0,8).toUpperCase()}. Receipt ready.`,
+        title: "STK Push Sent",
+        description: `Request sent to ${phoneNumber}. Waiting for ${selectedOrder.customerName} to enter PIN.`,
       });
-    }, 2500);
+    }, 1500);
   };
 
   const handlePrintReceipt = (order: Order) => {
@@ -88,7 +90,7 @@ export default function PaymentsPage() {
   };
 
   const totalRevenue = orders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
-  const pendingClearance = orders?.filter(o => o.paymentStatus === 'unpaid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
+  const pendingClearance = orders?.filter(o => o.paymentStatus !== 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
 
   return (
     <Shell userRole="seller">
@@ -124,10 +126,10 @@ export default function PaymentsPage() {
               <div className="p-2 bg-amber-50 rounded-lg">
                 <Clock className="h-5 w-5 text-amber-500" />
               </div>
-              <span className="text-[10px] font-bold uppercase text-slate-400">Awaiting Payment</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400">Awaiting Clearance</span>
             </div>
             <div className="text-3xl font-bold text-slate-900">KES {pendingClearance.toLocaleString()}</div>
-            <p className="text-xs text-slate-500 mt-2 font-medium">Potential revenue from unpaid orders</p>
+            <p className="text-xs text-slate-500 mt-2 font-medium">Potential revenue from pending orders</p>
           </CardContent>
         </Card>
 
@@ -188,9 +190,10 @@ export default function PaymentsPage() {
                       <TableCell>
                         <span className={cn(
                           "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full inline-flex items-center gap-1",
-                          order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
+                          order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
+                          order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
                         )}>
-                          {order.paymentStatus}
+                          {order.paymentStatus.replace('_', ' ')}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -210,7 +213,7 @@ export default function PaymentsPage() {
                               <Printer className="h-3.5 w-3.5" />
                               Receipt
                             </Button>
-                          ) : (
+                          ) : order.paymentStatus === 'unpaid' ? (
                             <Button 
                               onClick={() => openPaymentDialog(order)}
                               size="sm" 
@@ -219,6 +222,8 @@ export default function PaymentsPage() {
                             >
                               Trigger Pay
                             </Button>
+                          ) : (
+                             <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                           )}
                           <span className="font-bold text-teal-accent">
                             KES {order.totalAmount.toLocaleString()}
@@ -275,7 +280,7 @@ export default function PaymentsPage() {
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Awaiting Customer...
+                  Sending Request...
                 </>
               ) : (
                 "Send STK Push Request"

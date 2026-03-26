@@ -43,9 +43,6 @@ export default function SellerView() {
   const { user, profile } = useUser();
   const db = useFirestore();
 
-  // --- Payment State ---
-  const [isProcessingPayment, setIsProcessingPayment] = useState<string | null>(null);
-
   const sellerOrdersQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'seller') return null;
     return FirebaseService.getSellerOrdersQuery(db, user.uid);
@@ -67,15 +64,11 @@ export default function SellerView() {
   }, [sellerOrders]);
 
   const handleTriggerPayment = (order: Order) => {
-    setIsProcessingPayment(order.id);
-    toast({ title: "STK Push Sent", description: `Requested KES ${order.totalAmount.toLocaleString()} from ${order.customerName}.` });
-    
-    // Simulate customer confirmation
-    setTimeout(() => {
-      FirebaseService.processPayment(db, order.id);
-      setIsProcessingPayment(null);
-      toast({ title: "Payment Verified", description: `Order ${order.id.slice(0,8).toUpperCase()} is now marked as Paid.` });
-    }, 3000);
+    FirebaseService.requestPayment(db, order.id);
+    toast({ 
+      title: "STK Push Sent", 
+      description: `Requested KES ${order.totalAmount.toLocaleString()} from ${order.customerName}. Awaiting their PIN approval.` 
+    });
   };
 
   const handlePrintReceipt = (order: Order) => {
@@ -163,9 +156,10 @@ export default function SellerView() {
                     <TableCell>
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
-                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
+                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
+                        order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
                       )}>
-                        {order.paymentStatus}
+                        {order.paymentStatus.replace('_', ' ')}
                       </span>
                     </TableCell>
                     <TableCell className="text-right pr-6">
@@ -173,19 +167,14 @@ export default function SellerView() {
                         {order.paymentStatus === 'unpaid' ? (
                           <Button 
                             onClick={() => handleTriggerPayment(order)}
-                            disabled={isProcessingPayment === order.id}
                             size="sm" 
                             variant="outline" 
                             className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-3 gap-1.5"
                           >
-                            {isProcessingPayment === order.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Smartphone className="h-3 w-3" />
-                            )}
+                            <Smartphone className="h-3 w-3" />
                             Pay
                           </Button>
-                        ) : (
+                        ) : order.paymentStatus === 'paid' ? (
                           <Button 
                             onClick={() => handlePrintReceipt(order)}
                             size="sm" 
@@ -194,6 +183,8 @@ export default function SellerView() {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
+                        ) : (
+                          <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                         )}
                         <span className="font-bold text-slate-900">KES {order.totalAmount.toLocaleString()}</span>
                       </div>

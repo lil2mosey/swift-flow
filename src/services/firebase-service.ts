@@ -53,7 +53,7 @@ export const FirebaseService = {
     totalAmount: number;
     createdAt?: string;
     status?: OrderStatus;
-    paymentStatus?: 'unpaid' | 'paid';
+    paymentStatus?: 'unpaid' | 'pending_approval' | 'paid';
   }) => {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
@@ -91,8 +91,17 @@ export const FirebaseService = {
     });
   },
 
-  /** Marks an order as paid and completed */
-  processPayment: (db: Firestore, orderId: string) => {
+  /** Seller requests payment from customer (Trigger Pay) */
+  requestPayment: (db: Firestore, orderId: string) => {
+    const orderRef = doc(db, 'orders', orderId);
+    updateDocumentNonBlocking(orderRef, { 
+      paymentStatus: 'pending_approval',
+      updatedAt: new Date().toISOString()
+    });
+  },
+
+  /** Customer confirms payment (After entering PIN) */
+  confirmPayment: (db: Firestore, orderId: string) => {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'paid', 

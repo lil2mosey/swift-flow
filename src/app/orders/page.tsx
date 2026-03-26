@@ -42,7 +42,9 @@ import {
   PlusCircle, 
   User as UserIcon, 
   Phone, 
-  MapPin 
+  MapPin,
+  Smartphone,
+  Lock
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -60,8 +62,13 @@ export default function OrdersPage() {
   const db = useFirestore();
   const { user, profile, isProfileLoading } = useUser();
   
-  // --- State for New Order Form ---
+  // --- State ---
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [pin, setPin] = useState('');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
   const [newOrder, setNewOrder] = useState({
     customerName: '',
     customerPhone: '',
@@ -88,7 +95,7 @@ export default function OrdersPage() {
   
   const isLoading = isProfileLoading || isOrdersLoading;
 
-  const unpaidCount = orders?.filter(o => o.paymentStatus === 'unpaid').length || 0;
+  const unpaidCount = orders?.filter(o => o.paymentStatus !== 'paid').length || 0;
   const pendingFulfillment = orders?.filter(o => o.status === 'pending' || o.status === 'processing').length || 0;
   const completedToday = orders?.filter(o => o.status === 'completed').length || 0;
 
@@ -102,6 +109,37 @@ export default function OrdersPage() {
       title: "Printing Receipt",
       description: `Generating document for Order #${order.id.slice(0,8).toUpperCase()}...`,
     });
+  };
+
+  const handleTriggerPayment = (order: Order) => {
+    FirebaseService.requestPayment(db, order.id);
+    toast({ 
+      title: "Payment Requested", 
+      description: `A prompt has been sent to ${order.customerName}. Status is now 'Pending Approval'.` 
+    });
+  };
+
+  const handleOpenPinDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setIsPinDialogOpen(true);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!selectedOrder) return;
+    if (pin.length < 4) {
+      toast({ variant: "destructive", title: "Invalid PIN", description: "Please enter your 4-digit M-Pesa PIN." });
+      return;
+    }
+
+    setIsProcessingPayment(true);
+    // Simulate processing
+    setTimeout(() => {
+      FirebaseService.confirmPayment(db, selectedOrder.id);
+      setIsProcessingPayment(false);
+      setIsPinDialogOpen(false);
+      setPin('');
+      toast({ title: "Payment Successful", description: `You have successfully paid KES ${selectedOrder.totalAmount.toLocaleString()}.` });
+    }, 2000);
   };
 
   const handleProductSelect = (productId: string) => {
@@ -237,9 +275,6 @@ export default function OrdersPage() {
                           </div>
                         </SelectItem>
                       ))}
-                      {!isProductsLoading && (!products || products.length === 0) && (
-                        <div className="p-4 text-center text-xs text-slate-400 italic">No items found in inventory.</div>
-                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -284,7 +319,7 @@ export default function OrdersPage() {
                 <AlertCircle className="h-6 w-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Unpaid Orders</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Awaiting Compliance</p>
                 <p className="text-2xl font-bold text-slate-900">{isLoading ? '...' : unpaidCount}</p>
               </div>
             </CardContent>
@@ -347,9 +382,10 @@ export default function OrdersPage() {
                     <TableCell>
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
-                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
+                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
+                        order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
                       )}>
-                        {order.paymentStatus}
+                        {order.paymentStatus.replace('_', ' ')}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -380,22 +416,49 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell className="pr-6">
                       <div className="flex items-center justify-end gap-2">
-                        {order.paymentStatus === 'paid' ? (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="h-8 border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 px-3 shadow-sm transition-all active:scale-95"
-                            onClick={() => handlePrintReceipt(order)}
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                            Receipt
-                          </Button>
+                        {isSeller ? (
+                           <>
+                             {order.paymentStatus === 'unpaid' ? (
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 className="h-8 border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold px-3 shadow-sm"
+                                 onClick={() => handleTriggerPayment(order)}
+                               >
+                                 <Smartphone className="h-3.5 w-3.5 mr-2" />
+                                 Trigger Pay
+                               </Button>
+                             ) : order.paymentStatus === 'paid' ? (
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 className="h-8 border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 px-3 shadow-sm"
+                                 onClick={() => handlePrintReceipt(order)}
+                               >
+                                 <Printer className="h-3.5 w-3.5" />
+                                 Receipt
+                               </Button>
+                             ) : (
+                               <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Customer</span>
+                             )}
+                           </>
                         ) : (
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <>
+                            {order.paymentStatus === 'pending_approval' ? (
+                              <Button 
+                                size="sm" 
+                                className="h-8 bg-teal-500 hover:bg-teal-600 text-white font-bold px-3 gap-2"
+                                onClick={() => handleOpenPinDialog(order)}
+                              >
+                                <Smartphone className="h-3.5 w-3.5" />
+                                Pay Now
+                              </Button>
+                            ) : order.paymentStatus === 'paid' && (
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400">
+                                <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -406,6 +469,55 @@ export default function OrdersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* PIN Approval Dialog for Customer */}
+      <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Lock className="h-5 w-5 text-teal-600" />
+              M-Pesa Authorization
+            </DialogTitle>
+            <DialogDescription>
+              Confirming payment of <strong>KES {selectedOrder?.totalAmount.toLocaleString()}</strong> to SwiftFlow.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2 text-center">
+              <Label htmlFor="pin" className="text-xs font-bold uppercase text-slate-400 tracking-widest">Enter M-Pesa PIN</Label>
+              <Input 
+                id="pin" 
+                type="password" 
+                maxLength={4}
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="****"
+                className="h-14 text-center text-2xl tracking-[1em] bg-slate-50 border-none rounded-2xl focus-visible:ring-teal-400"
+              />
+            </div>
+            <div className="bg-teal-50 p-4 rounded-xl border border-teal-100 flex justify-between items-center">
+              <span className="text-xs font-bold text-teal-900">Total KES</span>
+              <span className="text-lg font-bold text-teal-600">{selectedOrder?.totalAmount.toLocaleString()}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              className="w-full h-12 bg-[#0f172a] hover:bg-slate-800 text-white font-bold rounded-2xl transition-all"
+              onClick={handleConfirmPayment}
+              disabled={isProcessingPayment}
+            >
+              {isProcessingPayment ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                "Authorize & Confirm"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Shell>
   );
 }

@@ -32,7 +32,10 @@ import {
   TrendingUp,
   MapPin,
   Phone,
-  User as UserIcon
+  User as UserIcon,
+  Printer,
+  Smartphone,
+  Loader2
 } from 'lucide-react';
 import { 
   ResponsiveContainer,
@@ -72,6 +75,9 @@ export default function SellerView() {
     amount: 0
   });
 
+  // --- Payment State ---
+  const [isProcessingPayment, setIsProcessingPayment] = useState<string | null>(null);
+
   const sellerOrdersQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'seller') return null;
     return FirebaseService.getSellerOrdersQuery(db, user.uid);
@@ -82,7 +88,7 @@ export default function SellerView() {
   }, [db]);
 
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
-  const { data: products } = useCollection<Product>(productsQuery);
+  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
 
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
@@ -109,7 +115,7 @@ export default function SellerView() {
   };
 
   const handleQuantityChange = (qty: string) => {
-    const q = parseInt(qty) || 0;
+    const q = parseInt(qty) || 1;
     const product = products?.find(p => p.id === newOrder.productId);
     setNewOrder(prev => ({
       ...prev,
@@ -152,6 +158,22 @@ export default function SellerView() {
     toast({ title: "Order Created", description: `Order for ${newOrder.customerName} has been recorded.` });
   };
 
+  const handleTriggerPayment = (order: Order) => {
+    setIsProcessingPayment(order.id);
+    toast({ title: "STK Push Sent", description: `Requested KES ${order.totalAmount.toLocaleString()} from ${order.customerName}.` });
+    
+    // Simulate customer confirmation
+    setTimeout(() => {
+      FirebaseService.processPayment(db, order.id);
+      setIsProcessingPayment(null);
+      toast({ title: "Payment Verified", description: `Order ${order.id.slice(0,8).toUpperCase()} is now marked as Paid.` });
+    }, 3000);
+  };
+
+  const handlePrintReceipt = (order: Order) => {
+    toast({ title: "Printing...", description: `Generating receipt for ${order.customerName}.` });
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -168,21 +190,21 @@ export default function SellerView() {
               <PlusCircle className="h-4 w-4" /> Create New Order
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[450px] rounded-3xl">
+          <DialogContent className="sm:max-w-[480px] rounded-3xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold">Create New Order</DialogTitle>
+              <DialogTitle className="text-2xl font-bold">New Direct Order</DialogTitle>
               <DialogDescription>
-                Record manual DM or direct sales into your shared logs.
+                Quickly record manual DM or direct sales into your logs.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-500">Customer Name</Label>
+                <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-500">Customer Info</Label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input 
                     id="name" 
-                    placeholder="Enter customer name (e.g., John Doe)" 
+                    placeholder="Full Name" 
                     className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
                     value={newOrder.customerName}
                     onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
@@ -192,12 +214,11 @@ export default function SellerView() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="phone" className="text-xs font-bold uppercase text-slate-500">Phone Number</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input 
                       id="phone" 
-                      placeholder="07XXXXXXXX" 
+                      placeholder="Phone (07...)" 
                       className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
                       value={newOrder.customerPhone}
                       onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
@@ -205,12 +226,11 @@ export default function SellerView() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="location" className="text-xs font-bold uppercase text-slate-500">Delivery Location</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input 
                       id="location" 
-                      placeholder="e.g. Westlands, Nairobi" 
+                      placeholder="Delivery Location" 
                       className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
                       value={newOrder.deliveryLocation}
                       onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})}
@@ -220,48 +240,52 @@ export default function SellerView() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="item" className="text-xs font-bold uppercase text-slate-500">Select Item</Label>
+                <Label className="text-xs font-bold uppercase text-slate-500">Select Item From Inventory</Label>
                 <Select onValueChange={handleProductSelect}>
-                  <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl">
-                    <SelectValue placeholder="-- Select an item from inventory --" />
+                  <SelectTrigger className="h-12 bg-slate-50 border-slate-100 rounded-xl">
+                    <SelectValue placeholder={isProductsLoading ? "Loading inventory..." : "-- Select an item --"} />
                   </SelectTrigger>
                   <SelectContent>
                     {products?.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} (KES {p.price.toLocaleString()})</SelectItem>
+                      <SelectItem key={p.id} value={p.id} className="py-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold">{p.name}</span>
+                          <span className="text-[10px] text-slate-400 uppercase">Stock: {p.currentStock} • KES {p.price.toLocaleString()}</span>
+                        </div>
+                      </SelectItem>
                     ))}
+                    {!isProductsLoading && (!products || products.length === 0) && (
+                      <div className="p-4 text-center text-xs text-slate-400 italic">No items found in inventory.</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="qty" className="text-xs font-bold uppercase text-slate-500">Quantity</Label>
+                  <Label className="text-xs font-bold uppercase text-slate-500">Quantity</Label>
                   <Input 
-                    id="qty" 
                     type="number" 
+                    min="1"
                     className="h-11 bg-slate-50 border-slate-100 rounded-xl"
                     value={newOrder.quantity}
                     onChange={(e) => handleQuantityChange(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="amount" className="text-xs font-bold uppercase text-slate-500">Amount (KES)</Label>
-                  <Input 
-                    id="amount" 
-                    type="number" 
-                    className="h-11 bg-slate-50 border-slate-100 rounded-xl font-bold text-teal-600"
-                    value={newOrder.amount}
-                    onChange={(e) => setNewOrder({...newOrder, amount: parseInt(e.target.value) || 0})}
-                  />
+                  <Label className="text-xs font-bold uppercase text-slate-500">Total KES</Label>
+                  <div className="h-11 flex items-center px-4 bg-teal-50 border border-teal-100 rounded-xl font-bold text-teal-600">
+                    KES {newOrder.amount.toLocaleString()}
+                  </div>
                 </div>
               </div>
             </div>
             <DialogFooter>
               <Button 
                 onClick={handleCreateOrder}
-                className="w-full h-12 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-bold rounded-xl shadow-lg shadow-purple-200"
+                className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-200"
               >
-                Create Order
+                Confirm & Sync Order
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -289,52 +313,86 @@ export default function SellerView() {
         <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
           <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold">Recent Store Activity</CardTitle>
-              <CardDescription>Real-time order synchronization active</CardDescription>
+              <CardTitle className="text-lg font-bold">Live Order Synchronization</CardTitle>
+              <CardDescription>Real-time updates from Instagram & Storefront</CardDescription>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
-              <span className="h-2 w-2 bg-teal-500 rounded-full animate-pulse" /> LIVE SYNC
+              <span className="h-2 w-2 bg-teal-500 rounded-full animate-pulse" /> ACTIVE
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow className="border-slate-100">
-                  <TableHead className="font-bold pl-6">Order ID</TableHead>
+                  <TableHead className="font-bold pl-6">Ref</TableHead>
                   <TableHead className="font-bold">Customer</TableHead>
                   <TableHead className="font-bold">Status</TableHead>
-                  <TableHead className="font-bold text-right pr-6">Amount</TableHead>
+                  <TableHead className="font-bold text-right pr-6">Action / Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isOrdersLoading ? (
                   Array(5).fill(0).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell className="pl-6"><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="pl-6"><Skeleton className="h-4 w-12" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell className="text-right pr-6"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                      <TableCell className="text-right pr-6"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : sellerOrders?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">
-                      No recent store activity found.
+                      No active orders found.
                     </TableCell>
                   </TableRow>
                 ) : sellerOrders?.map((order) => (
-                  <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-bold pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                    <TableCell className="font-medium text-slate-600">{order.customerName}</TableCell>
+                  <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                    <TableCell className="font-bold pl-6 text-xs text-slate-400">{order.id.slice(0, 5).toUpperCase()}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-900">{order.customerName}</span>
+                        <span className="text-[10px] text-slate-400">{order.items?.[0]?.productName || 'Direct Order'}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
-                        order.status === 'pending' ? "bg-amber-100 text-amber-700" : "bg-teal-100 text-teal-700"
+                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"
                       )}>
-                        {order.status}
+                        {order.paymentStatus}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right font-bold pr-6">KES {order.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-3">
+                        {order.paymentStatus === 'unpaid' ? (
+                          <Button 
+                            onClick={() => handleTriggerPayment(order)}
+                            disabled={isProcessingPayment === order.id}
+                            size="sm" 
+                            variant="outline" 
+                            className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-3 gap-1.5"
+                          >
+                            {isProcessingPayment === order.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Smartphone className="h-3 w-3" />
+                            )}
+                            Pay
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={() => handlePrintReceipt(order)}
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 text-slate-400 hover:text-teal-600 px-2"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <span className="font-bold text-slate-900">KES {order.totalAmount.toLocaleString()}</span>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -345,7 +403,7 @@ export default function SellerView() {
         <div className="space-y-6">
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">Sales Trends</CardTitle>
+              <CardTitle className="text-base font-bold">Sales Trajectory</CardTitle>
             </CardHeader>
             <CardContent className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -371,10 +429,10 @@ export default function SellerView() {
                 <Package className="h-6 w-6 text-teal-400" />
                 <span className="text-[10px] font-bold text-slate-500 uppercase">Inventory Health</span>
               </div>
-              <h3 className="text-lg font-bold">Stock Optimized</h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">AI suggests no immediate reorders required for trending hoodies.</p>
+              <h3 className="text-lg font-bold">Smart Audit</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">AI ready to analyze sales velocity and suggest safety stock points.</p>
               <Button variant="outline" className="w-full mt-6 border-slate-700 text-xs text-teal-400 hover:bg-slate-800 font-bold h-10">
-                Run AI Audit
+                Run AI Optimization
               </Button>
             </CardContent>
           </Card>

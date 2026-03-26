@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -18,7 +19,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Package as PackageIcon,
-  X
+  X,
+  Database
 } from 'lucide-react';
 import { 
   Table, 
@@ -49,6 +51,7 @@ export default function InventoryPage() {
   const db = useFirestore();
   const { user } = useUser();
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [recommendations, setRecommendations] = useState<IntelligentInventoryRecommendationOutput | null>(null);
 
@@ -92,6 +95,19 @@ export default function InventoryPage() {
       console.error("AI Recommendation error:", error);
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  const handleSeedDatabase = async () => {
+    if (!user) return;
+    setIsSeeding(true);
+    try {
+      await FirebaseService.seedDatabase(db, user.uid);
+      toast({ title: "Database Seeded", description: "15 jewelry items and 8 mock orders have been created." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Seeding Failed", description: error.message });
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -146,6 +162,17 @@ export default function InventoryPage() {
         action={
           <div className="flex gap-2">
             <Button 
+              onClick={handleSeedDatabase}
+              disabled={isSeeding || isProductsLoading}
+              variant="ghost"
+              className="text-slate-400 hover:text-teal-600 gap-2 h-11"
+              title="Developer tool to seed sample jewelry data"
+            >
+              {isSeeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+              Seed Data
+            </Button>
+
+            <Button 
               onClick={getAiRecommendations} 
               disabled={isAiLoading || isProductsLoading || !products?.length}
               variant="outline" 
@@ -162,7 +189,6 @@ export default function InventoryPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
-                {/* Visual Header with Color */}
                 <div className="bg-teal-50/50 p-8 pb-6 border-b border-teal-100">
                   <div className="flex justify-between items-start mb-2">
                     <DialogTitle className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -370,11 +396,11 @@ export default function InventoryPage() {
                     <div className="flex items-center gap-2">
                       <span className={cn(
                         "font-bold",
-                        product.currentStock < (product.lowStockThreshold || 20) ? "text-amber-600" : "text-slate-700"
+                        product.currentStock < (product.lowStockThreshold || 5) ? "text-amber-600" : "text-slate-700"
                       )}>
                         {product.currentStock}
                       </span>
-                      {product.currentStock < (product.lowStockThreshold || 20) && (
+                      {product.currentStock < (product.lowStockThreshold || 5) && (
                         <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase">
                           Low
                         </span>

@@ -113,18 +113,16 @@ export const FirebaseService = {
 
   // --- Queries ---
 
-  /** Query for seller's orders. */
-  getSellerOrdersQuery: (db: Firestore, sellerId: string) => {
-    // We can filter by sellerId to make the query Query-Aware
+  /** Query for ALL orders (Admin/Seller view). No limitations as requested. */
+  getSellerOrdersQuery: (db: Firestore) => {
     return query(
       collection(db, 'orders'),
-      where('sellerId', '==', sellerId),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(100)
     );
   },
 
-  /** Query for customer's orders */
+  /** Query for customer's specific orders */
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
     return query(
       collection(db, 'orders'),

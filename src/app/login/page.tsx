@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -20,18 +19,18 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { auth, firestore } = useFirebase();
-  const { user, isUserLoading, profile } = useUser();
+  const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (user && !isUserLoading && profile) {
+    if (user && !isUserLoading && profile && !isProfileLoading) {
       if (profile.role === 'seller') {
         router.push('/dashboard');
       } else {
         router.push('/shop');
       }
     }
-  }, [user, isUserLoading, profile, router]);
+  }, [user, isUserLoading, profile, isProfileLoading, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +54,7 @@ export default function LoginPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
       
-      const profileRef = doc(firestore, 'users', uid);
+      const profileRef = doc(firestore, 'userProfiles', uid);
       setDocumentNonBlocking(profileRef, {
         id: uid,
         email,
@@ -74,7 +73,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-teal-600" />

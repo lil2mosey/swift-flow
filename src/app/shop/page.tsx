@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -19,13 +19,13 @@ import {
 import Image from 'next/image';
 import { toast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, useAuth } from '@/firebase';
+import { useUser, useFirestore, useAuth, setDocumentNonBlocking } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { RoleGuard } from '@/components/RoleGuard';
+import { useCustomerProducts } from '@/hooks/use-customer-data';
 
 export default function ShopPage() {
   const { user, profile } = useUser();
@@ -45,14 +45,10 @@ export default function ShopPage() {
     fullName: ''
   });
 
-  // Fetch real products from Firestore
-  const productsQuery = useMemoFirebase(() => {
-    return FirebaseService.getProductsQuery(db);
-  }, [db]);
+  // Step 3: Using optimized customer products hook
+  const { products, isLoading: isProductsLoading, error: productsError, hasMore, loadMore } = useCustomerProducts(12);
 
-  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
-
-  const addToCart = (product: Product) => {
+  const addToCart = (product: any) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -84,7 +80,6 @@ export default function ShopPage() {
       return;
     }
 
-    // If guest, open the auth prompt first
     if (!user) {
       setIsAuthDialogOpen(true);
       return;
@@ -121,9 +116,8 @@ export default function ShopPage() {
       };
 
       const profileRef = doc(db, 'userProfiles', uid);
-      setDocumentNonBlocking(profileRef, newProfile, { merge: true });
+      await setDocumentNonBlocking(profileRef, newProfile, { merge: true });
 
-      // Close auth dialog and proceed with order
       setIsAuthDialogOpen(false);
       await proceedWithOrder(uid, authData.fullName);
       
@@ -187,67 +181,101 @@ export default function ShopPage() {
             }
           />
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {isProductsLoading ? (
-              Array(6).fill(0).map((_, i) => (
-                <Card key={i} className="border-none shadow-sm rounded-2xl overflow-hidden">
-                  <Skeleton className="aspect-square w-full" />
-                  <div className="p-4 space-y-2">
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-10 w-full rounded-xl" />
-                  </div>
-                </Card>
-              ))
-            ) : !products || products.length === 0 ? (
-              <div className="col-span-full py-20 text-center">
-                <div className="flex flex-col items-center gap-4 text-slate-400">
-                  <Package className="h-12 w-12 opacity-20" />
-                  <p className="font-medium italic">Our catalog is being updated. Check back soon!</p>
-                </div>
+          {productsError ? (
+            <div className="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <div className="p-4 bg-rose-50 rounded-2xl w-fit mx-auto mb-4">
+                <Package className="h-8 w-8 text-rose-500" />
               </div>
-            ) : products.map((product) => (
-              <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl transition-all hover:shadow-md">
-                <div className="relative aspect-square w-full">
-                  <Image 
-                    src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/400`} 
-                    alt={product.name} 
-                    fill 
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-8 w-8 shadow-sm">
-                      <Heart className="h-4 w-4 text-slate-400" />
-                    </Button>
-                  </div>
-                  <div className="absolute bottom-2 left-2">
-                    <span className="text-[10px] font-bold bg-white/90 text-teal-600 px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
-                      {product.category}
-                    </span>
+              <h3 className="text-xl font-bold text-slate-900">Connection Interrupted</h3>
+              <p className="text-slate-500 mt-2 max-w-sm mx-auto italic font-medium">
+                We're having trouble reaching the catalog. Please check your connection and try again.
+              </p>
+              <Button 
+                onClick={() => window.location.reload()}
+                className="mt-8 bg-primary hover:bg-slate-800 text-white font-bold h-11 px-8 rounded-xl"
+              >
+                Retry Loading
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {isProductsLoading && products.length === 0 ? (
+                Array(6).fill(0).map((_, i) => (
+                  <Card key={i} className="border-none shadow-sm rounded-2xl overflow-hidden">
+                    <Skeleton className="aspect-square w-full" />
+                    <div className="p-4 space-y-2">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                    </div>
+                  </Card>
+                ))
+              ) : products.length === 0 && !isProductsLoading ? (
+                <div className="col-span-full py-20 text-center">
+                  <div className="flex flex-col items-center gap-4 text-slate-400">
+                    <Package className="h-12 w-12 opacity-20" />
+                    <p className="font-medium italic">Our catalog is being updated. Check back soon!</p>
                   </div>
                 </div>
-                <CardHeader className="p-4 pb-1">
-                  <CardTitle className="text-base font-bold text-slate-900 line-clamp-1 group-hover:text-teal-600 transition-colors">
-                    {product.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="text-lg font-bold text-slate-900">
-                    KES {product.price.toLocaleString()}
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
-                </CardContent>
-                <CardFooter className="p-4 pt-0">
-                  <Button 
-                    onClick={() => addToCart(product)}
-                    className="w-full bg-slate-50 hover:bg-teal-50 hover:text-teal-700 text-slate-900 text-xs font-bold gap-2 h-10 border-none shadow-none rounded-xl transition-all"
-                  >
-                    <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+              ) : (
+                <>
+                  {products.map((product) => (
+                    <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl transition-all hover:shadow-md">
+                      <div className="relative aspect-square w-full">
+                        <Image 
+                          src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/400`} 
+                          alt={product.name} 
+                          fill 
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-8 w-8 shadow-sm">
+                            <Heart className="h-4 w-4 text-slate-400" />
+                          </Button>
+                        </div>
+                        <div className="absolute bottom-2 left-2">
+                          <span className="text-[10px] font-bold bg-white/90 text-teal-600 px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
+                            {product.category}
+                          </span>
+                        </div>
+                      </div>
+                      <CardHeader className="p-4 pb-1">
+                        <CardTitle className="text-base font-bold text-slate-900 line-clamp-1 group-hover:text-teal-600 transition-colors">
+                          {product.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-lg font-bold text-slate-900">
+                          KES {product.price.toLocaleString()}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-0">
+                        <Button 
+                          onClick={() => addToCart(product)}
+                          className="w-full bg-slate-50 hover:bg-teal-50 hover:text-teal-700 text-slate-900 text-xs font-bold gap-2 h-10 border-none shadow-none rounded-xl transition-all"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                  {hasMore && (
+                    <div className="col-span-full flex justify-center mt-8">
+                      <Button 
+                        onClick={() => loadMore()} 
+                        disabled={isProductsLoading}
+                        variant="outline"
+                        className="h-12 px-10 border-slate-200 text-slate-600 font-bold rounded-2xl"
+                      >
+                        {isProductsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load More Products"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Checkout Dialog */}

@@ -29,7 +29,8 @@ service cloud.firestore {
     // Validate order data
     function isValidOrder() {
       return request.resource.data.customerId != null &&
-             request.resource.data.customerId == request.auth.uid;
+             (request.resource.data.customerId == request.auth.uid || request.resource.data.customerId == 'manual-dm') &&
+             request.resource.data.totalAmount is number;
     }
     
     // Validate product data
@@ -56,7 +57,7 @@ service cloud.firestore {
       );
       
       // Create permissions
-      allow create: if isAuthenticated() && (isCustomer() || isSeller());
+      allow create: if isAuthenticated() && (isCustomer() || isSeller()) && isValidOrder();
       
       // Update permissions
       allow update: if isAuthenticated() && (

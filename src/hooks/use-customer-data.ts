@@ -35,7 +35,7 @@ export function useCustomerProducts(pageSize = 12) {
       if (!isNextPage) setIsLoading(true);
 
       const result = await measurePerformance('Fetch Products', async () => {
-        // Step 4: Added filtering for active products and consistent ordering
+        // Only active products and consistent ordering
         let q = query(
           collection(db, 'products'),
           where('isActive', '==', true),
@@ -70,7 +70,6 @@ export function useCustomerProducts(pageSize = 12) {
       setError(null);
     } catch (err: any) {
       console.error('Error fetching products:', err);
-      // If index is missing, err.message will contain the console link
       setError(err);
     } finally {
       setIsLoading(false);
@@ -104,7 +103,7 @@ export function useCustomerOrders() {
       try {
         setIsLoading(true);
         const result = await measurePerformance('Fetch Customer Orders', async () => {
-          // Step 4: Optimized query requires composite index: customerId + createdAt
+          // Optimized query using customerId consistent with schema
           const q = query(
             collection(db, 'orders'),
             where('customerId', '==', user.uid),

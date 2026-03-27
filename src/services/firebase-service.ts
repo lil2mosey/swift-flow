@@ -119,12 +119,11 @@ export const FirebaseService = {
     );
   },
 
-  /** Personal query for customers to see their history */
+  /** Personal query for customers to see their history. Simplified to avoid index errors. */
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
     return query(
       collection(db, 'orders'),
-      where('customerId', '==', customerId),
-      orderBy('createdAt', 'desc')
+      where('customerId', '==', customerId)
     );
   },
 

@@ -26,20 +26,6 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Validate order data
-    function isValidOrder() {
-      return request.resource.data.customerId != null &&
-             (request.resource.data.customerId == request.auth.uid || request.resource.data.customerId == 'manual-dm') &&
-             request.resource.data.totalAmount is number;
-    }
-    
-    // Validate product data
-    function isValidProduct() {
-      return request.resource.data.name is string &&
-             request.resource.data.price is number &&
-             request.resource.data.price > 0;
-    }
-    
     // --- User Profiles ---
     match /userProfiles/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isSeller());
@@ -57,7 +43,7 @@ service cloud.firestore {
       );
       
       // Create permissions
-      allow create: if isAuthenticated() && (isCustomer() || isSeller()) && isValidOrder();
+      allow create: if isAuthenticated();
       
       // Update permissions
       allow update: if isAuthenticated() && (
@@ -75,15 +61,13 @@ service cloud.firestore {
       // Read permissions - public
       allow read: if true;
       
-      // Write permissions - sellers only with validation
-      allow create: if isAuthenticated() && isSeller() && isValidProduct();
-      allow update: if isAuthenticated() && isSeller() && isValidProduct();
-      allow delete: if isAuthenticated() && isSeller();
+      // Write permissions - sellers only
+      allow write: if isAuthenticated() && isSeller();
     }
     
     // --- Cart ---
     match /carts/{cartId} {
-      allow read, write: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid || isSeller());
+      allow read, write: if isAuthenticated() && (resource.data.userId == request.auth.uid || isSeller());
       allow create: if isAuthenticated();
     }
     
@@ -103,20 +87,6 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid);
       allow write: if isAuthenticated() && (isSeller() || resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid);
-    }
-    
-    // --- Reviews ---
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if isAuthenticated() && isCustomer();
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid);
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid || isSeller());
-    }
-    
-    // --- Categories ---
-    match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if isAuthenticated() && isSeller();
     }
   }
 }

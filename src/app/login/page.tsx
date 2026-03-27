@@ -30,7 +30,7 @@ export default function LoginPage() {
     if (user && profile) {
       if (profile.role === 'seller') {
         router.push('/dashboard');
-      } else if (profile.role === 'customer') {
+      } else {
         router.push('/shop');
       }
     }

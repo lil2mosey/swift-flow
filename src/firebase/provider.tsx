@@ -99,6 +99,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setProfile(snapshot.data());
       } else {
         // Document might not exist yet if the user just registered
+        // We set isProfileLoading to false so RoleGuard knows we've checked
         setProfile(null);
       }
       setIsProfileLoading(false);

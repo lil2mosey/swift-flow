@@ -33,10 +33,10 @@ service cloud.firestore {
     
     // --- Orders ---
     match /orders/{orderId} {
-      // Allow customers to list their own orders based on the query filter
+      // Sellers can list everything. Customers MUST filter by their own ID in the query.
       allow list: if isAuthenticated() && (
         isSeller() || 
-        (request.query.limit <= 500 && request.auth.uid != null)
+        resource.data.customerId == request.auth.uid
       );
 
       // Detailed access for get/update

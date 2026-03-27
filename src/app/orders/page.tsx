@@ -64,7 +64,6 @@ export default function OrdersPage() {
   const db = useFirestore();
   const { user, profile, isProfileLoading } = useUser();
   
-  // --- State ---
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -80,7 +79,6 @@ export default function OrdersPage() {
     amount: 0
   });
 
-  // Defensive Query Pattern: Wait until profile is fully confirmed
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
     

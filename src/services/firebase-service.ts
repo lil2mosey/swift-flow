@@ -13,7 +13,7 @@ import {
   addDocumentNonBlocking, 
   updateDocumentNonBlocking 
 } from '@/firebase';
-import { OrderStatus, Product, UserProfile, OrderItem } from '@/lib/types';
+import { OrderStatus, Product, OrderItem } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.

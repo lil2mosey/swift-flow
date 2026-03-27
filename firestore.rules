@@ -7,6 +7,7 @@ service cloud.firestore {
     }
     
     function getUserData() {
+      // Safely get user data if the document exists
       return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data;
     }
     
@@ -35,37 +36,34 @@ service cloud.firestore {
     
     // --- Orders ---
     match /orders/{orderId} {
-      // Read permissions
+      // Sellers can read all. Customers only their own.
       allow read: if isAuthenticated() && (
         isSeller() || 
-        resource.data.userId == request.auth.uid ||
-        resource.data.customerId == request.auth.uid
+        resource.data.customerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid
       );
       
-      // Create permissions
       allow create: if isAuthenticated();
       
-      // Update permissions
       allow update: if isAuthenticated() && (
         isSeller() || 
-        resource.data.userId == request.auth.uid || 
-        resource.data.customerId == request.auth.uid
+        resource.data.customerId == request.auth.uid || 
+        resource.data.userId == request.auth.uid
       );
       
-      // Delete permissions
       allow delete: if false;
     }
     
     // --- Products ---
     match /products/{productId} {
-      // Read permissions - public
+      // Read permissions - public for both get and list
       allow read: if true;
       
       // Write permissions - sellers only
-      allow write: if isAuthenticated() && isSeller();
+      allow create, update, delete: if isAuthenticated() && isSeller();
     }
     
-    // --- Cart ---
+    // --- Carts ---
     match /carts/{cartId} {
       allow read, write: if isAuthenticated() && (resource.data.userId == request.auth.uid || isSeller());
       allow create: if isAuthenticated();

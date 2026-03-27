@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,10 +34,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
 import { 
   Printer, 
-  Eye, 
-  AlertCircle, 
   CheckCircle2, 
-  Clock, 
   Loader2, 
   PlusCircle, 
   User as UserIcon, 

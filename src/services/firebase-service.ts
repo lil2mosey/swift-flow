@@ -30,6 +30,7 @@ export const FirebaseService = {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
       customerId: customerId,
+      userId: customerId, // Step 4 consistency
       customerName: customerName || 'Valued Customer',
       sellerId: product.sellerId || 'system-seller', 
       items: [{ 
@@ -60,6 +61,7 @@ export const FirebaseService = {
     return addDocumentNonBlocking(ordersRef, {
       sellerId: sellerId,
       customerId: 'manual-dm',
+      userId: 'manual-dm',
       customerName: orderDetails.customerName,
       customerPhone: orderDetails.customerPhone,
       deliveryLocation: orderDetails.deliveryLocation,
@@ -78,7 +80,7 @@ export const FirebaseService = {
       ...productData,
       sellerId: sellerId,
       itemType: productData.itemType || 'product',
-      isActive: true, // Step 4: Default to active
+      isActive: true, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -111,7 +113,6 @@ export const FirebaseService = {
 
   // --- Queries ---
 
-  /** Administrative query for sellers to see all orders across the platform */
   getSellerOrdersQuery: (db: Firestore) => {
     return query(
       collection(db, 'orders'),
@@ -120,7 +121,6 @@ export const FirebaseService = {
     );
   },
 
-  /** Step 4: Optimized customer history query. Requires composite index. */
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
     return query(
       collection(db, 'orders'),
@@ -130,7 +130,6 @@ export const FirebaseService = {
     );
   },
 
-  /** Step 4: Optimized products query for storefront */
   getProductsQuery: (db: Firestore) => {
     return query(
       collection(db, 'products'), 

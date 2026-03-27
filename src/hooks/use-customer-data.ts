@@ -17,7 +17,7 @@ import { measurePerformance } from '@/lib/performance';
 import { Product, Order } from '@/lib/types';
 
 /**
- * Step 4: Optimized hook for fetching products with pagination and indexing support.
+ * Optimized hook for fetching products with pagination and performance monitoring.
  */
 export function useCustomerProducts(pageSize = 12) {
   const db = useFirestore();
@@ -35,7 +35,6 @@ export function useCustomerProducts(pageSize = 12) {
       if (!isNextPage) setIsLoading(true);
 
       const result = await measurePerformance('Fetch Products', async () => {
-        // Only active products and consistent ordering
         let q = query(
           collection(db, 'products'),
           where('isActive', '==', true),
@@ -77,14 +76,16 @@ export function useCustomerProducts(pageSize = 12) {
   }, [db, user, pageSize, lastDoc]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [user, db]); 
+    if (user && db) {
+      fetchProducts();
+    }
+  }, [user, db, fetchProducts]); 
 
   return { products, isLoading, error, hasMore, loadMore: () => fetchProducts(true) };
 }
 
 /**
- * Step 4: Optimized hook for fetching customer orders history with indexing support.
+ * Optimized hook for fetching customer orders history.
  */
 export function useCustomerOrders() {
   const db = useFirestore();
@@ -103,7 +104,6 @@ export function useCustomerOrders() {
       try {
         setIsLoading(true);
         const result = await measurePerformance('Fetch Customer Orders', async () => {
-          // Optimized query using customerId consistent with schema
           const q = query(
             collection(db, 'orders'),
             where('customerId', '==', user.uid),

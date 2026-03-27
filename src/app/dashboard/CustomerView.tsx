@@ -16,7 +16,6 @@ export default function CustomerView() {
   const { profile, user } = useUser();
   const db = useFirestore();
 
-  // Step 3: Using optimized data hooks for dashboard
   const { products, isLoading: isProductsLoading } = useCustomerProducts(6);
   const { orders, isLoading: isOrdersLoading } = useCustomerOrders();
 
@@ -40,11 +39,10 @@ export default function CustomerView() {
         <p className="text-slate-500 font-medium italic">Synchronizing your shopping experience ✨</p>
       </div>
 
-      {/* Step 3: Stats Cards with proper loading states */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <Card className="border-none shadow-sm bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-400">Total Orders</CardTitle>
             <div className="p-2 bg-slate-50 rounded-lg"><Package className="h-4 w-4 text-slate-400" /></div>
           </CardHeader>
           <CardContent>
@@ -59,7 +57,7 @@ export default function CustomerView() {
 
         <Card className="border-none shadow-sm bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-teal-600">Active Shipments</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-teal-600">Active Shipments</CardTitle>
             <div className="p-2 bg-teal-50 rounded-lg"><Clock className="h-4 w-4 text-teal-500" /></div>
           </CardHeader>
           <CardContent>
@@ -74,7 +72,7 @@ export default function CustomerView() {
 
         <Card className="border-none shadow-sm bg-primary text-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-400">Available Shop</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-400">Available Shop</CardTitle>
             <div className="p-2 bg-slate-800 rounded-lg"><ShoppingBag className="h-4 w-4 text-teal-400" /></div>
           </CardHeader>
           <CardContent>
@@ -94,7 +92,18 @@ export default function CustomerView() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {isProductsLoading && (!products || products.length === 0) ? (
-          Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-96 rounded-2xl" />)
+          Array(3).fill(0).map((_, i) => (
+            <Card key={i} className="border-none shadow-sm rounded-2xl overflow-hidden">
+              <Skeleton className="h-64 w-full" />
+              <CardHeader>
+                <Skeleton className="h-4 w-1/4 mb-2" />
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-12 w-full rounded-xl" />
+              </CardContent>
+            </Card>
+          ))
         ) : products?.map((product) => (
           <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl">
             <div className="relative h-64 w-full">

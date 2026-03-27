@@ -38,14 +38,12 @@ export default function ShopPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Auth form state for guests
   const [authData, setAuthData] = useState({
     email: '',
     password: '',
     fullName: ''
   });
 
-  // Step 3: Using optimized customer products hook
   const { products, isLoading: isProductsLoading, error: productsError, hasMore, loadMore } = useCustomerProducts(12);
 
   const addToCart = (product: any) => {

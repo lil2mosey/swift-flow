@@ -28,9 +28,8 @@ service cloud.firestore {
     
     // Validate order data
     function isValidOrder() {
-      return (request.resource.data.userId != null && request.resource.data.userId == request.auth.uid) ||
-             (request.resource.data.customerId != null && request.resource.data.customerId == request.auth.uid) ||
-             isSeller();
+      return request.resource.data.customerId != null &&
+             request.resource.data.customerId == request.auth.uid;
     }
     
     // Validate product data

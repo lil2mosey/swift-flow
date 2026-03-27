@@ -7,7 +7,6 @@ service cloud.firestore {
     }
     
     function getUserData() {
-      // Safely get user data if the document exists
       return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data;
     }
     
@@ -27,6 +26,21 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // Validate order data
+    function isValidOrder() {
+      return request.resource.data.userId != null &&
+             request.resource.data.userId == request.auth.uid &&
+             request.resource.data.items is list &&
+             request.resource.data.total is number;
+    }
+    
+    // Validate product data
+    function isValidProduct() {
+      return request.resource.data.name is string &&
+             request.resource.data.price is number &&
+             request.resource.data.price > 0;
+    }
+    
     // --- User Profiles ---
     match /userProfiles/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isSeller());
@@ -36,37 +50,49 @@ service cloud.firestore {
     
     // --- Orders ---
     match /orders/{orderId} {
-      // Sellers can read all. Customers only their own.
+      // Read permissions
       allow read: if isAuthenticated() && (
         isSeller() || 
-        resource.data.customerId == request.auth.uid ||
-        resource.data.userId == request.auth.uid
+        resource.data.userId == request.auth.uid ||
+        resource.data.customerId == request.auth.uid
       );
       
-      allow create: if isAuthenticated();
+      // Create permissions
+      allow create: if isAuthenticated() && 
+        (isCustomer() || isSeller()) &&
+        isValidOrder();
       
-      allow update: if isAuthenticated() && (
-        isSeller() || 
-        resource.data.customerId == request.auth.uid || 
-        resource.data.userId == request.auth.uid
-      );
+      // Update permissions
+      allow update: if isAuthenticated() && 
+        (isSeller() || 
+         resource.data.userId == request.auth.uid || 
+         resource.data.customerId == request.auth.uid);
       
+      // Delete permissions
       allow delete: if false;
     }
     
     // --- Products ---
     match /products/{productId} {
-      // Read permissions - public for both get and list
+      // Read permissions - public
       allow read: if true;
       
-      // Write permissions - sellers only
-      allow create, update, delete: if isAuthenticated() && isSeller();
+      // Write permissions - sellers only with validation
+      allow create: if isAuthenticated() && isSeller() && isValidProduct();
+      allow update: if isAuthenticated() && isSeller() && isValidProduct();
+      allow delete: if isAuthenticated() && isSeller();
     }
     
-    // --- Carts ---
+    // --- Cart ---
     match /carts/{cartId} {
-      allow read, write: if isAuthenticated() && (resource.data.userId == request.auth.uid || isSeller());
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isSeller());
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isSeller());
+      allow delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isSeller());
     }
     
     // --- Messages ---
@@ -76,15 +102,25 @@ service cloud.firestore {
         request.auth.uid == resource.data.receiverId ||
         isSeller()
       );
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+      allow create: if isAuthenticated() && 
+        request.auth.uid == request.resource.data.senderId &&
+        request.resource.data.receiverId != null &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() <= 5000;
       allow update: if false;
       allow delete: if false;
     }
     
     // --- Notifications ---
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid);
-      allow write: if isAuthenticated() && (isSeller() || resource.data.userId == request.auth.uid || resource.data.customerId == request.auth.uid);
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+        (isSeller() || request.resource.data.userId == request.auth.uid);
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
     }
   }
 }

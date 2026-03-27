@@ -47,12 +47,14 @@ export type PaymentStatus = 'unpaid' | 'pending_approval' | 'paid';
 export interface Order {
   id: string;
   customerId: string;
+  userId: string; // Matches field in security rules
   customerName: string;
   customerPhone?: string;
   deliveryLocation?: string;
   sellerId: string;
   items: OrderItem[];
-  totalAmount: number;
+  total: number; // Matches field in security rules validation
+  totalAmount: number; // Keep for backward compatibility in UI
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   createdAt: any;
@@ -63,6 +65,7 @@ export interface Message {
   id: string;
   senderId: string;
   receiverId: string;
-  text: string;
+  content: string; // Updated to match rules
+  text?: string; // Keep for backward compatibility
   createdAt: any;
 }

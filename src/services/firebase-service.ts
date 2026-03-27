@@ -24,13 +24,12 @@ export const FirebaseService = {
   
   /**
    * Places a new order from the storefront.
-   * @param customerName Passed directly to avoid "Anonymous" during race conditions.
    */
   placeOrder: (db: Firestore, customerId: string, customerName: string, product: Product) => {
     const ordersRef = collection(db, 'orders');
-    return addDocumentNonBlocking(ordersRef, {
+    const orderData = {
       customerId: customerId,
-      userId: customerId, // Step 4 consistency
+      userId: customerId, // Must match auth.uid for rule validation
       customerName: customerName || 'Valued Customer',
       sellerId: product.sellerId || 'system-seller', 
       items: [{ 
@@ -39,12 +38,14 @@ export const FirebaseService = {
         quantity: 1, 
         priceAtOrder: product.price 
       }],
+      total: product.price, // Required by optimized rules
       totalAmount: product.price,
       status: 'pending',
       paymentStatus: 'unpaid',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    });
+    };
+    return addDocumentNonBlocking(ordersRef, orderData);
   },
 
   addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
@@ -60,11 +61,12 @@ export const FirebaseService = {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
       sellerId: sellerId,
+      userId: sellerId, // Must match auth.uid (seller) for rule validation
       customerId: 'manual-dm',
-      userId: 'manual-dm',
       customerName: orderDetails.customerName,
       customerPhone: orderDetails.customerPhone,
       deliveryLocation: orderDetails.deliveryLocation,
+      total: orderDetails.totalAmount, // Required by optimized rules
       totalAmount: orderDetails.totalAmount,
       status: orderDetails.status || 'pending',
       paymentStatus: orderDetails.paymentStatus || 'unpaid',

@@ -134,7 +134,7 @@ export default function OrdersPage() {
       setIsProcessingPayment(false);
       setIsPinDialogOpen(false);
       setPin('');
-      toast({ title: "Payment Successful", description: `You have successfully paid KES ${selectedOrder.totalAmount.toLocaleString()}.` });
+      toast({ title: "Payment Successful", description: `You have successfully paid KES ${(selectedOrder.total || selectedOrder.totalAmount).toLocaleString()}.` });
     }, 2000);
   };
 
@@ -343,7 +343,7 @@ export default function OrdersPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right font-bold text-teal-accent pr-6">
-                          KES {order.totalAmount.toLocaleString()}
+                          KES {(order.total || order.totalAmount).toLocaleString()}
                         </TableCell>
                         <TableCell className="pr-6">
                           <div className="flex items-center justify-end gap-2">
@@ -381,7 +381,7 @@ export default function OrdersPage() {
               <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
                 <Lock className="h-5 w-5 text-teal-600" /> M-Pesa Auth
               </DialogTitle>
-              <DialogDescription>Confirm payment of <strong>KES {selectedOrder?.totalAmount.toLocaleString()}</strong>.</DialogDescription>
+              <DialogDescription>Confirm payment of <strong>KES {(selectedOrder?.total || selectedOrder?.totalAmount || 0).toLocaleString()}</strong>.</DialogDescription>
             </DialogHeader>
             <div className="py-6 space-y-4">
               <Label className="text-xs font-bold uppercase text-slate-400 tracking-widest block text-center">Enter M-Pesa PIN</Label>

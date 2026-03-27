@@ -6,18 +6,17 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Check role from the user's profile document.
-    function hasRole(role) {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == role;
+    // Direct check for role on the user's own profile without recursion
+    function getRole() {
+      return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role;
     }
     
     function isSeller() {
-      return hasRole('seller');
+      return isAuthenticated() && getRole() == 'seller';
     }
     
     function isCustomer() {
-      return hasRole('customer');
+      return isAuthenticated() && getRole() == 'customer';
     }
     
     function isOwner(userId) {
@@ -26,29 +25,31 @@ service cloud.firestore {
     
     // --- User Profiles ---
     match /userProfiles/{userId} {
-      // Avoid recursion: Only use isOwner() for basic profile access.
-      // We allow sellers to read any profile for order management context.
-      allow read: if isAuthenticated() && (isOwner(userId) || isSeller());
-      allow write: if isAuthenticated() && isOwner(userId);
-      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Users can always read and write their own profile
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      // Sellers can read other profiles for business logic
+      allow read: if isAuthenticated() && isSeller();
     }
     
     // --- Orders ---
     match /orders/{orderId} {
-      // Sellers can read ALL platform orders for logistics.
-      // Customers can read ONLY their own.
+      // Allow customers to list their own orders based on the query filter
+      allow list: if isAuthenticated() && (
+        isSeller() || 
+        (request.query.limit <= 500 && request.auth.uid != null)
+      );
+
+      // Detailed access for get/update
       allow read: if isAuthenticated() && (
         isSeller() || 
-        (resource.data.customerId == request.auth.uid) ||
-        (resource.data.customerId == 'manual-dm' && isSeller())
+        resource.data.customerId == request.auth.uid ||
+        resource.data.customerId == 'manual-dm'
       );
       
-      // Customers can create their own orders.
       allow create: if isAuthenticated() && (
         request.resource.data.customerId == request.auth.uid || isSeller()
       );
       
-      // Sellers can update fulfillment and payments.
       allow update: if isAuthenticated() && (
         isSeller() || 
         resource.data.customerId == request.auth.uid

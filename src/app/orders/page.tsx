@@ -80,7 +80,7 @@ export default function OrdersPage() {
     amount: 0
   });
 
-  // Defensive Query Pattern: Wait until profile is fully confirmed to prevent permission errors
+  // Defensive Query Pattern: Wait until profile is fully confirmed
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
     
@@ -88,18 +88,17 @@ export default function OrdersPage() {
       return FirebaseService.getSellerOrdersQuery(db);
     }
     
-    // For customers, ensure we filter by their specific UID
     return FirebaseService.getCustomerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
   
   const productsQuery = useMemoFirebase(() => {
+    if (!db) return null;
     return FirebaseService.getProductsQuery(db);
   }, [db]);
 
   const { data: orders, isLoading: isOrdersLoading, error: ordersError } = useCollection<Order>(ordersQuery);
   const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
   
-  // Loading state is only active if we're waiting for auth/profile OR if a query is actually pending
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {

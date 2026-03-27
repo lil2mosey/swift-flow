@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useUser } from '@/firebase';
+import { useUser, useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { ShieldAlert, Loader2 } from 'lucide-react';
+import { ShieldAlert, Loader2, LogOut } from 'lucide-react';
 import { BrandLoader } from '@/components/layout/BrandLoader';
+import { Button } from '@/components/ui/button';
+import { signOut } from 'firebase/auth';
 
 interface RoleGuardProps {
   children: React.ReactNode;
@@ -23,19 +25,20 @@ export function RoleGuard({
   redirectTo = '/login' 
 }: RoleGuardProps) {
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
   const [isTimedOut, setIsTimedOut] = useState(false);
 
-  // Safety timeout: If we are stuck in "Finalizing" for more than 5 seconds, 
-  // we might have a sync issue or permission error that didn't throw.
   useEffect(() => {
+    // If we have a user but no profile for more than 5 seconds, it's likely a sync issue.
     if (user && !profile && !isProfileLoading) {
       const timer = setTimeout(() => {
         setIsTimedOut(true);
       }, 5000);
       return () => clearTimeout(timer);
+    } else if (profile) {
+      setIsTimedOut(false);
     }
-    setIsTimedOut(false);
   }, [user, profile, isProfileLoading]);
 
   useEffect(() => {
@@ -55,31 +58,44 @@ export function RoleGuard({
     }
   }, [user, isUserLoading, profile, isProfileLoading, allowedRoles, router, redirectTo]);
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
   if (isUserLoading || isProfileLoading) {
     return <BrandLoader />;
   }
 
-  // If auth is done but profile doesn't exist yet
+  // If auth is done but profile doesn't exist yet (or is restricted)
   if (user && !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-teal-600 mb-4" />
         <h3 className="font-bold text-slate-900 text-xl">
-          {isTimedOut ? "Profile Not Found" : "Finalizing your workspace..."}
+          {isTimedOut ? "Profile Not Synchronized" : "Finalizing your workspace..."}
         </h3>
         <p className="text-slate-500 mt-2 max-w-sm">
           {isTimedOut 
-            ? "We're having trouble locating your profile document. Try refreshing the page or logging in again." 
+            ? "We can't find your account roles. This happens if registration didn't finish or your account is restricted." 
             : "We're synchronizing your role permissions. This should only take a moment."}
         </p>
-        {isTimedOut && (
-          <button 
+        
+        <div className="flex gap-4 mt-8">
+          <Button 
+            variant="outline"
             onClick={() => window.location.reload()}
-            className="mt-6 px-6 py-2 bg-primary text-white font-bold rounded-xl"
+            className="px-6 py-2 border-slate-200 text-slate-600 font-bold rounded-xl"
           >
-            Refresh Page
-          </button>
-        )}
+            Retry Sync
+          </Button>
+          <Button 
+            onClick={handleLogout}
+            className="px-6 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl gap-2"
+          >
+            <LogOut className="h-4 w-4" /> Sign Out
+          </Button>
+        </div>
       </div>
     );
   }

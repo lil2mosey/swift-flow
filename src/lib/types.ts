@@ -29,6 +29,9 @@ export interface Product {
   leadTimeDays: number;
   itemType?: InventoryItemType;
   sellerId?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface OrderItem {

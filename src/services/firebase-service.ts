@@ -78,6 +78,7 @@ export const FirebaseService = {
       ...productData,
       sellerId: sellerId,
       itemType: productData.itemType || 'product',
+      isActive: true, // Step 4: Default to active
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -119,15 +120,23 @@ export const FirebaseService = {
     );
   },
 
-  /** Personal query for customers to see their history. Simplified to avoid index errors. */
+  /** Step 4: Optimized customer history query. Requires composite index. */
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
     return query(
       collection(db, 'orders'),
-      where('customerId', '==', customerId)
+      where('customerId', '==', customerId),
+      orderBy('createdAt', 'desc'),
+      limit(100)
     );
   },
 
+  /** Step 4: Optimized products query for storefront */
   getProductsQuery: (db: Firestore) => {
-    return query(collection(db, 'products'), limit(200));
+    return query(
+      collection(db, 'products'), 
+      where('isActive', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(200)
+    );
   }
 };

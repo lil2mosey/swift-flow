@@ -17,7 +17,7 @@ import { measurePerformance } from '@/lib/performance';
 import { Product, Order } from '@/lib/types';
 
 /**
- * Step 2: Optimized hook for fetching products with pagination.
+ * Step 4: Optimized hook for fetching products with pagination and indexing support.
  */
 export function useCustomerProducts(pageSize = 12) {
   const db = useFirestore();
@@ -35,8 +35,11 @@ export function useCustomerProducts(pageSize = 12) {
       if (!isNextPage) setIsLoading(true);
 
       const result = await measurePerformance('Fetch Products', async () => {
+        // Step 4: Added filtering for active products and consistent ordering
         let q = query(
           collection(db, 'products'),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc'),
           limit(pageSize)
         );
 
@@ -66,6 +69,8 @@ export function useCustomerProducts(pageSize = 12) {
       setHasMore(result.products.length === pageSize);
       setError(null);
     } catch (err: any) {
+      console.error('Error fetching products:', err);
+      // If index is missing, err.message will contain the console link
       setError(err);
     } finally {
       setIsLoading(false);
@@ -74,13 +79,13 @@ export function useCustomerProducts(pageSize = 12) {
 
   useEffect(() => {
     fetchProducts();
-  }, [user, db]); // Only re-run on initial auth or db change
+  }, [user, db]); 
 
   return { products, isLoading, error, hasMore, loadMore: () => fetchProducts(true) };
 }
 
 /**
- * Step 2: Optimized hook for fetching customer orders history.
+ * Step 4: Optimized hook for fetching customer orders history with indexing support.
  */
 export function useCustomerOrders() {
   const db = useFirestore();
@@ -99,7 +104,7 @@ export function useCustomerOrders() {
       try {
         setIsLoading(true);
         const result = await measurePerformance('Fetch Customer Orders', async () => {
-          // Note: userId in user prompt is customerId in our backend schema
+          // Step 4: Optimized query requires composite index: customerId + createdAt
           const q = query(
             collection(db, 'orders'),
             where('customerId', '==', user.uid),
@@ -117,7 +122,7 @@ export function useCustomerOrders() {
         setOrders(result);
         setError(null);
       } catch (err: any) {
-        // If it's an index error, it will be logged here
+        console.error('Error fetching customer orders:', err);
         setError(err);
       } finally {
         setIsLoading(false);

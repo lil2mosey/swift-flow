@@ -4,371 +4,59 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user within the system, either a customer or a seller. Authentication details are handled externally.",
+      "description": "Represents a user within the system, either a customer or a seller.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity."
-        },
-        "authSystemId": {
-          "type": "string",
-          "description": "Identifier from the external authentication system linked to this user profile."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the user.",
-          "format": "email"
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "The phone number of the user. (Optional)"
-        },
-        "address": {
-          "type": "array",
-          "description": "The user's physical address.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user within the system (e.g., 'customer', 'seller')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "authSystemId": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["customer", "seller"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "authSystemId",
-        "firstName",
-        "lastName",
-        "email",
-        "role",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "authSystemId", "email", "role"]
     },
     "Product": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a product available for sale in the inventory.",
+      "description": "Represents a product available for sale.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Product entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the product."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the product."
-        },
-        "price": {
-          "type": "number",
-          "description": "The current selling price of the product."
-        },
-        "sku": {
-          "type": "string",
-          "description": "Stock Keeping Unit, a unique identifier for the product often used for inventory management."
-        },
-        "stockQuantity": {
-          "type": "number",
-          "description": "The current quantity of the product available in stock."
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to an image of the product. (Optional)",
-          "format": "uri"
-        },
-        "sellerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile of the seller who owns this product. (Relationship: UserProfile 1:N Product)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the product was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the product was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "sku": { "type": "string" },
+        "currentStock": { "type": "number" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "sellerId": { "type": "string" },
+        "isActive": { "type": "boolean", "description": "Whether the product is currently visible in the storefront." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "description",
-        "price",
-        "sku",
-        "stockQuantity",
-        "sellerId",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "price", "sku", "currentStock", "sellerId"]
     },
     "Order": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Order",
       "type": "object",
-      "description": "Represents a customer's order for products, managed by a seller.",
+      "description": "Represents a customer's order.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Order entity."
-        },
-        "customerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile of the customer who placed the order. (Relationship: UserProfile 1:N Order)"
-        },
-        "sellerId": {
-          "type": "string",
-          "description": "Reference to the UserProfile of the seller managing this order. (Relationship: UserProfile 1:N Order)"
-        },
-        "orderDate": {
-          "type": "string",
-          "description": "The date and time when the order was placed.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current fulfillment status of the order (e.g., 'pending', 'processing', 'shipped', 'delivered', 'cancelled')."
-        },
-        "paymentStatus": {
-          "type": "string",
-          "description": "The current payment status of the order (e.g., 'unpaid', 'pending', 'paid', 'refunded')."
-        },
-        "totalAmount": {
-          "type": "number",
-          "description": "The total monetary amount of the order, including all items and taxes/shipping."
-        },
-        "shippingAddress": {
-          "type": "array",
-          "description": "The physical address where the order should be shipped.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "notes": {
-          "type": "string",
-          "description": "Optional notes or special instructions provided by the customer for the order."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the order was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the order was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "status": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "customerId",
-        "sellerId",
-        "orderDate",
-        "status",
-        "paymentStatus",
-        "totalAmount",
-        "shippingAddress",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "OrderItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "OrderItem",
-      "type": "object",
-      "description": "Represents a single product item included in an order.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the OrderItem entity."
-        },
-        "orderId": {
-          "type": "string",
-          "description": "Reference to the Order this item belongs to. (Relationship: Order 1:N OrderItem)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to the Product being ordered. (Relationship: Product 1:N OrderItem)"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product in this order item."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "The price of a single unit of the product at the time the order was placed."
-        },
-        "subtotal": {
-          "type": "number",
-          "description": "The total cost for this specific order item (quantity * unitPrice)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the order item was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the order item was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "orderId",
-        "productId",
-        "quantity",
-        "unitPrice",
-        "subtotal",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Payment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Payment",
-      "type": "object",
-      "description": "Records details of a payment transaction associated with an order.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Payment entity."
-        },
-        "orderId": {
-          "type": "string",
-          "description": "Reference to the Order for which this payment was made. (Relationship: Order 1:N Payment)"
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date and time when the payment was processed.",
-          "format": "date-time"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the payment."
-        },
-        "method": {
-          "type": "string",
-          "description": "The payment method used (e.g., 'credit_card', 'paypal', 'mpesa', 'bank_transfer')."
-        },
-        "transactionId": {
-          "type": "string",
-          "description": "The unique transaction ID provided by the payment gateway or system."
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the payment (e.g., 'successful', 'failed', 'pending', 'refunded')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the payment record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the payment record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "orderId",
-        "paymentDate",
-        "amount",
-        "method",
-        "transactionId",
-        "status",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Message": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Message",
-      "type": "object",
-      "description": "Represents a message exchanged between a customer and a seller within the application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Message entity."
-        },
-        "senderId": {
-          "type": "string",
-          "description": "Reference to the UserProfile of the sender. (Relationship: UserProfile 1:N Message)"
-        },
-        "receiverId": {
-          "type": "string",
-          "description": "Reference to the UserProfile of the receiver. (Relationship: UserProfile 1:N Message)"
-        },
-        "orderId": {
-          "type": "string",
-          "description": "Optional reference to an Order if the message is contextually linked to a specific order. (Relationship: Order 1:N Message)"
-        },
-        "content": {
-          "type": "string",
-          "description": "The text content of the message."
-        },
-        "sentAt": {
-          "type": "string",
-          "description": "Timestamp when the message was sent.",
-          "format": "date-time"
-        },
-        "readAt": {
-          "type": "string",
-          "description": "Optional timestamp when the message was read by the receiver.",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the message record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the message record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "senderId",
-        "receiverId",
-        "content",
-        "sentAt",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "customerId", "sellerId", "totalAmount"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -376,107 +64,26 @@
         "path": "/userProfiles/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual user profiles (customers and sellers). The document ID (`userId`) must match the user's authentication UID (`request.auth.uid`). Includes `role` for database-backed access control.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user, matching `request.auth.uid`."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
+          "description": "Stores individual user profiles."
         }
       },
       {
         "path": "/products/{productId}",
         "definition": {
           "entityName": "Product",
-          "schema": {
-            "$ref": "#/backend/entities/Product"
-          },
-          "description": "Global collection for all products. Customers can list and read all products. Sellers can list and manage only their own products using the `sellerId` field for authorization independence.",
-          "params": [
-            {
-              "name": "productId",
-              "description": "The unique identifier for the product."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Product" },
+          "description": "Global collection for all products."
         }
       },
       {
         "path": "/orders/{orderId}",
         "definition": {
           "entityName": "Order",
-          "schema": {
-            "$ref": "#/backend/entities/Order"
-          },
-          "description": "Represents customer orders. Includes denormalized `customerId` and `sellerId` fields for authorization independence, allowing both customers and sellers to list/access their relevant orders directly.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the order."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/orders/{orderId}/orderItems/{orderItemId}",
-        "definition": {
-          "entityName": "OrderItem",
-          "schema": {
-            "$ref": "#/backend/entities/OrderItem"
-          },
-          "description": "Subcollection of specific items within an order. Includes denormalized `customerId` and `sellerId` from the parent `Order` for authorization independence, enabling direct access checks without needing to fetch the parent order.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The unique identifier of the parent order."
-            },
-            {
-              "name": "orderItemId",
-              "description": "The unique identifier for the order item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/orders/{orderId}/payments/{paymentId}",
-        "definition": {
-          "entityName": "Payment",
-          "schema": {
-            "$ref": "#/backend/entities/Payment"
-          },
-          "description": "Subcollection for payment records related to an order. Includes denormalized `customerId` and `sellerId` from the parent `Order` for authorization independence, enabling direct access checks without needing to fetch the parent order.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The unique identifier of the parent order."
-            },
-            {
-              "name": "paymentId",
-              "description": "The unique identifier for the payment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/messages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Global collection for customer-seller messages. Each message includes `senderId` and `receiverId` fields for direct authorization, allowing efficient listing and access control by participating users.",
-          "params": [
-            {
-              "name": "messageId",
-              "description": "The unique identifier for the message."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Order" },
+          "description": "Represents customer orders."
         }
       }
-    ],
-    "reasoning": "The Firestore data structure is designed to be secure, scalable, and highly debuggable, explicitly addressing the `list` permission error by implementing robust Authorization Independence and QAPs (Queries Are Not Filters) principles. The core strategy revolves around judicious denormalization and structural segregation.\n\n**Authorization Independence:**\n1.  **Top-Level Collections (UserProfile, Product, Order, Message):** For these collections, the primary authorization identifiers (`authSystemId`/`userId`, `sellerId`, `customerId`, `senderId`, `receiverId`) are stored directly within each document. This eliminates the need for `get()` calls in security rules to resolve ownership or access rights, thus supporting atomic operations and simplifying rule logic. For example, an `Order` document directly contains `customerId` and `sellerId`, allowing rules to check `request.auth.uid == resource.data.customerId` or `request.auth.uid == resource.data.sellerId` without fetching parent documents.\n2.  **Subcollections (OrderItem, Payment):** To maintain Authorization Independence for subcollections, the crucial authorization context from their parent (`Order`'s `customerId` and `sellerId`) is denormalized directly into each `OrderItem` and `Payment` document. This means a rule evaluating access to `/orders/{orderId}/orderItems/{orderItemId}` does not need to perform a `get()` operation on `/orders/{orderId}`. Instead, it can directly check `resource.data.orderCustomerId == request.auth.uid` or `resource.data.orderSellerId == request.auth.uid`. This is critical for robust, performant security rules and supports atomic writes (e.g., creating an order and its items in a single batch).\n\n**QAPs (Queries Are Not Filters) and Debuggability:**\n1.  **Direct Authorization Fields:** By embedding `sellerId`, `customerId`, `senderId`, `receiverId` directly into the documents, `list` operations become inherently secure and efficient. The client-side application can construct queries like `db.collection('orders').where('customerId', '==', auth.uid)` or `db.collection('products').where('sellerId', '==', auth.uid)`. Security rules can then directly validate that the incoming query matches the user's identity (`request.auth.uid == resource.data.customerId`), preventing unauthorized data leaks and resolving the original permission error.\n2.  **Structural Segregation:** Data with differing access patterns is strategically placed. For instance, `products` are in a top-level collection (`/products`) for easy listing by all customers, while `sellerId` within each product document allows sellers to manage only their own. `userProfiles` are user-specific, ensuring private data. Messages are global but secured by sender/receiver IDs, enabling clear message threading.\n3.  **Clarity of Intent:** Path naming (e.g., `{userId}`, `{orderId}`) and descriptive wildcards ensure that the purpose and ownership of data at each level are immediately obvious. The explicit denormalization is documented, making rule writing and debugging straightforward. Roles are stored in `UserProfile` documents (DBAC), enabling `get` operations on a user's own profile to retrieve their role for broader system permissions.\n\nThis structure ensures that the security rules are simple, declarative, and efficient, avoiding costly and insecure `get()` calls for authorization checks, and making `list` operations secure and performant."
+    ]
   }
 }

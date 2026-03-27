@@ -6,7 +6,7 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Check role from the user's profile document
+    // Check role from the user's profile document.
     function hasRole(role) {
       return isAuthenticated() && 
              get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == role;
@@ -26,6 +26,8 @@ service cloud.firestore {
     
     // --- User Profiles ---
     match /userProfiles/{userId} {
+      // Avoid recursion: Only use isOwner() for basic profile access.
+      // We allow sellers to read any profile for order management context.
       allow read: if isAuthenticated() && (isOwner(userId) || isSeller());
       allow write: if isAuthenticated() && isOwner(userId);
       allow create: if isAuthenticated() && request.auth.uid == userId;

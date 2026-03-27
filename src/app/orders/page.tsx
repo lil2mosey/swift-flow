@@ -80,7 +80,7 @@ export default function OrdersPage() {
     amount: 0
   });
 
-  // Defensive Query Pattern: Wait until profile is fully confirmed
+  // Defensive Query Pattern: Wait until profile is fully confirmed to prevent permission errors
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
     
@@ -88,6 +88,7 @@ export default function OrdersPage() {
       return FirebaseService.getSellerOrdersQuery(db);
     }
     
+    // For customers, ensure we filter by their specific UID
     return FirebaseService.getCustomerOrdersQuery(db, user.uid);
   }, [db, user, profile]);
   

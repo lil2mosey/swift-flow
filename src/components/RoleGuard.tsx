@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { ShieldAlert, Loader2 } from 'lucide-react';
@@ -14,7 +14,7 @@ interface RoleGuardProps {
 }
 
 /**
- * Enhanced RoleGuard to handle registration race conditions.
+ * Enhanced RoleGuard to handle registration race conditions and loading states.
  */
 export function RoleGuard({ 
   children, 
@@ -24,6 +24,19 @@ export function RoleGuard({
 }: RoleGuardProps) {
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
+  const [isTimedOut, setIsTimedOut] = useState(false);
+
+  // Safety timeout: If we are stuck in "Finalizing" for more than 5 seconds, 
+  // we might have a sync issue or permission error that didn't throw.
+  useEffect(() => {
+    if (user && !profile && !isProfileLoading) {
+      const timer = setTimeout(() => {
+        setIsTimedOut(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+    setIsTimedOut(false);
+  }, [user, profile, isProfileLoading]);
 
   useEffect(() => {
     if (isUserLoading || isProfileLoading) return;
@@ -46,15 +59,27 @@ export function RoleGuard({
     return <BrandLoader />;
   }
 
-  // If auth is done but profile doesn't exist yet (usually right after registration)
+  // If auth is done but profile doesn't exist yet
   if (user && !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-teal-600 mb-4" />
-        <h3 className="font-bold text-slate-900 text-xl">Finalizing your workspace...</h3>
+        <h3 className="font-bold text-slate-900 text-xl">
+          {isTimedOut ? "Profile Not Found" : "Finalizing your workspace..."}
+        </h3>
         <p className="text-slate-500 mt-2 max-w-sm">
-          We're synchronizing your role permissions. This should only take a moment.
+          {isTimedOut 
+            ? "We're having trouble locating your profile document. Try refreshing the page or logging in again." 
+            : "We're synchronizing your role permissions. This should only take a moment."}
         </p>
+        {isTimedOut && (
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-6 px-6 py-2 bg-primary text-white font-bold rounded-xl"
+          >
+            Refresh Page
+          </button>
+        )}
       </div>
     );
   }

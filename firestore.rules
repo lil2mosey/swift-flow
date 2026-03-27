@@ -6,14 +6,20 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function getUserData() {
+      return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data;
+    }
+    
     function isSeller() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
+             exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+             getUserData().role == 'seller';
     }
     
     function isCustomer() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'customer';
+             exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+             getUserData().role == 'customer';
     }
     
     function isOwner(userId) {

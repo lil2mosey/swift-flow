@@ -26,31 +26,56 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // Validate order data - adapted for existing app schema
+    function isValidOrder() {
+      return (request.resource.data.customerId == request.auth.uid || isSeller()) &&
+             request.resource.data.items is list &&
+             (request.resource.data.totalAmount is number || request.resource.data.totalAmount is int);
+    }
+    
+    // Validate product data
+    function isValidProduct() {
+      return request.resource.data.name is string &&
+             request.resource.data.price is number &&
+             request.resource.data.price > 0;
+    }
+    
     // --- User Profiles ---
     match /userProfiles/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isSeller());
       allow write: if isAuthenticated() && isOwner(userId);
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.id == request.auth.uid;
     }
     
     // --- Orders ---
     match /orders/{orderId} {
-      // Sellers can read all. Customers only their own.
       allow read: if isAuthenticated() && (
         isSeller() || 
-        resource.data.customerId == request.auth.uid ||
-        resource.data.customerId == 'manual-dm'
+        resource.data.customerId == request.auth.uid
       );
       
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isSeller() || resource.data.customerId == request.auth.uid);
+      allow create: if isAuthenticated() && (isCustomer() || isSeller()) && isValidOrder();
+      
+      allow update: if isAuthenticated() && (
+        isSeller() || 
+        resource.data.customerId == request.auth.uid
+      );
+      
       allow delete: if false;
     }
     
     // --- Products ---
     match /products/{productId} {
-      allow read: if true; // Truly public catalog for list and get
-      allow write: if isAuthenticated() && isSeller();
+      allow read: if true;
+      allow create: if isAuthenticated() && isSeller() && isValidProduct();
+      allow update: if isAuthenticated() && isSeller() && isValidProduct();
+      allow delete: if isAuthenticated() && isSeller();
+    }
+    
+    // --- Carts ---
+    match /carts/{cartId} {
+      allow read: if isAuthenticated() && (resource.data.customerId == request.auth.uid || isSeller());
+      allow write: if isAuthenticated() && (resource.data.customerId == request.auth.uid || isSeller());
     }
     
     // --- Messages ---
@@ -61,6 +86,25 @@ service cloud.firestore {
         isSeller()
       );
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+    }
+
+    // --- Notifications ---
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.customerId == request.auth.uid;
+      allow write: if isAuthenticated() && (isSeller() || resource.data.customerId == request.auth.uid);
+    }
+    
+    // --- Reviews ---
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isCustomer();
+      allow update, delete: if isAuthenticated() && (resource.data.customerId == request.auth.uid || isSeller());
+    }
+    
+    // --- Categories ---
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isSeller();
     }
   }
 }

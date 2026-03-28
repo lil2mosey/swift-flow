@@ -67,7 +67,8 @@ import { PermissionAwareCollection } from '@/components/PermissionAwareCollectio
  */
 const ReceiptPrintView = ({ order }: { order: Order }) => {
   const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
-  const deliveryFee = (order.totalAmount || order.total || 0) - itemsSubtotal;
+  const orderTotal = order.totalAmount || order.total || 0;
+  const deliveryFee = orderTotal - itemsSubtotal;
   const formattedDate = order.createdAt 
     ? (typeof order.createdAt === 'string' ? new Date(order.createdAt) : new Date(order.createdAt.seconds * 1000)).toLocaleString()
     : new Date().toLocaleString();
@@ -131,7 +132,7 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
         </div>
         <div className="flex justify-between items-center pt-2 border-t border-slate-200">
           <span className="text-sm font-bold uppercase tracking-widest text-teal-600">Total Paid</span>
-          <span className="text-xl font-bold text-slate-900">KES {(order.totalAmount || order.total || 0).toLocaleString()}</span>
+          <span className="text-xl font-bold text-slate-900">KES {orderTotal.toLocaleString()}</span>
         </div>
       </div>
 
@@ -485,7 +486,7 @@ export default function OrdersPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right font-bold text-teal-accent pr-6">
-                          KES {(order.total || order.totalAmount).toLocaleString()}
+                          KES {(order.totalAmount || order.total || 0).toLocaleString()}
                         </TableCell>
                         <TableCell className="pr-6">
                           <div className="flex items-center justify-end gap-2">
@@ -528,7 +529,7 @@ export default function OrdersPage() {
               <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
                 <Lock className="h-5 w-5 text-teal-600" /> M-Pesa Security
               </DialogTitle>
-              <DialogDescription>Authorize payment of <strong>KES {(selectedOrder?.total || selectedOrder?.totalAmount || 0).toLocaleString()}</strong>.</DialogDescription>
+              <DialogDescription>Authorize payment of <strong>KES {(selectedOrder?.totalAmount || selectedOrder?.total || 0).toLocaleString()}</strong>.</DialogDescription>
             </DialogHeader>
             <div className="py-6 space-y-4 text-center">
               <Label className="text-xs font-bold uppercase text-slate-400 tracking-widest block">Enter PIN to Complete Sync</Label>

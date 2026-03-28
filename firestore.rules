@@ -8,25 +8,57 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Explicit rules for core application collections
-    // During development, we allow authenticated users to interact with all collections
-    // to ensure synchronized features (orders, messages) work for both roles.
-    
+    // Helper to check if the user is the owner of a document (by UID)
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper to check if the user is a seller using their profile
+    // We ensure userProfiles are readable by the user for this get() to succeed
+    function isSeller() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
+    }
+
     match /userProfiles/{userId} {
-      allow read, write: if isAuthenticated();
+      // Users can always read and write their own profile
+      allow read, write: if isOwner(userId);
+      // Allow other authenticated users to read profiles (needed for display names in shared docs)
+      allow read: if isAuthenticated();
     }
 
     match /products/{productId} {
       allow read: if true; // Public catalog access
-      allow write: if isAuthenticated();
+      allow write: if isSeller();
     }
 
     match /orders/{orderId} {
-      allow read, write: if isAuthenticated();
+      // Customers can read their own orders, sellers can read all orders
+      allow read: if isAuthenticated() && (
+        resource.data.customerId == request.auth.uid || 
+        resource.data.sellerId == request.auth.uid ||
+        isSeller()
+      );
+      // Both roles can create (customers place orders, sellers create manual ones)
+      allow create: if isAuthenticated();
+      // Allow update for fulfillment or payment status changes
+      allow update: if isAuthenticated() && (
+        resource.data.sellerId == request.auth.uid || 
+        resource.data.customerId == request.auth.uid ||
+        isSeller()
+      );
+      // Allow delete for sellers during development cleanup
+      allow delete: if isSeller();
     }
 
     match /messages/{messageId} {
-      allow read, write: if isAuthenticated();
+      // Participants (sender/receiver) can read their chat
+      allow read: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isSeller()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
     }
 
     // Global wildcard for authenticated users during development

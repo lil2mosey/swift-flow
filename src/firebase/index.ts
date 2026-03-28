@@ -11,30 +11,35 @@ let auth: Auth;
 
 /**
  * Robust Firebase initialization for Next.js.
- * Ensures Firestore settings like long polling are applied exactly once.
+ * Uses a singleton pattern to prevent "INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
+ * This ensures settings like long polling are applied exactly once.
  */
 export function initializeFirebase() {
   if (typeof window !== 'undefined') {
     const apps = getApps();
+    
+    // 1. Initialize or retrieve the App
     if (apps.length > 0) {
       app = apps[0];
     } else {
       app = initializeApp(firebaseConfig);
     }
 
+    // 2. Initialize or retrieve Auth
     if (!auth) {
       auth = getAuth(app);
     }
 
+    // 3. Initialize or retrieve Firestore
     if (!db) {
       // CRITICAL: initializeFirestore with experimentalForceLongPolling MUST be called
-      // only once per app. This resolves "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
+      // only once per app session to avoid internal assertion failures.
       try {
         db = initializeFirestore(app, {
           experimentalForceLongPolling: true,
         });
       } catch (e) {
-        // If already initialized, use getFirestore to retrieve the existing instance.
+        // Fallback to getFirestore if already initialized or custom init fails
         db = getFirestore(app);
       }
     }

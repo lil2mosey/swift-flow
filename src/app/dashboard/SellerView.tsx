@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Printer,
   Smartphone,
-  Loader2
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
 import { 
   ResponsiveContainer,
@@ -25,7 +26,7 @@ import {
 } from 'recharts';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Order } from '@/lib/types';
+import { Order, Product } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
@@ -48,7 +49,18 @@ export default function SellerView() {
     return FirebaseService.getSellerOrdersQuery(db);
   }, [db, user, profile]);
 
+  const productsQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'seller') return null;
+    return FirebaseService.getProductsQuery(db);
+  }, [db, user, profile]);
+
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
+  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
+
+  const lowStockItems = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
+  }, [products]);
 
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
@@ -108,93 +120,169 @@ export default function SellerView() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-sm overflow-hidden">
-          <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-bold">Live Order Synchronization</CardTitle>
-              <CardDescription>Real-time updates from Instagram & Storefront</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
-              <span className="h-2 w-2 bg-teal-500 rounded-full animate-pulse" /> ACTIVE
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow className="border-slate-100">
-                  <TableHead className="font-bold pl-6">Ref</TableHead>
-                  <TableHead className="font-bold">Customer</TableHead>
-                  <TableHead className="font-bold">Status</TableHead>
-                  <TableHead className="font-bold text-right pr-6">Action / Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isOrdersLoading ? (
-                  Array(5).fill(0).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="pl-6"><Skeleton className="h-4 w-12" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell className="text-right pr-6"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+        <div className="lg:col-span-2 space-y-8">
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold">Live Order Synchronization</CardTitle>
+                <CardDescription>Real-time updates from Instagram & Storefront</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
+                <span className="h-2 w-2 bg-teal-500 rounded-full animate-pulse" /> ACTIVE
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow className="border-slate-100">
+                    <TableHead className="font-bold pl-6">Ref</TableHead>
+                    <TableHead className="font-bold">Customer</TableHead>
+                    <TableHead className="font-bold">Status</TableHead>
+                    <TableHead className="font-bold text-right pr-6">Action / Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isOrdersLoading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="pl-6"><Skeleton className="h-4 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell className="text-right pr-6"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : sellerOrders?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">
+                        No active orders found.
+                      </TableCell>
                     </TableRow>
-                  ))
-                ) : sellerOrders?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">
-                      No active orders found.
-                    </TableCell>
+                  ) : sellerOrders?.slice(0, 8).map((order) => (
+                    <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors group">
+                      <TableCell className="font-bold pl-6 text-xs text-slate-400">{order.id.slice(0, 5).toUpperCase()}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-slate-900">{order.customerName}</span>
+                          <span className="text-[10px] text-slate-400">{order.items?.[0]?.productName || 'Direct Order'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
+                          order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
+                          order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                        )}>
+                          {order.paymentStatus.replace('_', ' ')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <div className="flex items-center justify-end gap-3">
+                          {order.paymentStatus === 'unpaid' ? (
+                            <Button 
+                              onClick={() => handleTriggerPayment(order)}
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-3 gap-1.5"
+                            >
+                              <Smartphone className="h-3.5 w-3.5" />
+                              Pay
+                            </Button>
+                          ) : order.paymentStatus === 'paid' ? (
+                            <Button 
+                              onClick={() => handlePrintReceipt(order)}
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-8 text-slate-400 hover:text-teal-600 px-2"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
+                          )}
+                          <span className="font-bold text-slate-900">KES {order.totalAmount.toLocaleString()}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Low Stock Panel */}
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader className="bg-rose-50/50 border-b border-rose-100 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-rose-100 rounded-xl">
+                  <AlertTriangle className="h-5 w-5 text-rose-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-bold text-slate-900">Critical Inventory Alerts</CardTitle>
+                  <CardDescription className="text-rose-600 font-medium">Items requiring immediate replenishment</CardDescription>
+                </div>
+              </div>
+              <Button asChild variant="ghost" className="text-xs font-bold text-slate-400 hover:text-rose-600 gap-1">
+                <Link href="/inventory">Manage Inventory <ChevronRight className="h-3 w-3" /></Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-slate-50/30">
+                  <TableRow className="border-slate-100">
+                    <TableHead className="pl-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Item Name</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Type</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Current Stock</TableHead>
+                    <TableHead className="text-right pr-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Status</TableHead>
                   </TableRow>
-                ) : sellerOrders?.slice(0, 8).map((order) => (
-                  <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors group">
-                    <TableCell className="font-bold pl-6 text-xs text-slate-400">{order.id.slice(0, 5).toUpperCase()}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-slate-900">{order.customerName}</span>
-                        <span className="text-[10px] text-slate-400">{order.items?.[0]?.productName || 'Direct Order'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
-                        order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
-                        order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                      )}>
-                        {order.paymentStatus.replace('_', ' ')}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-3">
-                        {order.paymentStatus === 'unpaid' ? (
-                          <Button 
-                            onClick={() => handleTriggerPayment(order)}
-                            size="sm" 
-                            variant="outline" 
-                            className="h-8 border-teal-200 text-teal-700 hover:bg-teal-50 font-bold px-3 gap-1.5"
-                          >
-                            <Smartphone className="h-3 w-3" />
-                            Pay
-                          </Button>
-                        ) : order.paymentStatus === 'paid' ? (
-                          <Button 
-                            onClick={() => handlePrintReceipt(order)}
-                            size="sm" 
-                            variant="ghost" 
-                            className="h-8 text-slate-400 hover:text-teal-600 px-2"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
-                        )}
-                        <span className="font-bold text-slate-900">KES {order.totalAmount.toLocaleString()}</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {isProductsLoading ? (
+                    Array(3).fill(0).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="pl-6"><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                        <TableCell className="text-right pr-6"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : lowStockItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">
+                        All inventory levels are healthy.
+                      </TableCell>
+                    </TableRow>
+                  ) : lowStockItems.slice(0, 5).map((item) => (
+                    <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/30">
+                      <TableCell className="pl-6">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{item.name}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{item.category}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          {item.itemType === 'material' ? 'Raw Material' : 'Finished Good'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-rose-600">{item.currentStock}</span>
+                        <span className="text-[10px] text-slate-400 ml-1">/ {item.lowStockThreshold || 10} min</span>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <span className={cn(
+                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
+                          item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-amber-100 text-amber-700"
+                        )}>
+                          {item.currentStock <= (item.criticalThreshold || 5) ? 'Critical' : 'Low Stock'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="space-y-6">
           <Card className="border-none shadow-sm">

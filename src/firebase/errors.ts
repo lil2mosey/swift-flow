@@ -1,5 +1,6 @@
 'use client';
 import { getAuth, type User } from 'firebase/auth';
+import { getApps } from 'firebase/app';
 
 type SecurityRuleContext = {
   path: string;
@@ -78,10 +79,13 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   let authObject: FirebaseAuthObject | null = null;
   try {
     // Safely attempt to get the current user.
-    const firebaseAuth = getAuth();
-    const currentUser = firebaseAuth.currentUser;
-    if (currentUser) {
-      authObject = buildAuthObject(currentUser);
+    // Check if an app exists before calling getAuth to prevent secondary initialization errors
+    if (getApps().length > 0) {
+      const firebaseAuth = getAuth();
+      const currentUser = firebaseAuth.currentUser;
+      if (currentUser) {
+        authObject = buildAuthObject(currentUser);
+      }
     }
   } catch {
     // This will catch errors if the Firebase app is not yet initialized.

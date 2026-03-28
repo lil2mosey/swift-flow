@@ -13,20 +13,22 @@ export function initializeFirebase() {
   let app: FirebaseApp;
   let db: Firestore;
 
-  if (getApps().length > 0) {
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
     app = getApp();
+    // Use getFirestore but be aware it might not have the long polling if initialized elsewhere
     db = getFirestore(app);
   } else {
+    // Attempt to initialize via Firebase App Hosting environment variables
+    // fallback to config object for development
     try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      app = initializeApp();
-    } catch (e) {
-      // Fallback to config object for development
       app = initializeApp(firebaseConfig);
+    } catch (e) {
+      app = initializeApp();
     }
 
     // Initialize Firestore with long polling for maximum stability in the Studio environment.
-    // This resolves the "Could not reach Cloud Firestore backend" error.
+    // This resolves the "Could not reach Cloud Firestore backend" error and internal assertion failures.
     db = initializeFirestore(app, {
       experimentalForceLongPolling: true,
     });

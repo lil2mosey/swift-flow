@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -226,8 +227,6 @@ export default function OrdersPage() {
                       <Input 
                         placeholder="Phone (07...)" 
                         className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
-                        value={newOrder.customerPhone}
-                        onChange={(e) => setEmail(e.target.value)}
                         value={newOrder.customerPhone}
                         onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
                       />

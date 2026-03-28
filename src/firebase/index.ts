@@ -1,9 +1,9 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, Firestore, terminate } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
 
 let app: FirebaseApp;
 let db: Firestore;
@@ -22,18 +22,21 @@ export function initializeFirebase() {
       app = initializeApp(firebaseConfig);
     }
 
-    auth = getAuth(app);
+    if (!auth) {
+      auth = getAuth(app);
+    }
 
-    // CRITICAL: initializeFirestore with experimentalForceLongPolling MUST be called
-    // only once per app. If it's already initialized, initializeFirestore will throw.
-    // This resolves "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
-    try {
-      db = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
-      });
-    } catch (e) {
-      // If already initialized, use getFirestore to retrieve the existing instance.
-      db = getFirestore(app);
+    if (!db) {
+      // CRITICAL: initializeFirestore with experimentalForceLongPolling MUST be called
+      // only once per app. This resolves "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
+      try {
+        db = initializeFirestore(app, {
+          experimentalForceLongPolling: true,
+        });
+      } catch (e) {
+        // If already initialized, use getFirestore to retrieve the existing instance.
+        db = getFirestore(app);
+      }
     }
   }
 

@@ -16,7 +16,7 @@ import {
   ShoppingBag,
   Package as PackageIcon,
   RefreshCcw,
-  Sparkles
+  PlusCircle
 } from 'lucide-react';
 import { 
   Table, 
@@ -192,7 +192,7 @@ export default function InventoryPage() {
                         onClick={() => setAddMode('new')}
                         className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", addMode === 'new' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
                       >
-                        <Sparkles className="h-3.5 w-3.5" /> Register New
+                        <PlusCircle className="h-3.5 w-3.5" /> Register New
                       </button>
                     </div>
 

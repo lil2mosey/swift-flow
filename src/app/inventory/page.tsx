@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -7,20 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { 
   Plus, 
-  Search, 
-  Filter, 
   Sparkles, 
   Loader2,
-  AlertTriangle,
-  CheckCircle2,
-  Package as PackageIcon,
   X,
   Layers,
-  ShoppingBag
+  ShoppingBag,
+  Package as PackageIcon
 } from 'lucide-react';
 import { 
   Table, 
@@ -33,7 +29,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -80,11 +75,15 @@ export default function InventoryPage() {
 
   const filteredItems = useMemo(() => {
     if (!allItems) return [];
+    // Ensure we match itemType, defaulting to 'product' for legacy items
     return allItems.filter(item => (item.itemType || 'product') === activeTab);
   }, [allItems, activeTab]);
 
   const getAiRecommendations = async () => {
-    if (!allItems) return;
+    if (!allItems || allItems.length === 0) {
+      toast({ title: "No Data", description: "Add some products first to get recommendations." });
+      return;
+    }
     setIsAiLoading(true);
     try {
       const input = {
@@ -98,8 +97,10 @@ export default function InventoryPage() {
       };
       const result = await intelligentInventoryRecommendation(input);
       setRecommendations(result);
+      toast({ title: "AI Audit Complete", description: "Check recommendations for stock optimization." });
     } catch (error) {
       console.error("AI Recommendation error:", error);
+      toast({ variant: "destructive", title: "AI Error", description: "Could not generate recommendations." });
     } finally {
       setIsAiLoading(false);
     }
@@ -114,13 +115,13 @@ export default function InventoryPage() {
     try {
       await FirebaseService.addProduct(db, user.uid, {
         name: formData.name,
-        sku: formData.sku,
+        sku: formData.sku || `SKU-${Date.now()}`,
         description: formData.description,
         price: Number(formData.price),
         cost: Number(formData.cost),
         currentStock: Number(formData.currentStock),
         location: formData.location,
-        category: formData.category,
+        category: formData.category || (activeTab === 'product' ? 'Product' : 'Material'),
         supplier: formData.supplier,
         lowStockThreshold: Number(formData.lowStockThreshold),
         criticalThreshold: Number(formData.criticalThreshold),
@@ -181,13 +182,13 @@ export default function InventoryPage() {
                     <div className="flex gap-4 p-1 bg-slate-100 rounded-xl mb-2">
                       <button 
                         onClick={() => setFormData({...formData, itemType: 'product'})}
-                        className={cn("flex-1 py-2 text-xs font-bold rounded-lg", formData.itemType === 'product' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
+                        className={cn("flex-1 py-2 text-xs font-bold rounded-lg transition-all", formData.itemType === 'product' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
                       >
                         Finished Product
                       </button>
                       <button 
                         onClick={() => setFormData({...formData, itemType: 'material'})}
-                        className={cn("flex-1 py-2 text-xs font-bold rounded-lg", formData.itemType === 'material' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
+                        className={cn("flex-1 py-2 text-xs font-bold rounded-lg transition-all", formData.itemType === 'material' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
                       >
                         Raw Material
                       </button>
@@ -195,21 +196,27 @@ export default function InventoryPage() {
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Name</Label>
-                        <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl" />
+                        <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl" placeholder="E.g. Summer Dress" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Price (KES)</Label>
                         <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl" />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Stock Quantity</Label>
-                      <Input type="number" value={formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl" />
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Stock Quantity</Label>
+                        <Input type="number" value={formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Category</Label>
+                        <Input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl" placeholder="E.g. Apparel" />
+                      </div>
                     </div>
                   </div>
                   <DialogFooter className="p-8 pt-0 bg-slate-50/30">
-                    <Button onClick={handleAddProduct} className="bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-2xl">
-                      Confirm Add
+                    <Button onClick={handleAddProduct} className="bg-[#0f172a] hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-2xl w-full">
+                      Confirm & Save Item
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -228,25 +235,48 @@ export default function InventoryPage() {
             </TabsTrigger>
           </TabsList>
 
-          <Card className="border-none shadow-sm">
+          <Card className="border-none shadow-sm min-h-[400px]">
             <CardContent className="p-6">
               <Table>
                 <TableHeader>
                   <TableRow className="border-slate-100">
                     <TableHead className="font-bold">Item Name</TableHead>
+                    <TableHead className="font-bold">Category</TableHead>
                     <TableHead className="font-bold">Stock</TableHead>
                     <TableHead className="font-bold text-right">Value (KES)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isProductsLoading ? (
-                    <TableRow><TableCell colSpan={3} className="text-center py-10">Loading inventory...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
                   ) : filteredItems.length === 0 ? (
-                    <TableRow><TableCell colSpan={3} className="text-center py-20 text-slate-400">No items found.</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-32 text-slate-400">
+                        <div className="flex flex-col items-center gap-3">
+                          <PackageIcon className="h-10 w-10 opacity-10" />
+                          <p className="font-medium italic">No {activeTab === 'product' ? 'finished goods' : 'raw materials'} found in your inventory.</p>
+                          <Button variant="link" onClick={() => setIsAddDialogOpen(true)} className="text-teal-600 font-bold">Add your first item</Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ) : filteredItems.map((item) => (
-                    <TableRow key={item.id} className="border-slate-100">
-                      <TableCell className="font-medium text-slate-900">{item.name}</TableCell>
-                      <TableCell className="font-bold">{item.currentStock}</TableCell>
+                    <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <TableCell className="font-medium text-slate-900">
+                        <div className="flex flex-col">
+                          <span>{item.name}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">{item.sku}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-bold text-slate-500 uppercase">{item.category}</TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "font-bold px-2 py-1 rounded-md",
+                          item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700" : 
+                          item.currentStock <= (item.lowStockThreshold || 10) ? "bg-amber-100 text-amber-700" : "text-slate-900"
+                        )}>
+                          {item.currentStock}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right font-bold text-teal-accent">KES {item.price.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}

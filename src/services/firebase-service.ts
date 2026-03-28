@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -133,9 +134,9 @@ export const FirebaseService = {
   },
 
   getProductsQuery: (db: Firestore) => {
+    // Simplified query for inventory management to ensure all items are visible
     return query(
       collection(db, 'products'), 
-      where('isActive', '==', true),
       orderBy('createdAt', 'desc'),
       limit(200)
     );

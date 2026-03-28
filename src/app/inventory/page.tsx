@@ -17,7 +17,8 @@ import {
   Package as PackageIcon,
   RefreshCcw,
   PlusCircle,
-  AlertCircle
+  AlertCircle,
+  Search
 } from 'lucide-react';
 import { 
   Table, 
@@ -58,6 +59,7 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<InventoryItemType>('product');
   const [addMode, setAddMode] = useState<'restock' | 'new'>('restock');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Restock State
   const [selectedItemId, setSelectedItemId] = useState<string>('');
@@ -87,8 +89,14 @@ export default function InventoryPage() {
 
   const filteredItems = useMemo(() => {
     if (!allItems) return [];
-    return allItems.filter(item => (item.itemType || 'product') === activeTab);
-  }, [allItems, activeTab]);
+    return allItems.filter(item => {
+      const matchesTab = (item.itemType || 'product') === activeTab;
+      const matchesSearch = !searchTerm || 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesTab && matchesSearch;
+    });
+  }, [allItems, activeTab, searchTerm]);
 
   const handleRestock = async () => {
     if (!selectedItemId || restockAmount <= 0) {
@@ -104,7 +112,6 @@ export default function InventoryPage() {
 
     try {
       const itemRef = doc(db, 'products', selectedItemId);
-      // Ensure we are adding to the existing numeric value
       const currentCount = Number(item.currentStock) || 0;
       const amountToAdd = Number(restockAmount);
       const newTotal = currentCount + amountToAdd;
@@ -190,7 +197,6 @@ export default function InventoryPage() {
                 </div>
                 
                 <div className="px-8 py-6 space-y-6">
-                  {/* Mode Selector */}
                   <div className="flex gap-4 p-1 bg-slate-100 rounded-xl mb-2">
                     <button 
                       onClick={() => setAddMode('restock')}
@@ -304,66 +310,80 @@ export default function InventoryPage() {
           }
         />
 
-        <Tabs defaultValue="product" value={activeTab} onValueChange={(v) => setActiveTab(v as InventoryItemType)} className="w-full">
-          <TabsList className="mb-8 bg-slate-100 p-1 rounded-2xl w-full max-w-md">
-            <TabsTrigger value="product" className="flex-1 py-2.5 font-bold uppercase text-[10px] tracking-widest">
-              <ShoppingBag className="h-3.5 w-3.5 mr-2" /> Finished Goods
-            </TabsTrigger>
-            <TabsTrigger value="material" className="flex-1 py-2.5 font-bold uppercase text-[10px] tracking-widest">
-              <Layers className="h-3.5 w-3.5 mr-2" /> Raw Materials
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <Tabs defaultValue="product" value={activeTab} onValueChange={(v) => setActiveTab(v as InventoryItemType)} className="flex-1">
+            <TabsList className="bg-slate-100 p-1 rounded-2xl w-full max-w-md">
+              <TabsTrigger value="product" className="flex-1 py-2.5 font-bold uppercase text-[10px] tracking-widest">
+                <ShoppingBag className="h-3.5 w-3.5 mr-2" /> Finished Goods
+              </TabsTrigger>
+              <TabsTrigger value="material" className="flex-1 py-2.5 font-bold uppercase text-[10px] tracking-widest">
+                <Layers className="h-3.5 w-3.5 mr-2" /> Raw Materials
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          <Card className="border-none shadow-sm min-h-[400px] overflow-hidden">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-primary text-white">
-                  <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Details</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Category</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Current Stock</TableHead>
-                    <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Unit Price (KES)</TableHead>
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input 
+              placeholder="Search by name or SKU..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-12 bg-white border-none rounded-xl shadow-sm font-medium"
+            />
+          </div>
+        </div>
+
+        <Card className="border-none shadow-sm min-h-[400px] overflow-hidden">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-primary text-white">
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Details</TableHead>
+                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Category</TableHead>
+                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Current Stock</TableHead>
+                  <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Unit Price (KES)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isProductsLoading ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
+                ) : filteredItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-32 text-slate-400">
+                      <div className="flex flex-col items-center gap-3">
+                        <PackageIcon className="h-10 w-10 opacity-10" />
+                        <p className="font-medium italic">
+                          {searchTerm ? `No results found for "${searchTerm}"` : "No items found in this category."}
+                        </p>
+                        {!searchTerm && <Button variant="link" onClick={() => setIsAddDialogOpen(true)} className="text-teal-600 font-bold">Register your first item</Button>}
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isProductsLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
-                  ) : filteredItems.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-32 text-slate-400">
-                        <div className="flex flex-col items-center gap-3">
-                          <PackageIcon className="h-10 w-10 opacity-10" />
-                          <p className="font-medium italic">No items found in this category.</p>
-                          <Button variant="link" onClick={() => setIsAddDialogOpen(true)} className="text-teal-600 font-bold">Register your first item</Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredItems.map((item) => (
-                    <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="font-medium text-slate-900 pl-6">
-                        <div className="flex flex-col">
-                          <span className="font-bold">{item.name}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{item.sku}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-slate-500 uppercase">{item.category}</TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "font-bold px-3 py-1.5 rounded-lg inline-flex items-center",
-                          item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700" : 
-                          item.currentStock <= (item.lowStockThreshold || 20) ? "bg-amber-100 text-amber-700" : "bg-slate-50 text-slate-900"
-                        )}>
-                          {item.currentStock}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-teal-600 pr-6">KES {item.price.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </Tabs>
+                ) : filteredItems.map((item) => (
+                  <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <TableCell className="font-medium text-slate-900 pl-6">
+                      <div className="flex flex-col">
+                        <span className="font-bold">{item.name}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{item.sku}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs font-bold text-slate-500 uppercase">{item.category}</TableCell>
+                    <TableCell>
+                      <span className={cn(
+                        "font-bold px-3 py-1.5 rounded-lg inline-flex items-center",
+                        item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700" : 
+                        item.currentStock <= (item.lowStockThreshold || 20) ? "bg-amber-100 text-amber-700" : "bg-slate-50 text-slate-900"
+                      )}>
+                        {item.currentStock}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-teal-600 pr-6">KES {item.price.toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </Shell>
     </RoleGuard>
   );

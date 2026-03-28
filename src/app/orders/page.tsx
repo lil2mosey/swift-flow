@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,7 +45,8 @@ import {
   Lock,
   X,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  Search
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -156,6 +157,7 @@ export default function OrdersPage() {
   const [orderToPrint, setOrderToPrint] = useState<Order | null>(null);
   const [pin, setPin] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [newOrder, setNewOrder] = useState({
     customerName: '',
@@ -182,6 +184,15 @@ export default function OrdersPage() {
   const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
   
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
+
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+    return orders.filter(order => 
+      !searchTerm ||
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orders, searchTerm]);
 
   useEffect(() => {
     if (orderToPrint) {
@@ -407,10 +418,20 @@ export default function OrdersPage() {
           )}
         />
 
+        <div className="mb-6 relative w-full max-w-md ml-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Search by Order ID or Customer Name..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 bg-white border-none rounded-xl shadow-sm font-medium"
+          />
+        </div>
+
         <PermissionAwareCollection 
           isLoading={isInitialLoading} 
           error={ordersError} 
-          data={orders || []} 
+          data={filteredOrders} 
           collectionName="orders"
         >
           {(data) => (
@@ -521,7 +542,6 @@ export default function OrdersPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Hidden Printable Receipt Area */}
         <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
           {orderToPrint && <ReceiptPrintView order={orderToPrint} />}
         </div>

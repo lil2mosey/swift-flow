@@ -5,7 +5,7 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
 
-// Singleton references to survive re-renders and HMR within the module scope
+// Singleton references
 let app: FirebaseApp;
 let db: Firestore;
 let auth: Auth;
@@ -14,7 +14,6 @@ let auth: Auth;
  * Robust Firebase initialization for Next.js.
  * Uses a strict singleton pattern and global window storage to prevent
  * "INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
- * This ensures settings like long polling are applied exactly once per session.
  */
 export function initializeFirebase() {
   if (typeof window !== 'undefined') {
@@ -42,7 +41,6 @@ export function initializeFirebase() {
     auth = getAuth(app);
 
     // 4. Initialize Firestore with required long-polling
-    // We check the global store again to be absolutely sure we don't re-init Firestore
     if (globalStore.__firebaseDb) {
       db = globalStore.__firebaseDb;
     } else {
@@ -56,7 +54,7 @@ export function initializeFirebase() {
       }
     }
 
-    // Store in global window object to prevent multiple initializations across navigations
+    // Store in global window object
     globalStore.__firebaseApp = app;
     globalStore.__firebaseDb = db;
     globalStore.__firebaseAuth = auth;

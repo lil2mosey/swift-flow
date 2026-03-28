@@ -2,37 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper to check for authenticated users
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    match /userProfiles/{userId} {
-      // Users can always read and write their own profile
-      // Allow read for other authenticated users to handle synchronization and lookups
-      allow read: if isAuthenticated();
-      allow write: if request.auth.uid == userId;
-    }
-
-    match /products/{productId} {
-      allow read: if true; // Public catalog access
-      allow write: if isAuthenticated();
-    }
-
-    match /orders/{orderId} {
-      // Broad access for authenticated users to ensure cross-navigation sync
-      allow read, write: if isAuthenticated();
-    }
-
-    match /messages/{messageId} {
-      // Broad access for authenticated users to ensure real-time chat sync
-      allow read, write: if isAuthenticated();
-    }
-
-    // Global wildcard for development safety and catch-all synchronization
+    // Allow all authenticated users full access temporarily to unblock development
     match /{document=**} {
-      allow read, write: if isAuthenticated() || request.time < timestamp.date(2026, 4, 3);
+      allow read, write: if request.auth != null;
     }
   }
 }

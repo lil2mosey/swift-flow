@@ -75,10 +75,9 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   try {
     const apps = getApps();
     if (apps.length > 0) {
-      // Use the first app and getAuth directly. 
-      // We don't try-catch internally here to avoid hiding real initialization issues
       const firebaseAuth = getAuth(apps[0]);
-      const currentUser = firebaseAuth.currentUser;
+      // Access currentUser safely as it may be null during init
+      const currentUser = firebaseAuth?.currentUser;
       if (currentUser) {
         authObject = buildAuthObject(currentUser);
       }

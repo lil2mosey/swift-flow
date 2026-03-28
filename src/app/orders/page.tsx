@@ -419,15 +419,17 @@ export default function OrdersPage() {
           )}
         />
 
-        <div className="mb-6 relative w-full max-w-md ml-auto">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Search by Order ID or Customer Name..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-11 bg-white border-none rounded-xl shadow-sm font-medium"
-          />
-        </div>
+        {isSeller && (
+          <div className="mb-6 relative w-full max-w-md ml-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input 
+              placeholder="Search by Order ID or Customer Name..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-11 bg-white border-none rounded-xl shadow-sm font-medium"
+            />
+          </div>
+        )}
 
         <PermissionAwareCollection 
           isLoading={isInitialLoading} 

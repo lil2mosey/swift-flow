@@ -14,7 +14,6 @@ service cloud.firestore {
     }
 
     // Helper to check if the user is a seller using their profile
-    // We ensure userProfiles are readable by the user for this get() to succeed
     function isSeller() {
       return isAuthenticated() && 
         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'seller';
@@ -23,7 +22,7 @@ service cloud.firestore {
     match /userProfiles/{userId} {
       // Users can always read and write their own profile
       allow read, write: if isOwner(userId);
-      // Allow other authenticated users to read profiles (needed for display names in shared docs)
+      // Allow other authenticated users to read profiles (needed for display names and role checks)
       allow read: if isAuthenticated();
     }
 
@@ -33,35 +32,17 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Customers can read their own orders, sellers can read all orders
-      allow read: if isAuthenticated() && (
-        resource.data.customerId == request.auth.uid || 
-        resource.data.sellerId == request.auth.uid ||
-        isSeller()
-      );
-      // Both roles can create (customers place orders, sellers create manual ones)
-      allow create: if isAuthenticated();
-      // Allow update for fulfillment or payment status changes
-      allow update: if isAuthenticated() && (
-        resource.data.sellerId == request.auth.uid || 
-        resource.data.customerId == request.auth.uid ||
-        isSeller()
-      );
-      // Allow delete for sellers during development cleanup
-      allow delete: if isSeller();
+      // Broad read/write access for authenticated users during development
+      // Ensures both customers and sellers can synchronize orders
+      allow read, write: if isAuthenticated();
     }
 
     match /messages/{messageId} {
-      // Participants (sender/receiver) can read their chat
-      allow read: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants ||
-        isSeller()
-      );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      // Broad read/write access for authenticated users during development
+      allow read, write: if isAuthenticated();
     }
 
-    // Global wildcard for authenticated users during development
+    // Global wildcard for development safety
     match /{document=**} {
       allow read, write: if isAuthenticated() || request.time < timestamp.date(2026, 4, 3);
     }

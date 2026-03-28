@@ -1,4 +1,3 @@
-
 {
   "placeholderImages": [
     {
@@ -30,6 +29,12 @@
       "description": "Rose Gold Tennis Bracelet",
       "imageUrl": "https://picsum.photos/seed/brac1/600/600",
       "imageHint": "gold bracelet"
+    },
+    {
+      "id": "jw-ear-2",
+      "description": "Vintage Emerald Studs",
+      "imageUrl": "https://picsum.photos/seed/ear2/600/600",
+      "imageHint": "emerald earrings"
     }
   ]
 }

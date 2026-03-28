@@ -8,15 +8,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper to check for specific administrative UIDs
-    function isSuperUser() {
-      return isAuthenticated() && (
-        request.auth.uid == 'sreC0Eu3pNcTtybFH3zOmnFKA0h1' || 
-        request.auth.uid == '3Q1aUMYWXkaWCq27Pgc5GhQdVKg2'
-      );
-    }
-
     // Explicit rules for core application collections to ensure list/get operations work
+    // These allow any authenticated user to interact with the business data
     match /userProfiles/{userId} {
       allow read, write: if isAuthenticated();
     }
@@ -33,13 +26,9 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // Global wildcard to catch any other development paths
     match /{document=**} {
-      // Grant full access to the specified administrative UIDs
-      allow read, write: if isSuperUser();
-      
-      // Maintain general "Allow All" for development as requested
-      // Note: This covers all users until the specified date.
-      allow read, write: if request.time < timestamp.date(2026, 4, 3);
+      allow read, write: if isAuthenticated() || request.time < timestamp.date(2026, 4, 3);
     }
   }
 }

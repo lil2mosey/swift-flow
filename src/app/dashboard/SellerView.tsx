@@ -56,7 +56,7 @@ export default function SellerView() {
   }, [products]);
 
   const processedChartData = useMemo(() => {
-    if (!sellerOrders) return [];
+    if (!sellerOrders || sellerOrders.length === 0) return [];
     
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
@@ -96,7 +96,7 @@ export default function SellerView() {
       { label: 'Total Revenue', value: `KES ${revenue.toLocaleString()}`, sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-400', bg: 'bg-teal-500/10' },
       { label: 'Pending Orders', value: pending, sub: 'LIVE', icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
       { label: 'Completed', value: completed, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10' },
-      { label: 'Customer Chat', value: '3', sub: 'UNREAD', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+      { label: 'Customer Chat', value: '0', sub: 'UNREAD', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     ];
   }, [sellerOrders]);
 
@@ -315,32 +315,39 @@ export default function SellerView() {
               <CardDescription className="text-[10px] uppercase font-bold text-slate-400">Past 7 Days Growth</CardDescription>
             </CardHeader>
             <CardContent className="h-[180px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={processedChartData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontWeight: 'bold' }}
-                    formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Revenue']}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#2dd4bf" 
-                    fillOpacity={1} 
-                    fill="url(#colorValue)" 
-                    strokeWidth={3} 
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {processedChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={processedChartData}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
+                    <YAxis hide />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontWeight: 'bold' }}
+                      formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#2dd4bf" 
+                      fillOpacity={1} 
+                      fill="url(#colorValue)" 
+                      strokeWidth={3} 
+                      animationDuration={1500}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                   <TrendingUp className="h-8 w-8 text-slate-100 mb-2" />
+                   <p className="text-[10px] text-slate-400 font-bold uppercase">No sales data available yet</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -10,7 +10,7 @@ service cloud.firestore {
 
     match /userProfiles/{userId} {
       // Users can always read and write their own profile
-      // Allow read for other authenticated users so they can see names/roles during sync
+      // Allow read for other authenticated users to handle synchronization and lookups
       allow read: if isAuthenticated();
       allow write: if request.auth.uid == userId;
     }
@@ -21,16 +21,16 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      // Broad access for authenticated users during development
+      // Broad access for authenticated users to ensure cross-navigation sync
       allow read, write: if isAuthenticated();
     }
 
     match /messages/{messageId} {
-      // Broad access for authenticated users during development
+      // Broad access for authenticated users to ensure real-time chat sync
       allow read, write: if isAuthenticated();
     }
 
-    // Global wildcard for development safety
+    // Global wildcard for development safety and catch-all synchronization
     match /{document=**} {
       allow read, write: if isAuthenticated() || request.time < timestamp.date(2026, 4, 3);
     }

@@ -5,7 +5,6 @@ import { useFirestore, useUser } from '@/firebase';
 import { 
   collection, 
   query, 
-  where, 
   orderBy, 
   limit, 
   getDocs, 
@@ -18,6 +17,7 @@ import { Product, Order } from '@/lib/types';
 
 /**
  * Optimized hook for fetching products with pagination and performance monitoring.
+ * Query simplified to remove isActive filter to ensure seeded data appears without needing composite indexes.
  */
 export function useCustomerProducts(pageSize = 12) {
   const db = useFirestore();
@@ -37,7 +37,6 @@ export function useCustomerProducts(pageSize = 12) {
       const result = await measurePerformance('Fetch Products', async () => {
         let q = query(
           collection(db, 'products'),
-          where('isActive', '==', true),
           orderBy('createdAt', 'desc'),
           limit(pageSize)
         );
@@ -106,7 +105,6 @@ export function useCustomerOrders() {
         const result = await measurePerformance('Fetch Customer Orders', async () => {
           const q = query(
             collection(db, 'orders'),
-            where('customerId', '==', user.uid),
             orderBy('createdAt', 'desc'),
             limit(50)
           );

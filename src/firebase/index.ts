@@ -58,6 +58,12 @@ export function initializeFirebase() {
     globalStore.__firebaseApp = app;
     globalStore.__firebaseDb = db;
     globalStore.__firebaseAuth = auth;
+
+    return {
+      firebaseApp: app,
+      auth: auth,
+      firestore: db
+    };
   }
 
   return {

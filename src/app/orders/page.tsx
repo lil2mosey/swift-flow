@@ -186,6 +186,8 @@ export default function OrdersPage() {
   
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
+  const isSeller = profile?.role === 'seller';
+
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(order => 
@@ -297,8 +299,6 @@ export default function OrdersPage() {
     setNewOrder({ customerName: '', customerPhone: '', deliveryLocation: '', productId: '', quantity: 1, amount: 0, paymentStatus: 'unpaid' });
     toast({ title: "Order Synced", description: "Direct order successfully recorded." });
   };
-
-  const isSeller = profile?.role === 'seller';
 
   return (
     <RoleGuard allowedRoles={['seller', 'customer']}>

@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,8 @@ import {
   Phone, 
   MapPin,
   Smartphone,
-  Lock
+  Lock,
+  X
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -203,20 +205,28 @@ export default function OrdersPage() {
                   <PlusCircle className="h-4 w-4" /> Create New Order
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[480px] rounded-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold">New Direct Order</DialogTitle>
-                  <DialogDescription>Quickly record manual DM or direct sales into your logs.</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-6 py-4">
+              <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
+                <div className="bg-teal-50/50 p-8 pb-6 border-b border-teal-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <DialogTitle className="text-3xl font-bold text-slate-900 tracking-tight">
+                      New <span className="text-teal-600">Direct Order</span>
+                    </DialogTitle>
+                    <DialogClose className="rounded-full h-8 w-8 flex items-center justify-center hover:bg-white hover:text-teal-600 transition-colors shadow-sm bg-white/50">
+                      <X className="h-4 w-4 text-slate-400" />
+                    </DialogClose>
+                  </div>
+                  <DialogDescription className="text-slate-500 font-medium">Quickly record manual DM or direct sales into your logs.</DialogDescription>
+                </div>
+
+                <div className="px-8 py-6 space-y-6">
                   <div className="grid gap-2">
-                    <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-500">Customer Info</Label>
+                    <Label htmlFor="name" className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Customer Info</Label>
                     <div className="relative">
                       <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         id="name" 
                         placeholder="Full Name" 
-                        className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                        className="pl-9 h-11 bg-slate-50 border-none rounded-xl"
                         value={newOrder.customerName}
                         onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
                       />
@@ -227,7 +237,7 @@ export default function OrdersPage() {
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         placeholder="Phone (07...)" 
-                        className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                        className="pl-9 h-11 bg-slate-50 border-none rounded-xl"
                         value={newOrder.customerPhone}
                         onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
                       />
@@ -236,16 +246,16 @@ export default function OrdersPage() {
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input 
                         placeholder="Delivery Location" 
-                        className="pl-9 h-11 bg-slate-50 border-slate-100 rounded-xl"
+                        className="pl-9 h-11 bg-slate-50 border-none rounded-xl"
                         value={newOrder.deliveryLocation}
                         onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})}
                       />
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs font-bold uppercase text-slate-500">Select Item</Label>
+                    <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Select Item</Label>
                     <Select onValueChange={handleProductSelect}>
-                      <SelectTrigger className="h-12 bg-slate-50 border-slate-100 rounded-xl">
+                      <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl">
                         <SelectValue placeholder={isProductsLoading ? "Loading inventory..." : "-- Select an item --"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -262,24 +272,24 @@ export default function OrdersPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Quantity</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Quantity</Label>
                       <Input 
                         type="number" min="1"
-                        className="h-11 bg-slate-50 border-slate-100 rounded-xl"
+                        className="h-11 bg-slate-50 border-none rounded-xl"
                         value={newOrder.quantity}
                         onChange={(e) => handleQuantityChange(e.target.value)}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-xs font-bold uppercase text-slate-500">Total KES</Label>
+                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Total KES</Label>
                       <div className="h-11 flex items-center px-4 bg-teal-50 border border-teal-100 rounded-xl font-bold text-teal-600">
                         KES {newOrder.amount.toLocaleString()}
                       </div>
                     </div>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button onClick={handleCreateOrder} className="w-full h-12 bg-primary hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg shadow-slate-200">
+                <DialogFooter className="p-8 pt-0 bg-slate-50/30">
+                  <Button onClick={handleCreateOrder} className="w-full h-12 bg-[#0f172a] hover:bg-slate-800 text-white font-bold rounded-2xl shadow-lg shadow-slate-200">
                     Confirm & Sync Order
                   </Button>
                 </DialogFooter>

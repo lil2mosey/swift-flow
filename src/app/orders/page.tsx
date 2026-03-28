@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -44,7 +45,8 @@ import {
   Smartphone,
   Lock,
   X,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -54,7 +56,7 @@ import {
   useUser 
 } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Order, OrderStatus, Product } from '@/lib/types';
+import { Order, OrderStatus, Product, PaymentStatus } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
@@ -162,7 +164,8 @@ export default function OrdersPage() {
     deliveryLocation: '',
     productId: '',
     quantity: 1,
-    amount: 0
+    amount: 0,
+    paymentStatus: 'unpaid' as PaymentStatus
   });
 
   const ordersQuery = useMemoFirebase(() => {
@@ -210,11 +213,11 @@ export default function OrdersPage() {
     });
   };
 
-  const handleTriggerPayment = (order: Order) => {
-    FirebaseService.requestPayment(db, order.id);
+  const handleMarkAsPaid = (order: Order) => {
+    FirebaseService.confirmPayment(db, order.id);
     toast({ 
-      title: "Payment Requested", 
-      description: `A prompt has been sent to ${order.customerName}. Status is now 'Pending Approval'.` 
+      title: "Payment Recorded", 
+      description: `Order for ${order.customerName} has been marked as PAID.` 
     });
   };
 
@@ -275,6 +278,8 @@ export default function OrdersPage() {
       customerPhone: newOrder.customerPhone,
       deliveryLocation: newOrder.deliveryLocation,
       totalAmount: newOrder.amount,
+      paymentStatus: newOrder.paymentStatus,
+      status: newOrder.paymentStatus === 'paid' ? 'processing' : 'pending',
       items: [{
         productId: newOrder.productId,
         productName: selectedProduct?.name || 'Manual Item',
@@ -284,7 +289,7 @@ export default function OrdersPage() {
     });
 
     setIsOrderDialogOpen(false);
-    setNewOrder({ customerName: '', customerPhone: '', deliveryLocation: '', productId: '', quantity: 1, amount: 0 });
+    setNewOrder({ customerName: '', customerPhone: '', deliveryLocation: '', productId: '', quantity: 1, amount: 0, paymentStatus: 'unpaid' });
     toast({ title: "Order Created", description: `Order for ${newOrder.customerName} has been recorded.` });
   };
 
@@ -350,23 +355,37 @@ export default function OrdersPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Select Item</Label>
-                    <Select onValueChange={handleProductSelect}>
-                      <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl">
-                        <SelectValue placeholder={isProductsLoading ? "Loading inventory..." : "-- Select an item --"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products?.map(p => (
-                          <SelectItem key={p.id} value={p.id} className="py-3">
-                            <div className="flex flex-col">
-                              <span className="font-bold">{p.name}</span>
-                              <span className="text-[10px] text-slate-400 uppercase">Stock: {p.currentStock} • KES {p.price.toLocaleString()}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Select Item</Label>
+                      <Select onValueChange={handleProductSelect}>
+                        <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl">
+                          <SelectValue placeholder={isProductsLoading ? "Loading inventory..." : "-- Select --"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products?.map(p => (
+                            <SelectItem key={p.id} value={p.id} className="py-3">
+                              <div className="flex flex-col">
+                                <span className="font-bold">{p.name}</span>
+                                <span className="text-[10px] text-slate-400 uppercase">KES {p.price.toLocaleString()}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Payment Status</Label>
+                      <Select value={newOrder.paymentStatus} onValueChange={(v) => setNewOrder({...newOrder, paymentStatus: v as PaymentStatus})}>
+                        <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unpaid">Unpaid</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
@@ -459,8 +478,13 @@ export default function OrdersPage() {
                           <div className="flex items-center justify-end gap-2">
                             {isSeller ? (
                                order.paymentStatus === 'unpaid' ? (
-                                 <Button size="sm" variant="outline" className="h-8 border-teal-200 text-teal-700 bg-teal-50 font-bold px-3" onClick={() => handleTriggerPayment(order)}>
-                                   <Smartphone className="h-3.5 w-3.5 mr-2" /> Pay
+                                 <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-8 border-teal-200 text-teal-700 bg-teal-50 font-bold px-3" 
+                                  onClick={() => handleMarkAsPaid(order)}
+                                 >
+                                   <CreditCard className="h-3.5 w-3.5 mr-2" /> Mark Paid
                                  </Button>
                                ) : order.paymentStatus === 'paid' ? (
                                  <Button size="sm" variant="outline" className="h-8 border-teal-200 text-teal-700 font-bold px-3" onClick={() => handlePrintReceipt(order)}>

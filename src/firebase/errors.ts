@@ -80,14 +80,16 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   try {
     // Safely attempt to get the current user.
     // Check if an app exists before calling getAuth to prevent secondary initialization errors
-    if (getApps().length > 0) {
-      const firebaseAuth = getAuth();
+    const apps = getApps();
+    if (apps.length > 0) {
+      // Use the first app to avoid initialization race conditions
+      const firebaseAuth = getAuth(apps[0]);
       const currentUser = firebaseAuth.currentUser;
       if (currentUser) {
         authObject = buildAuthObject(currentUser);
       }
     }
-  } catch {
+  } catch (error) {
     // This will catch errors if the Firebase app is not yet initialized.
     // In this case, we'll proceed without auth information.
   }

@@ -15,21 +15,25 @@ let auth: Auth;
  */
 export function initializeFirebase() {
   if (typeof window !== 'undefined') {
-    const existingApps = getApps();
-    if (existingApps.length > 0) {
-      app = getApp();
-      auth = getAuth(app);
-      db = getFirestore(app);
+    const apps = getApps();
+    if (apps.length > 0) {
+      app = apps[0];
     } else {
-      // Initialize via config object for Studio environment
       app = initializeApp(firebaseConfig);
-      auth = getAuth(app);
+    }
 
-      // Initialize Firestore with long polling for maximum stability in the Studio environment.
-      // This resolves "FIRESTORE INTERNAL ASSERTION FAILED" and connectivity issues.
+    auth = getAuth(app);
+
+    // CRITICAL: initializeFirestore with experimentalForceLongPolling MUST be called
+    // only once per app. If it's already initialized, initializeFirestore will throw.
+    // This resolves "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
+    try {
       db = initializeFirestore(app, {
         experimentalForceLongPolling: true,
       });
+    } catch (e) {
+      // If already initialized, use getFirestore to retrieve the existing instance.
+      db = getFirestore(app);
     }
   }
 

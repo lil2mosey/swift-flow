@@ -8,8 +8,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Explicit rules for core application collections to ensure list/get operations work
-    // These allow any authenticated user to interact with the business data
+    // Explicit rules for core application collections
+    // These ensure that all authenticated users can list and get data
     match /userProfiles/{userId} {
       allow read, write: if isAuthenticated();
     }
@@ -26,7 +26,7 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // Global wildcard to catch any other development paths
+    // Global wildcard for authenticated users during development
     match /{document=**} {
       allow read, write: if isAuthenticated() || request.time < timestamp.date(2026, 4, 3);
     }

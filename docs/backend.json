@@ -53,6 +53,21 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "customerId", "sellerId", "totalAmount"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a direct message between customer and seller.",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "content": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "content", "participants"]
     }
   },
   "auth": {
@@ -82,6 +97,14 @@
           "entityName": "Order",
           "schema": { "$ref": "#/backend/entities/Order" },
           "description": "Represents customer orders."
+        }
+      },
+      {
+        "path": "/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": { "$ref": "#/backend/entities/Message" },
+          "description": "Real-time messages between users."
         }
       }
     ]

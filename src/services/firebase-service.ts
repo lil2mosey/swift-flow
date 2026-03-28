@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -8,7 +7,8 @@ import {
   where, 
   orderBy, 
   limit, 
-  Firestore
+  Firestore,
+  serverTimestamp
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -23,14 +23,11 @@ import { OrderStatus, Product, OrderItem } from '@/lib/types';
 export const FirebaseService = {
   // --- Orders ---
   
-  /**
-   * Places a new order from the storefront.
-   */
   placeOrder: (db: Firestore, customerId: string, customerName: string, product: Product) => {
     const ordersRef = collection(db, 'orders');
     const orderData = {
       customerId: customerId,
-      userId: customerId, // Must match auth.uid for rule validation
+      userId: customerId, 
       customerName: customerName || 'Valued Customer',
       sellerId: product.sellerId || 'system-seller', 
       items: [{ 
@@ -39,12 +36,12 @@ export const FirebaseService = {
         quantity: 1, 
         priceAtOrder: product.price 
       }],
-      total: product.price, // Required by optimized rules
+      total: product.price, 
       totalAmount: product.price,
       status: 'pending',
       paymentStatus: 'unpaid',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     };
     return addDocumentNonBlocking(ordersRef, orderData);
   },
@@ -62,18 +59,18 @@ export const FirebaseService = {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
       sellerId: sellerId,
-      userId: sellerId, // Must match auth.uid (seller) for rule validation
+      userId: sellerId, 
       customerId: 'manual-dm',
       customerName: orderDetails.customerName,
       customerPhone: orderDetails.customerPhone,
       deliveryLocation: orderDetails.deliveryLocation,
-      total: orderDetails.totalAmount, // Required by optimized rules
+      total: orderDetails.totalAmount, 
       totalAmount: orderDetails.totalAmount,
       status: orderDetails.status || 'pending',
       paymentStatus: orderDetails.paymentStatus || 'unpaid',
       items: orderDetails.items,
-      createdAt: orderDetails.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: orderDetails.createdAt || serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
   },
 
@@ -84,8 +81,8 @@ export const FirebaseService = {
       sellerId: sellerId,
       itemType: productData.itemType || 'product',
       isActive: true, 
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
   },
 
@@ -93,7 +90,7 @@ export const FirebaseService = {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { 
       status, 
-      updatedAt: new Date().toISOString() 
+      updatedAt: serverTimestamp() 
     });
   },
 
@@ -101,7 +98,7 @@ export const FirebaseService = {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'pending_approval',
-      updatedAt: new Date().toISOString()
+      updatedAt: serverTimestamp()
     });
   },
 
@@ -110,8 +107,41 @@ export const FirebaseService = {
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'paid', 
       status: 'completed',
-      updatedAt: new Date().toISOString()
+      updatedAt: serverTimestamp()
     });
+  },
+
+  // --- Messages ---
+
+  sendMessage: (db: Firestore, senderId: string, receiverId: string, content: string, senderName: string) => {
+    const messagesRef = collection(db, 'messages');
+    return addDocumentNonBlocking(messagesRef, {
+      senderId,
+      receiverId,
+      content,
+      senderName,
+      participants: [senderId, receiverId].sort(),
+      createdAt: serverTimestamp()
+    });
+  },
+
+  getMessagesQuery: (db: Firestore, participants: string[]) => {
+    return query(
+      collection(db, 'messages'),
+      where('participants', '==', participants.sort()),
+      orderBy('createdAt', 'asc'),
+      limit(100)
+    );
+  },
+
+  // For sellers to find all customers they've chatted with
+  getConversationsQuery: (db: Firestore, sellerId: string) => {
+    return query(
+      collection(db, 'messages'),
+      where('participants', 'array-contains', sellerId),
+      orderBy('createdAt', 'desc'),
+      limit(500)
+    );
   },
 
   // --- Queries ---
@@ -134,7 +164,6 @@ export const FirebaseService = {
   },
 
   getProductsQuery: (db: Firestore) => {
-    // Simplified query for inventory management to ensure all items are visible
     return query(
       collection(db, 'products'), 
       orderBy('createdAt', 'desc'),

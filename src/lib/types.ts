@@ -5,6 +5,8 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,14 +49,14 @@ export type PaymentStatus = 'unpaid' | 'pending_approval' | 'paid';
 export interface Order {
   id: string;
   customerId: string;
-  userId: string; // Matches field in security rules
+  userId: string; 
   customerName: string;
   customerPhone?: string;
   deliveryLocation?: string;
   sellerId: string;
   items: OrderItem[];
-  total: number; // Matches field in security rules validation
-  totalAmount: number; // Keep for backward compatibility in UI
+  total: number; 
+  totalAmount: number; 
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   createdAt: any;
@@ -65,7 +67,8 @@ export interface Message {
   id: string;
   senderId: string;
   receiverId: string;
-  content: string; // Updated to match rules
-  text?: string; // Keep for backward compatibility
+  content: string;
+  participants: string[];
   createdAt: any;
+  senderName?: string;
 }

@@ -108,7 +108,6 @@ export default function OrdersPage() {
       title: "Opening Print Dialog",
       description: `Preparing receipt for Order #${order.id.slice(0,8).toUpperCase()}...`,
     });
-    // Triggers the native browser print dialog
     window.print();
   };
 

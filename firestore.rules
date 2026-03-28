@@ -10,7 +10,6 @@ service cloud.firestore {
 
     // Explicit rules for core application collections
     // Both customers and sellers need read/write access to these during development
-    // specific logic for roles can be added as the app scales
     
     match /userProfiles/{userId} {
       allow read, write: if isAuthenticated();

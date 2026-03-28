@@ -22,7 +22,8 @@ import {
   Area,
   XAxis,
   YAxis,
-  CartesianGrid
+  CartesianGrid,
+  Tooltip
 } from 'recharts';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
@@ -31,14 +32,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
-
-const chartData = [
-  { name: 'Mon', value: 30 },
-  { name: 'Tue', value: 45 },
-  { name: 'Wed', value: 20 },
-  { name: 'Thu', value: 55 },
-  { name: 'Fri', value: 40 },
-];
 
 export default function SellerView() {
   const { user, profile } = useUser();
@@ -62,10 +55,45 @@ export default function SellerView() {
     return products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
   }, [products]);
 
+  const processedChartData = useMemo(() => {
+    if (!sellerOrders) return [];
+    
+    // Create a range for the last 7 days
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    const dataMap = last7Days.reduce((acc, date) => {
+      acc[date] = 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Filter and sum orders by date
+    sellerOrders.forEach(order => {
+      if (order.paymentStatus === 'paid' && order.createdAt) {
+        // Standardize date string from ISO format
+        const orderDate = typeof order.createdAt === 'string' 
+          ? order.createdAt.split('T')[0] 
+          : new Date(order.createdAt).toISOString().split('T')[0];
+
+        if (dataMap[orderDate] !== undefined) {
+          dataMap[orderDate] += order.totalAmount || order.total || 0;
+        }
+      }
+    });
+
+    return last7Days.map(date => ({
+      name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+      value: dataMap[date]
+    }));
+  }, [sellerOrders]);
+
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
     const completed = sellerOrders?.filter(o => o.status === 'completed').length || 0;
-    const revenue = sellerOrders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + o.totalAmount, 0) || 0;
+    const revenue = sellerOrders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + (o.totalAmount || o.total || 0), 0) || 0;
 
     return [
       { label: 'Total Revenue', value: `KES ${revenue.toLocaleString()}`, sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-400', bg: 'bg-teal-500/10' },
@@ -199,7 +227,7 @@ export default function SellerView() {
                           ) : (
                             <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                           )}
-                          <span className="font-bold text-slate-900">KES {order.totalAmount.toLocaleString()}</span>
+                          <span className="font-bold text-slate-900">KES {(order.totalAmount || order.total || 0).toLocaleString()}</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -287,11 +315,12 @@ export default function SellerView() {
         <div className="space-y-6">
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">Sales Trajectory</CardTitle>
+              <CardTitle className="text-base font-bold">Sales Trajectory (Paid)</CardTitle>
+              <CardDescription className="text-[10px] uppercase font-bold text-slate-400">Past 7 Days Growth</CardDescription>
             </CardHeader>
             <CardContent className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
+                <AreaChart data={processedChartData}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.1}/>
@@ -299,9 +328,21 @@ export default function SellerView() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" hide />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
                   <YAxis hide />
-                  <Area type="monotone" dataKey="value" stroke="#2dd4bf" fillOpacity={1} fill="url(#colorValue)" strokeWidth={3} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontWeight: 'bold' }}
+                    formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Revenue']}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#2dd4bf" 
+                    fillOpacity={1} 
+                    fill="url(#colorValue)" 
+                    strokeWidth={3} 
+                    animationDuration={1500}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>

@@ -2,41 +2,40 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
+
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
 
 /**
  * Robust Firebase initialization for Next.js.
  * Ensures Firestore settings like long polling are applied exactly once.
  */
 export function initializeFirebase() {
-  let app: FirebaseApp;
-  let db: Firestore;
-
-  const existingApps = getApps();
-  if (existingApps.length > 0) {
-    app = getApp();
-    // Use getFirestore but be aware it might not have the long polling if initialized elsewhere
-    db = getFirestore(app);
-  } else {
-    // Attempt to initialize via Firebase App Hosting environment variables
-    // fallback to config object for development
-    try {
+  if (typeof window !== 'undefined') {
+    const existingApps = getApps();
+    if (existingApps.length > 0) {
+      app = getApp();
+      auth = getAuth(app);
+      db = getFirestore(app);
+    } else {
+      // Initialize via config object for Studio environment
       app = initializeApp(firebaseConfig);
-    } catch (e) {
-      app = initializeApp();
-    }
+      auth = getAuth(app);
 
-    // Initialize Firestore with long polling for maximum stability in the Studio environment.
-    // This resolves the "Could not reach Cloud Firestore backend" error and internal assertion failures.
-    db = initializeFirestore(app, {
-      experimentalForceLongPolling: true,
-    });
+      // Initialize Firestore with long polling for maximum stability in the Studio environment.
+      // This resolves "FIRESTORE INTERNAL ASSERTION FAILED" and connectivity issues.
+      db = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      });
+    }
   }
 
   return {
     firebaseApp: app,
-    auth: getAuth(app),
+    auth: auth,
     firestore: db
   };
 }

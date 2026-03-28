@@ -16,7 +16,8 @@ import {
   ShoppingBag,
   Package as PackageIcon,
   RefreshCcw,
-  PlusCircle
+  PlusCircle,
+  AlertCircle
 } from 'lucide-react';
 import { 
   Table, 
@@ -96,23 +97,33 @@ export default function InventoryPage() {
     }
 
     const item = allItems?.find(i => i.id === selectedItemId);
-    if (!item) return;
+    if (!item) {
+      toast({ variant: "destructive", title: "Error", description: "Could not find the selected item." });
+      return;
+    }
 
     try {
       const itemRef = doc(db, 'products', selectedItemId);
-      const newTotal = (item.currentStock || 0) + restockAmount;
+      // Ensure we are adding to the existing numeric value
+      const currentCount = Number(item.currentStock) || 0;
+      const amountToAdd = Number(restockAmount);
+      const newTotal = currentCount + amountToAdd;
       
       await updateDocumentNonBlocking(itemRef, { 
         currentStock: newTotal,
         updatedAt: new Date().toISOString()
       });
 
-      toast({ title: "Stock Updated", description: `Added ${restockAmount} units to ${item.name}. New total: ${newTotal}.` });
+      toast({ 
+        title: "Stock Replenished", 
+        description: `Added ${amountToAdd} units to ${item.name}. New level: ${newTotal}.` 
+      });
+      
       setIsAddDialogOpen(false);
       setSelectedItemId('');
       setRestockAmount(0);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not update stock." });
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not synchronize stock update." });
     }
   };
 
@@ -131,7 +142,7 @@ export default function InventoryPage() {
         cost: Number(formData.cost),
         currentStock: Number(formData.currentStock),
         location: formData.location,
-        category: formData.category || (activeTab === 'product' ? 'Product' : 'Material'),
+        category: formData.category || (formData.itemType === 'product' ? 'Product' : 'Material'),
         supplier: formData.supplier,
         lowStockThreshold: Number(formData.lowStockThreshold),
         criticalThreshold: Number(formData.criticalThreshold),
@@ -140,7 +151,7 @@ export default function InventoryPage() {
         itemType: formData.itemType
       });
 
-      toast({ title: "Item Registered", description: `${formData.name} has been added to inventory.` });
+      toast({ title: "Registration Successful", description: `${formData.name} is now in the catalog.` });
       setIsAddDialogOpen(false);
       setFormData({
         name: '', sku: '', description: '', price: 0, cost: 0, currentStock: 0,
@@ -148,7 +159,7 @@ export default function InventoryPage() {
         criticalThreshold: 10, itemType: activeTab
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not register item." });
+      toast({ variant: "destructive", title: "Error", description: "Could not register new item." });
     }
   };
 
@@ -157,136 +168,139 @@ export default function InventoryPage() {
       <Shell userRole="seller">
         <PageHeader 
           title="Inventory Command" 
-          description="Track live stock levels for finished goods and raw materials."
+          description="Manage stock levels for finished products and materials."
           action={
-            <div className="flex gap-3">
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 px-6 shadow-lg shadow-slate-200">
-                    <Plus className="h-4 w-4" /> Stock Management
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
-                  <div className="bg-[#0f172a] p-8 pb-6 border-b border-slate-800 text-white">
-                    <div className="flex justify-between items-start mb-2">
-                      <DialogTitle className="text-3xl font-bold tracking-tight">
-                        Stock <span className="text-teal-400">Logistics</span>
-                      </DialogTitle>
-                      <DialogClose className="rounded-full h-8 w-8 flex items-center justify-center hover:bg-slate-800 transition-colors shadow-sm bg-slate-700/50">
-                        <X className="h-4 w-4 text-slate-300" />
-                      </DialogClose>
-                    </div>
-                    <DialogDescription className="text-slate-400 font-medium">Update current stock levels or register a brand new item in your catalog.</DialogDescription>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 px-6 shadow-lg shadow-slate-200">
+                  <Plus className="h-4 w-4" /> Stock Management
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
+                <div className="bg-[#0f172a] p-8 pb-6 border-b border-slate-800 text-white">
+                  <div className="flex justify-between items-start mb-2">
+                    <DialogTitle className="text-3xl font-bold tracking-tight">
+                      Stock <span className="text-teal-400">Logistics</span>
+                    </DialogTitle>
+                    <DialogClose className="rounded-full h-8 w-8 flex items-center justify-center hover:bg-slate-800 transition-colors shadow-sm bg-slate-700/50">
+                      <X className="h-4 w-4 text-slate-300" />
+                    </DialogClose>
                   </div>
-                  
-                  <div className="px-8 py-6 space-y-6">
-                    {/* Mode Selector */}
-                    <div className="flex gap-4 p-1 bg-slate-100 rounded-xl mb-2">
-                      <button 
-                        onClick={() => setAddMode('restock')}
-                        className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", addMode === 'restock' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
-                      >
-                        <RefreshCcw className="h-3.5 w-3.5" /> Restock Existing
-                      </button>
-                      <button 
-                        onClick={() => setAddMode('new')}
-                        className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", addMode === 'new' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
-                      >
-                        <PlusCircle className="h-3.5 w-3.5" /> Register New
-                      </button>
-                    </div>
-
-                    {addMode === 'restock' ? (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Select Item from Inventory</Label>
-                          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                            <SelectTrigger className="h-14 bg-slate-50 border-none rounded-xl text-slate-900 font-bold">
-                              <SelectValue placeholder="-- Choose Item --" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-none shadow-xl">
-                              {allItems && allItems.length > 0 ? (
-                                allItems.map(item => (
-                                  <SelectItem key={item.id} value={item.id} className="py-3 font-medium">
-                                    <div className="flex justify-between items-center w-full min-w-[300px]">
-                                      <span>{item.name}</span>
-                                      <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 ml-4 font-bold uppercase">{item.itemType || 'product'}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <div className="p-4 text-center text-xs text-slate-400 italic">No items found in catalog.</div>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Quantity to Add</Label>
-                          <div className="relative">
-                            <Plus className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-500" />
-                            <Input 
-                              type="number" 
-                              min="1"
-                              placeholder="0"
-                              value={restockAmount || ''} 
-                              onChange={(e) => setRestockAmount(Number(e.target.value))} 
-                              className="h-14 bg-slate-50 border-none rounded-xl pl-12 text-lg font-bold text-slate-900" 
-                            />
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-medium px-1">This will be added to the current stock level of the selected item.</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="flex gap-4 p-1 bg-slate-50 rounded-xl mb-2">
-                          <button 
-                            onClick={() => setFormData({...formData, itemType: 'product'})}
-                            className={cn("flex-1 py-2 text-[10px] font-bold rounded-lg transition-all", formData.itemType === 'product' ? "bg-white text-teal-600 shadow-sm border border-teal-100" : "text-slate-400")}
-                          >
-                            Finished Product
-                          </button>
-                          <button 
-                            onClick={() => setFormData({...formData, itemType: 'material'})}
-                            className={cn("flex-1 py-2 text-[10px] font-bold rounded-lg transition-all", formData.itemType === 'material' ? "bg-white text-teal-600 shadow-sm border border-teal-100" : "text-slate-400")}
-                          >
-                            Raw Material
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Name</Label>
-                            <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="E.g. Summer Dress" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Price (KES)</Label>
-                            <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Initial Stock</Label>
-                            <Input type="number" value={formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Category</Label>
-                            <Input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="E.g. Apparel" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter className="p-8 pt-0 bg-slate-50/30">
-                    <Button 
-                      onClick={addMode === 'restock' ? handleRestock : handleAddNewItem} 
-                      className="bg-primary hover:bg-slate-800 text-white font-bold h-14 px-10 rounded-2xl w-full shadow-xl shadow-slate-200"
+                  <DialogDescription className="text-slate-400 font-medium">Add to current stock levels or register a brand new item.</DialogDescription>
+                </div>
+                
+                <div className="px-8 py-6 space-y-6">
+                  {/* Mode Selector */}
+                  <div className="flex gap-4 p-1 bg-slate-100 rounded-xl mb-2">
+                    <button 
+                      onClick={() => setAddMode('restock')}
+                      className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", addMode === 'restock' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
                     >
-                      {addMode === 'restock' ? 'Update Stock Levels' : 'Confirm & Save New Item'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                      <RefreshCcw className="h-3.5 w-3.5" /> Restock Existing
+                    </button>
+                    <button 
+                      onClick={() => setAddMode('new')}
+                      className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2", addMode === 'new' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" /> Register New
+                    </button>
+                  </div>
+
+                  {addMode === 'restock' ? (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Target Item</Label>
+                        <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                          <SelectTrigger className="h-14 bg-slate-50 border-none rounded-xl text-slate-900 font-bold">
+                            <SelectValue placeholder="-- Choose Item to Update --" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-none shadow-xl">
+                            {allItems && allItems.length > 0 ? (
+                              allItems.map(item => (
+                                <SelectItem key={item.id} value={item.id} className="py-3 font-medium">
+                                  <div className="flex justify-between items-center w-full min-w-[300px]">
+                                    <span>{item.name}</span>
+                                    <div className="flex gap-2">
+                                      <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-bold uppercase">Stock: {item.currentStock}</span>
+                                      <span className="text-[10px] bg-teal-50 px-2 py-0.5 rounded-full text-teal-600 font-bold uppercase">{item.itemType || 'product'}</span>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center text-xs text-slate-400 italic">Catalog is empty.</div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Quantity to Add</Label>
+                        <div className="relative">
+                          <Plus className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-500" />
+                          <Input 
+                            type="number" 
+                            min="1"
+                            placeholder="0"
+                            value={restockAmount || ''} 
+                            onChange={(e) => setRestockAmount(Number(e.target.value))} 
+                            className="h-14 bg-slate-50 border-none rounded-xl pl-12 text-lg font-bold text-slate-900" 
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium px-1 flex items-center gap-1.5">
+                          <AlertCircle className="h-3 w-3" /> This will be added to the current stock level.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="flex gap-4 p-1 bg-slate-50 rounded-xl mb-2">
+                        <button 
+                          onClick={() => setFormData({...formData, itemType: 'product'})}
+                          className={cn("flex-1 py-2 text-[10px] font-bold rounded-lg transition-all", formData.itemType === 'product' ? "bg-white text-teal-600 shadow-sm border border-teal-100" : "text-slate-400")}
+                        >
+                          Finished Product
+                        </button>
+                        <button 
+                          onClick={() => setFormData({...formData, itemType: 'material'})}
+                          className={cn("flex-1 py-2 text-[10px] font-bold rounded-lg transition-all", formData.itemType === 'material' ? "bg-white text-teal-600 shadow-sm border border-teal-100" : "text-slate-400")}
+                        >
+                          Raw Material
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Name</Label>
+                          <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="E.g. Summer Dress" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Price (KES)</Label>
+                          <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Initial Stock</Label>
+                          <Input type="number" value={formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Low Stock Warning</Label>
+                          <Input type="number" value={formData.lowStockThreshold} onChange={(e) => setFormData({...formData, lowStockThreshold: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter className="p-8 pt-0 bg-slate-50/30">
+                  <Button 
+                    onClick={addMode === 'restock' ? handleRestock : handleAddNewItem} 
+                    className="bg-primary hover:bg-slate-800 text-white font-bold h-14 px-10 rounded-2xl w-full shadow-xl shadow-slate-200"
+                  >
+                    {addMode === 'restock' ? 'Update Existing Stock' : 'Save New Catalog Item'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           }
         />
 
@@ -305,10 +319,10 @@ export default function InventoryPage() {
               <Table>
                 <TableHeader className="bg-primary text-white">
                   <TableRow className="border-none hover:bg-transparent">
-                    <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Name</TableHead>
+                    <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Details</TableHead>
                     <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Category</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Stock</TableHead>
-                    <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Value (KES)</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Current Stock</TableHead>
+                    <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Unit Price (KES)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -319,8 +333,8 @@ export default function InventoryPage() {
                       <TableCell colSpan={4} className="text-center py-32 text-slate-400">
                         <div className="flex flex-col items-center gap-3">
                           <PackageIcon className="h-10 w-10 opacity-10" />
-                          <p className="font-medium italic">No {activeTab === 'product' ? 'finished goods' : 'raw materials'} found in your inventory.</p>
-                          <Button variant="link" onClick={() => setIsAddDialogOpen(true)} className="text-teal-600 font-bold">Manage your first item</Button>
+                          <p className="font-medium italic">No items found in this category.</p>
+                          <Button variant="link" onClick={() => setIsAddDialogOpen(true)} className="text-teal-600 font-bold">Register your first item</Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -329,20 +343,20 @@ export default function InventoryPage() {
                       <TableCell className="font-medium text-slate-900 pl-6">
                         <div className="flex flex-col">
                           <span className="font-bold">{item.name}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{item.sku}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{item.sku}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs font-bold text-slate-500 uppercase">{item.category}</TableCell>
                       <TableCell>
                         <span className={cn(
-                          "font-bold px-2 py-1 rounded-md",
+                          "font-bold px-3 py-1.5 rounded-lg inline-flex items-center",
                           item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700" : 
-                          item.currentStock <= (item.lowStockThreshold || 10) ? "bg-amber-100 text-amber-700" : "text-slate-900"
+                          item.currentStock <= (item.lowStockThreshold || 20) ? "bg-amber-100 text-amber-700" : "bg-slate-50 text-slate-900"
                         )}>
                           {item.currentStock}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-bold text-teal-accent pr-6">KES {item.price.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-bold text-teal-600 pr-6">KES {item.price.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

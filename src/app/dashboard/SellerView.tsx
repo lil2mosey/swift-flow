@@ -52,7 +52,8 @@ export default function SellerView() {
 
   const lowStockItems = useMemo(() => {
     if (!products) return [];
-    return products.filter(p => p.currentStock <= (p.lowStockThreshold || 10));
+    // Filter items that are at or below their individual lowStockThreshold
+    return products.filter(p => p.currentStock <= (p.lowStockThreshold || 20));
   }, [products]);
 
   const processedChartData = useMemo(() => {
@@ -73,7 +74,7 @@ export default function SellerView() {
       if (order.paymentStatus === 'paid' && order.createdAt) {
         const orderDate = typeof order.createdAt === 'string' 
           ? order.createdAt.split('T')[0] 
-          : new Date(order.createdAt).toISOString().split('T')[0];
+          : new Date(order.createdAt?.seconds * 1000 || order.createdAt).toISOString().split('T')[0];
 
         if (dataMap[orderDate] !== undefined) {
           dataMap[orderDate] += order.totalAmount || order.total || 0;
@@ -103,13 +104,13 @@ export default function SellerView() {
   const handleTriggerPayment = (order: Order) => {
     FirebaseService.requestPayment(db, order.id);
     toast({ 
-      title: "STK Push Sent", 
-      description: `Requested KES ${order.totalAmount.toLocaleString()} from ${order.customerName}. Awaiting their PIN approval.` 
+      title: "Payment Request Sent", 
+      description: `Requested KES ${order.totalAmount.toLocaleString()} from ${order.customerName}.` 
     });
   };
 
   const handlePrintReceipt = (order: Order) => {
-    toast({ title: "Printing...", description: `Generating receipt for ${order.customerName}.` });
+    toast({ title: "Printing...", description: `Formatting receipt for ${order.customerName}.` });
   };
 
   return (
@@ -242,7 +243,7 @@ export default function SellerView() {
                 </div>
                 <div>
                   <CardTitle className="text-lg font-bold text-slate-900">Critical Inventory Alerts</CardTitle>
-                  <CardDescription className="text-rose-600 font-medium">Items requiring immediate replenishment</CardDescription>
+                  <CardDescription className="text-rose-600 font-medium">Replenish these items immediately</CardDescription>
                 </div>
               </div>
               <Button asChild variant="ghost" className="text-xs font-bold text-slate-400 hover:text-rose-600 gap-1">
@@ -255,8 +256,8 @@ export default function SellerView() {
                   <TableRow className="border-slate-100">
                     <TableHead className="pl-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Item Name</TableHead>
                     <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Type</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Current Stock</TableHead>
-                    <TableHead className="text-right pr-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Status</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Stock Level</TableHead>
+                    <TableHead className="text-right pr-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Threshold</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -289,15 +290,16 @@ export default function SellerView() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-bold text-rose-600">{item.currentStock}</span>
-                        <span className="text-[10px] text-slate-400 ml-1">/ {item.lowStockThreshold || 10} min</span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
                         <span className={cn(
-                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
+                          "font-bold px-2 py-0.5 rounded",
                           item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-amber-100 text-amber-700"
                         )}>
-                          {item.currentStock <= (item.criticalThreshold || 5) ? 'Critical' : 'Low Stock'}
+                          {item.currentStock}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          min {item.lowStockThreshold || 20}
                         </span>
                       </TableCell>
                     </TableRow>

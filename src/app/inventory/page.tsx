@@ -75,7 +75,6 @@ export default function InventoryPage() {
 
   const filteredItems = useMemo(() => {
     if (!allItems) return [];
-    // Ensure we match itemType, defaulting to 'product' for legacy items
     return allItems.filter(item => (item.itemType || 'product') === activeTab);
   }, [allItems, activeTab]);
 
@@ -235,15 +234,15 @@ export default function InventoryPage() {
             </TabsTrigger>
           </TabsList>
 
-          <Card className="border-none shadow-sm min-h-[400px]">
-            <CardContent className="p-6">
+          <Card className="border-none shadow-sm min-h-[400px] overflow-hidden">
+            <CardContent className="p-0">
               <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-100">
-                    <TableHead className="font-bold">Item Name</TableHead>
-                    <TableHead className="font-bold">Category</TableHead>
-                    <TableHead className="font-bold">Stock</TableHead>
-                    <TableHead className="font-bold text-right">Value (KES)</TableHead>
+                <TableHeader className="bg-primary text-white">
+                  <TableRow className="border-none hover:bg-transparent">
+                    <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Name</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Category</TableHead>
+                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Stock</TableHead>
+                    <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Value (KES)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -261,7 +260,7 @@ export default function InventoryPage() {
                     </TableRow>
                   ) : filteredItems.map((item) => (
                     <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="font-medium text-slate-900">
+                      <TableCell className="font-medium text-slate-900 pl-6">
                         <div className="flex flex-col">
                           <span>{item.name}</span>
                           <span className="text-[10px] text-slate-400 font-bold uppercase">{item.sku}</span>
@@ -277,7 +276,7 @@ export default function InventoryPage() {
                           {item.currentStock}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-bold text-teal-accent">KES {item.price.toLocaleString()}</TableCell>
+                      <TableCell className="text-right font-bold text-teal-accent pr-6">KES {item.price.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -58,7 +58,6 @@ export default function SellerView() {
   const processedChartData = useMemo(() => {
     if (!sellerOrders) return [];
     
-    // Create a range for the last 7 days
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
@@ -70,10 +69,8 @@ export default function SellerView() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Filter and sum orders by date
     sellerOrders.forEach(order => {
       if (order.paymentStatus === 'paid' && order.createdAt) {
-        // Standardize date string from ISO format
         const orderDate = typeof order.createdAt === 'string' 
           ? order.createdAt.split('T')[0] 
           : new Date(order.createdAt).toISOString().split('T')[0];
@@ -166,7 +163,7 @@ export default function SellerView() {
                     <TableHead className="font-bold pl-6">Ref</TableHead>
                     <TableHead className="font-bold">Customer</TableHead>
                     <TableHead className="font-bold">Status</TableHead>
-                    <TableHead className="font-bold text-right pr-6">Action / Total</TableHead>
+                    <TableHead className="text-right pr-6">Action / Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -237,7 +234,6 @@ export default function SellerView() {
             </CardContent>
           </Card>
 
-          {/* Low Stock Panel */}
           <Card className="border-none shadow-sm overflow-hidden">
             <CardHeader className="bg-rose-50/50 border-b border-rose-100 flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
@@ -354,10 +350,10 @@ export default function SellerView() {
                 <Package className="h-6 w-6 text-teal-400" />
                 <span className="text-[10px] font-bold text-slate-500 uppercase">Inventory Health</span>
               </div>
-              <h3 className="text-lg font-bold">Smart Audit</h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">AI ready to analyze sales velocity and suggest safety stock points.</p>
+              <h3 className="text-lg font-bold">Stock Management</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">Keep track of your goods and materials to ensure smooth business operations.</p>
               <Button asChild variant="outline" className="w-full mt-6 border-slate-700 text-xs text-teal-400 hover:bg-slate-800 font-bold h-10">
-                <Link href="/inventory">Run AI Optimization</Link>
+                <Link href="/inventory">View Inventory</Link>
               </Button>
             </CardContent>
           </Card>

@@ -1,17 +1,15 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { 
   Plus, 
-  Sparkles, 
   Loader2,
   X,
   Layers,
@@ -36,8 +34,6 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { intelligentInventoryRecommendation } from '@/ai/flows/intelligent-inventory-recommendation';
-import { type IntelligentInventoryRecommendationOutput } from '@/ai/flows/intelligent-inventory-recommendation';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { Product, InventoryItemType } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
@@ -47,9 +43,7 @@ import { RoleGuard } from '@/components/RoleGuard';
 export default function InventoryPage() {
   const db = useFirestore();
   const { user } = useUser();
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [recommendations, setRecommendations] = useState<IntelligentInventoryRecommendationOutput | null>(null);
   const [activeTab, setActiveTab] = useState<InventoryItemType>('product');
 
   const [formData, setFormData] = useState({
@@ -77,33 +71,6 @@ export default function InventoryPage() {
     if (!allItems) return [];
     return allItems.filter(item => (item.itemType || 'product') === activeTab);
   }, [allItems, activeTab]);
-
-  const getAiRecommendations = async () => {
-    if (!allItems || allItems.length === 0) {
-      toast({ title: "No Data", description: "Add some products first to get recommendations." });
-      return;
-    }
-    setIsAiLoading(true);
-    try {
-      const input = {
-        products: allItems.filter(p => (p.itemType || 'product') === 'product').map(p => ({
-          productId: p.id,
-          productName: p.name,
-          currentStock: p.currentStock,
-          averageDailySales: p.averageDailySales || 1,
-          leadTimeDays: p.leadTimeDays || 5,
-        }))
-      };
-      const result = await intelligentInventoryRecommendation(input);
-      setRecommendations(result);
-      toast({ title: "AI Audit Complete", description: "Check recommendations for stock optimization." });
-    } catch (error) {
-      console.error("AI Recommendation error:", error);
-      toast({ variant: "destructive", title: "AI Error", description: "Could not generate recommendations." });
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   const handleAddProduct = async () => {
     if (!formData.name || !user) {
@@ -149,16 +116,6 @@ export default function InventoryPage() {
           description="Track live stock levels for finished goods and raw materials."
           action={
             <div className="flex gap-3">
-              <Button 
-                onClick={getAiRecommendations} 
-                disabled={isAiLoading || isProductsLoading || !allItems?.length}
-                variant="outline" 
-                className="border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold gap-2 rounded-xl h-11"
-              >
-                {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                AI Recommendations
-              </Button>
-              
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 px-6 shadow-lg shadow-slate-200">

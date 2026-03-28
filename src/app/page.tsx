@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -46,7 +45,7 @@ export default function Home() {
               </div>
               <CardTitle className="text-2xl font-bold">Admin Portal</CardTitle>
               <CardDescription className="text-slate-500">
-                Manage your store, inventory, and finances in dark-mode dashboard.
+                Manage your store, inventory, and finances in a professional dashboard.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -90,8 +89,8 @@ export default function Home() {
             <div className="p-4 bg-teal-50 rounded-2xl mb-4">
               <Package className="h-6 w-6 text-teal-500" />
             </div>
-            <h3 className="font-bold text-slate-800">Smart Logistics</h3>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed">AI-powered inventory analysis embedded directly in your admin panel.</p>
+            <h3 className="font-bold text-slate-800">Advanced Inventory</h3>
+            <p className="text-xs text-slate-500 mt-2 leading-relaxed">Full tracking of finished goods and raw materials in one place.</p>
           </div>
           <div className="flex flex-col items-center text-center p-8 bg-white rounded-3xl shadow-sm border border-slate-50">
             <div className="p-4 bg-teal-50 rounded-2xl mb-4">

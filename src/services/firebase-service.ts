@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -84,6 +85,85 @@ export const FirebaseService = {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+  },
+
+  seedJewelryCatalog: async (db: Firestore, sellerId: string) => {
+    const jewelryItems = [
+      {
+        name: "Eternity Diamond Band",
+        sku: "JW-R-001",
+        description: "Handcrafted 24K gold band set with premium VVS diamonds.",
+        price: 125000,
+        currentStock: 5,
+        category: "Rings",
+        imageUrl: "https://picsum.photos/seed/ring1/600/600",
+        lowStockThreshold: 2,
+        criticalThreshold: 1,
+        averageDailySales: 0.1,
+        leadTimeDays: 14,
+        itemType: 'product' as const
+      },
+      {
+        name: "Midnight Sapphire Pendant",
+        sku: "JW-N-002",
+        description: "Elegant deep blue sapphire surrounded by a halo of white gold.",
+        price: 48000,
+        currentStock: 12,
+        category: "Necklaces",
+        imageUrl: "https://picsum.photos/seed/neck1/600/600",
+        lowStockThreshold: 5,
+        criticalThreshold: 2,
+        averageDailySales: 0.3,
+        leadTimeDays: 10,
+        itemType: 'product' as const
+      },
+      {
+        name: "Pearl Essence Drop Earrings",
+        sku: "JW-E-003",
+        description: "Lustrous freshwater pearls on 18K rose gold settings.",
+        price: 18500,
+        currentStock: 25,
+        category: "Earrings",
+        imageUrl: "https://picsum.photos/seed/ear1/600/600",
+        lowStockThreshold: 10,
+        criticalThreshold: 5,
+        averageDailySales: 0.8,
+        leadTimeDays: 7,
+        itemType: 'product' as const
+      },
+      {
+        name: "Rose Gold Tennis Bracelet",
+        sku: "JW-B-004",
+        description: "Continuous sparkle with perfectly matched pink-hued diamonds.",
+        price: 75000,
+        currentStock: 8,
+        category: "Bracelets",
+        imageUrl: "https://picsum.photos/seed/brac1/600/600",
+        lowStockThreshold: 3,
+        criticalThreshold: 1,
+        averageDailySales: 0.2,
+        leadTimeDays: 12,
+        itemType: 'product' as const
+      },
+      {
+        name: "Vintage Emerald Studs",
+        sku: "JW-E-005",
+        description: "Deep green Colombian emeralds in a classic vintage square cut.",
+        price: 55000,
+        currentStock: 4,
+        category: "Earrings",
+        imageUrl: "https://picsum.photos/seed/ear2/600/600",
+        lowStockThreshold: 2,
+        criticalThreshold: 1,
+        averageDailySales: 0.1,
+        leadTimeDays: 20,
+        itemType: 'product' as const
+      }
+    ];
+
+    for (const item of jewelryItems) {
+      await FirebaseService.addProduct(db, sellerId, item);
+    }
   },
 
   updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {

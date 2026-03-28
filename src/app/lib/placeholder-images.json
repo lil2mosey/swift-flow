@@ -1,0 +1,35 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "landing-hero",
+      "description": "Logistics and order management",
+      "imageUrl": "https://picsum.photos/seed/oms/1200/800",
+      "imageHint": "order logistics"
+    },
+    {
+      "id": "jw-ring-1",
+      "description": "24K Gold Eternity Diamond Ring",
+      "imageUrl": "https://picsum.photos/seed/ring1/600/600",
+      "imageHint": "diamond ring"
+    },
+    {
+      "id": "jw-neck-1",
+      "description": "Sapphire Solitaire Pendant",
+      "imageUrl": "https://picsum.photos/seed/neck1/600/600",
+      "imageHint": "sapphire necklace"
+    },
+    {
+      "id": "jw-ear-1",
+      "description": "Pearl Essence Drop Earrings",
+      "imageUrl": "https://picsum.photos/seed/ear1/600/600",
+      "imageHint": "pearl earrings"
+    },
+    {
+      "id": "jw-brac-1",
+      "description": "Rose Gold Tennis Bracelet",
+      "imageUrl": "https://picsum.photos/seed/brac1/600/600",
+      "imageHint": "gold bracelet"
+    }
+  ]
+}

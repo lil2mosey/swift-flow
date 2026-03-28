@@ -103,9 +103,11 @@ export default function OrdersPage() {
 
   const handlePrintReceipt = (order: Order) => {
     toast({
-      title: "Printing Receipt",
-      description: `Generating document for Order #${order.id.slice(0,8).toUpperCase()}...`,
+      title: "Opening Print Dialog",
+      description: `Preparing receipt for Order #${order.id.slice(0,8).toUpperCase()}...`,
     });
+    // Triggers the native browser print dialog
+    window.print();
   };
 
   const handleTriggerPayment = (order: Order) => {
@@ -354,7 +356,7 @@ export default function OrdersPage() {
                                  </Button>
                                ) : order.paymentStatus === 'paid' ? (
                                  <Button size="sm" variant="outline" className="h-8 border-teal-200 text-teal-700 font-bold px-3" onClick={() => handlePrintReceipt(order)}>
-                                   <Printer className="h-3.5 w-3.5" /> Receipt
+                                   <Printer className="h-3.5 w-3.5 mr-2" /> Receipt
                                  </Button>
                                ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                             ) : (

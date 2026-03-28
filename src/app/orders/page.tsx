@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,7 +43,8 @@ import {
   MapPin,
   Smartphone,
   Lock,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -59,6 +60,91 @@ import { toast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
 import { PermissionAwareCollection } from '@/components/PermissionAwareCollection';
 
+/**
+ * Receipt Layout for Printing
+ */
+const ReceiptPrintView = ({ order }: { order: Order }) => {
+  const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
+  const deliveryFee = (order.totalAmount || order.total || 0) - itemsSubtotal;
+  const formattedDate = order.createdAt 
+    ? (typeof order.createdAt === 'string' ? new Date(order.createdAt) : new Date(order.createdAt.seconds * 1000)).toLocaleString()
+    : new Date().toLocaleString();
+
+  return (
+    <div className="p-8 max-w-2xl mx-auto bg-white text-slate-900 font-sans border border-slate-200">
+      <div className="text-center border-b pb-6 mb-6">
+        <div className="flex justify-center items-center gap-2 mb-2">
+          <ShieldCheck className="h-8 w-8 text-teal-600" />
+          <h1 className="text-3xl font-bold tracking-tight">SwiftFlow</h1>
+        </div>
+        <p className="text-slate-500 font-medium">Order Management & Logistics</p>
+        <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Official Receipt</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Details</p>
+          <p className="text-sm font-bold">{order.customerName || 'Anonymous'}</p>
+          <p className="text-xs text-slate-600">{order.customerPhone || 'N/A'}</p>
+          <p className="text-xs text-slate-600 italic">{order.deliveryLocation || 'Standard Delivery'}</p>
+        </div>
+        <div className="text-right space-y-1">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Reference</p>
+          <p className="text-sm font-bold">#{order.id.slice(0, 8).toUpperCase()}</p>
+          <p className="text-xs text-slate-600">{formattedDate}</p>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold">
+              <th className="py-2">Item Description</th>
+              <th className="py-2 text-center">Qty</th>
+              <th className="py-2 text-right">Price</th>
+              <th className="py-2 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {order.items?.map((item, idx) => (
+              <tr key={idx}>
+                <td className="py-3 font-medium">{item.productName}</td>
+                <td className="py-3 text-center">{item.quantity}</td>
+                <td className="py-3 text-right">KES {item.priceAtOrder.toLocaleString()}</td>
+                <td className="py-3 text-right font-bold">KES {(item.priceAtOrder * item.quantity).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t pt-4 space-y-2">
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-500 font-medium uppercase tracking-wider">Items Worth (Subtotal)</span>
+          <span className="font-bold text-slate-700">KES {itemsSubtotal.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center text-xs">
+          <span className="text-slate-500 font-medium uppercase tracking-wider">Delivery Fees</span>
+          <span className="font-bold text-slate-700">KES {deliveryFee.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+          <span className="text-sm font-bold uppercase tracking-widest text-teal-600">Total Paid</span>
+          <span className="text-xl font-bold text-slate-900">KES {(order.totalAmount || order.total || 0).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div className="mt-12 text-center">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-2">Thank you for your business!</p>
+        <div className="flex justify-center items-center gap-1.5 opacity-50">
+          <div className="h-1 w-1 bg-teal-500 rounded-full" />
+          <div className="h-1 w-1 bg-teal-500 rounded-full" />
+          <div className="h-1 w-1 bg-teal-500 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function OrdersPage() {
   const db = useFirestore();
   const { user, profile, isProfileLoading } = useUser();
@@ -66,6 +152,7 @@ export default function OrdersPage() {
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [orderToPrint, setOrderToPrint] = useState<Order | null>(null);
   const [pin, setPin] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   
@@ -98,17 +185,29 @@ export default function OrdersPage() {
   
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
+  // Trigger print logic when an order is selected for printing
+  useEffect(() => {
+    if (orderToPrint) {
+      const timer = setTimeout(() => {
+        window.print();
+        // Clear order to print after print dialog closes
+        setOrderToPrint(null);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [orderToPrint]);
+
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     const orderRef = doc(db, 'orders', orderId);
     updateDocumentNonBlocking(orderRef, { status: newStatus, updatedAt: new Date().toISOString() });
   };
 
   const handlePrintReceipt = (order: Order) => {
+    setOrderToPrint(order);
     toast({
-      title: "Opening Print Dialog",
-      description: `Preparing receipt for Order #${order.id.slice(0,8).toUpperCase()}...`,
+      title: "Preparing Receipt",
+      description: `Formatting Order #${order.id.slice(0,8).toUpperCase()} for print...`,
     });
-    window.print();
   };
 
   const handleTriggerPayment = (order: Order) => {
@@ -405,6 +504,11 @@ export default function OrdersPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Hidden Printable Receipt Area */}
+        <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
+          {orderToPrint && <ReceiptPrintView order={orderToPrint} />}
+        </div>
       </Shell>
     </RoleGuard>
   );

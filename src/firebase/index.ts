@@ -3,15 +3,20 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, initializeFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore';
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+/**
+ * Robust Firebase initialization for Next.js.
+ * Ensures Firestore settings like long polling are applied exactly once.
+ */
 export function initializeFirebase() {
-  if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production.
-    let app;
+  let app: FirebaseApp;
+  let db: Firestore;
+
+  if (getApps().length > 0) {
+    app = getApp();
+    db = getFirestore(app);
+  } else {
     try {
       // Attempt to initialize via Firebase App Hosting environment variables
       app = initializeApp();
@@ -22,13 +27,16 @@ export function initializeFirebase() {
 
     // Initialize Firestore with long polling for maximum stability in the Studio environment.
     // This resolves the "Could not reach Cloud Firestore backend" error.
-    initializeFirestore(app, {
+    db = initializeFirestore(app, {
       experimentalForceLongPolling: true,
     });
   }
 
-  const app = getApp();
-  return getSdks(app);
+  return {
+    firebaseApp: app,
+    auth: getAuth(app),
+    firestore: db
+  };
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {

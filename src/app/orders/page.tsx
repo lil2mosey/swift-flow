@@ -513,11 +513,21 @@ export default function OrdersPage() {
                                </Button>
                              )
                           ) : (
-                            order.paymentStatus === 'pending_approval' ? (
-                              <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-1.5 text-[10px]" onClick={() => handleOpenPinDialog(order)}>
-                                <Smartphone className="h-3.5 w-3.5" /> Pay Now
-                              </Button>
-                            ) : order.paymentStatus === 'paid' && <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                            <div className="flex items-center gap-2">
+                              {order.paymentStatus === 'pending_approval' && (
+                                <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-1.5 text-[10px]" onClick={() => handleOpenPinDialog(order)}>
+                                  <Smartphone className="h-3.5 w-3.5" /> Pay Now
+                                </Button>
+                              )}
+                              {order.paymentStatus === 'paid' && (
+                                <>
+                                  <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                                  <Button size="sm" variant="ghost" className="h-8 text-slate-400 px-2" onClick={() => handlePrintReceipt(order)}>
+                                    <Printer className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -597,11 +607,21 @@ export default function OrdersPage() {
                                    </Button>
                                  ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                               ) : (
-                                order.paymentStatus === 'pending_approval' ? (
-                                  <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-2" onClick={() => handleOpenPinDialog(order)}>
-                                    <Smartphone className="h-3.5 w-3.5" /> Pay Now
-                                  </Button>
-                                ) : order.paymentStatus === 'paid' && <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                                <div className="flex items-center justify-end gap-2">
+                                  {order.paymentStatus === 'pending_approval' && (
+                                    <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-2" onClick={() => handleOpenPinDialog(order)}>
+                                      <Smartphone className="h-3.5 w-3.5" /> Pay Now
+                                    </Button>
+                                  )}
+                                  {order.paymentStatus === 'paid' && (
+                                    <>
+                                      <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                                      <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600 font-bold px-2" onClick={() => handlePrintReceipt(order)}>
+                                        <Printer className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </TableCell>

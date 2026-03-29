@@ -172,8 +172,12 @@ export default function OrdersPage() {
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
-    // As requested, customers now have the same global access as sellers for testing
-    return FirebaseService.getSellerOrdersQuery(db);
+    // Sellers see everything, Customers see only their own orders
+    if (profile.role === 'seller') {
+      return FirebaseService.getSellerOrdersQuery(db);
+    } else {
+      return FirebaseService.getCustomerOrdersQuery(db, user.uid);
+    }
   }, [db, user, profile]);
   
   const productsQuery = useMemoFirebase(() => {
@@ -305,7 +309,7 @@ export default function OrdersPage() {
       <Shell userRole={isSeller ? "seller" : "customer"}>
         <PageHeader 
           title={isSeller ? "Logistics Command" : "Orders Dashboard"} 
-          description={isSeller ? "Synchronize manual DM sales and track platform fulfillment." : "View all platform orders and synchronization status."}
+          description={isSeller ? "Synchronize manual DM sales and track platform fulfillment." : "View your order history and synchronization status."}
           action={isSeller && (
             <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
               <DialogTrigger asChild>

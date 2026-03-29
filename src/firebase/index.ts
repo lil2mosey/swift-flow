@@ -41,6 +41,7 @@ export function initializeFirebase() {
     auth = getAuth(app);
 
     // 4. Initialize Firestore with required long-polling
+    // We check if it's already in the global store to avoid re-initialization errors (ID: ca9)
     if (globalStore.__firebaseDb) {
       db = globalStore.__firebaseDb;
     } else {
@@ -49,12 +50,12 @@ export function initializeFirebase() {
           experimentalForceLongPolling: true,
         });
       } catch (e) {
-        // Fallback if already initialized
+        // Fallback if already initialized by another module
         db = getFirestore(app);
       }
     }
 
-    // Store in global window object for absolute singleton consistency
+    // Store in global window object for absolute singleton consistency across navigation
     globalStore.__firebaseApp = app;
     globalStore.__firebaseDb = db;
     globalStore.__firebaseAuth = auth;
@@ -65,6 +66,12 @@ export function initializeFirebase() {
       firestore: db
     };
   }
+
+  // SSR Fallback (minimal initialization)
+  const apps = getApps();
+  app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
 
   return {
     firebaseApp: app,

@@ -17,7 +17,7 @@ import { OrderStatus, Product, OrderItem } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Queries are kept simple (no orderBy) to avoid index requirements during rapid prototyping.
+ * Enhanced with premium jewelry catalog seeding and robust inventory synchronization.
  */
 
 export const FirebaseService = {
@@ -92,7 +92,7 @@ export const FirebaseService = {
       {
         name: "Eternity Diamond Band",
         sku: "JW-R-001",
-        description: "Handcrafted 24K gold band set with premium VVS diamonds.",
+        description: "Handcrafted 24K gold band set with premium VVS diamonds. A symbol of everlasting love.",
         price: 125000,
         currentStock: 5,
         category: "Rings",
@@ -106,7 +106,7 @@ export const FirebaseService = {
       {
         name: "Midnight Sapphire Pendant",
         sku: "JW-N-002",
-        description: "Elegant deep blue sapphire surrounded by a halo of white gold.",
+        description: "Elegant deep blue sapphire surrounded by a halo of white gold. Perfect for evening wear.",
         price: 48000,
         currentStock: 12,
         category: "Necklaces",
@@ -120,7 +120,7 @@ export const FirebaseService = {
       {
         name: "Pearl Essence Drop Earrings",
         sku: "JW-E-003",
-        description: "Lustrous freshwater pearls on 18K rose gold settings.",
+        description: "Lustrous freshwater pearls on 18K rose gold settings. Timeless elegance.",
         price: 18500,
         currentStock: 25,
         category: "Earrings",
@@ -134,7 +134,7 @@ export const FirebaseService = {
       {
         name: "Rose Gold Tennis Bracelet",
         sku: "JW-B-004",
-        description: "Continuous sparkle with perfectly matched pink-hued diamonds.",
+        description: "Continuous sparkle with perfectly matched pink-hued diamonds. A modern classic.",
         price: 75000,
         currentStock: 8,
         category: "Bracelets",
@@ -148,7 +148,7 @@ export const FirebaseService = {
       {
         name: "Vintage Emerald Studs",
         sku: "JW-E-005",
-        description: "Deep green Colombian emeralds in a classic vintage square cut.",
+        description: "Deep green Colombian emeralds in a classic vintage square cut. Unmatched brilliance.",
         price: 55000,
         currentStock: 4,
         category: "Earrings",
@@ -158,6 +158,20 @@ export const FirebaseService = {
         averageDailySales: 0.1,
         leadTimeDays: 20,
         itemType: 'product' as const
+      },
+      {
+        name: "Gold Leaf Brooch",
+        sku: "JW-BR-006",
+        description: "A delicate 18K yellow gold brooch inspired by the beauty of nature.",
+        price: 12500,
+        currentStock: 15,
+        category: "Accessories",
+        imageUrl: "https://picsum.photos/seed/brooch/600/600",
+        lowStockThreshold: 5,
+        criticalThreshold: 2,
+        averageDailySales: 0.4,
+        leadTimeDays: 5,
+        itemType: 'product' as const
       }
     ];
 
@@ -165,7 +179,7 @@ export const FirebaseService = {
       await FirebaseService.addProduct(db, sellerId, item);
     }
 
-    // Seed a completed order for "real data" demo
+    // Seed a completed order for "real data" demo in the dashboard
     await FirebaseService.addManualOrder(db, sellerId, {
       customerName: "Initial Demo Client",
       customerPhone: "0700000000",

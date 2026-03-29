@@ -41,10 +41,12 @@ export function initializeFirebase() {
       db = existingDb;
     } else {
       try {
+        // Critical: In Studio, we must force long polling for reliable streams
         db = initializeFirestore(app, {
           experimentalForceLongPolling: true,
         });
       } catch (e) {
+        // Fallback if initializeFirestore fails (e.g. already initialized)
         db = getFirestoreRegular(app);
       }
     }

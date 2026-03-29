@@ -110,7 +110,6 @@ export const FirebaseService = {
     const convsRef = collection(db, 'conversations');
     const participants = [customerId, sellerId].sort();
     
-    // We use a simplified query to avoid composite index requirements in production
     const q = query(
       convsRef, 
       where('participants', '==', participants),
@@ -175,7 +174,7 @@ export const FirebaseService = {
 
     addDocumentNonBlocking(messagesRef, {
       senderId,
-      senderName, // Professional identity badge
+      senderName, 
       text,
       createdAt: serverTimestamp()
     });
@@ -188,7 +187,6 @@ export const FirebaseService = {
   },
 
   getInquiriesQuery: (db: Firestore, userId: string) => {
-    // Index-free query: Avoid orderBy here to prevent composite index requirements in Vercel
     return query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId),
@@ -197,7 +195,6 @@ export const FirebaseService = {
   },
 
   getChatMessagesQuery: (db: Firestore, convId: string) => {
-    // Single-field orderBy is standard and usually doesn't require composite index
     return query(
       collection(db, 'conversations', convId, 'messages'),
       orderBy('createdAt', 'asc'),
@@ -276,19 +273,6 @@ export const FirebaseService = {
         averageDailySales: 0,
         leadTimeDays: 5,
         itemType: 'material' as const
-      },
-      {
-        name: "925 Sterling Silver Sheets",
-        sku: "RM-SILVER-SHEET",
-        description: "Standard gauge Sterling Silver sheets for workshop use.",
-        price: 850,
-        currentStock: 25,
-        category: "Metals",
-        sellerId: sellerId,
-        lowStockThreshold: 5,
-        averageDailySales: 0,
-        leadTimeDays: 5,
-        itemType: 'material' as const
       }
     ];
 
@@ -298,15 +282,10 @@ export const FirebaseService = {
   },
 
   getSellerOrdersQuery: (db: Firestore) => {
-    // Basic query for production stability
-    return query(
-      collection(db, 'orders'),
-      limit(200)
-    );
+    return query(collection(db, 'orders'), limit(200));
   },
 
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
-    // Filter by customer only, avoid orderBy to prevent composite index requirement
     return query(
       collection(db, 'orders'),
       where('customerId', '==', customerId),
@@ -315,9 +294,6 @@ export const FirebaseService = {
   },
 
   getProductsQuery: (db: Firestore) => {
-    return query(
-      collection(db, 'products'), 
-      limit(200)
-    );
+    return query(collection(db, 'products'), limit(200));
   }
 };

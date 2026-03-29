@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -25,11 +24,11 @@ export function useCustomerProducts(maxLimit = 24) {
   useEffect(() => {
     if (!db) return;
 
-    // We only query by itemType (equality) to avoid needing a composite index for range/sorting
+    // Use only itemType equality filter to avoid composite index requirements
     const q = query(
       collection(db, 'products'),
       where('itemType', '==', 'product'),
-      limit(maxLimit * 2) // Fetch a bit more to account for out-of-stock items filtered on client
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -39,7 +38,7 @@ export function useCustomerProducts(maxLimit = 24) {
           ...doc.data() 
         })) as Product[];
       
-      // Filter by stock level on the client side to bypass index requirements
+      // Client-side stock filtering and sorting for instant sync without indices
       const inStockProducts = productsData
         .filter(p => (p.currentStock || 0) > 0)
         .slice(0, maxLimit);
@@ -48,7 +47,6 @@ export function useCustomerProducts(maxLimit = 24) {
       setIsLoading(false);
       setError(null);
     }, (err) => {
-      console.error('Error in useCustomerProducts listener:', err);
       setError(err);
       setIsLoading(false);
     });
@@ -56,7 +54,7 @@ export function useCustomerProducts(maxLimit = 24) {
     return () => unsubscribe();
   }, [db, maxLimit]);
 
-  return { products, isLoading, error, hasMore: false, loadMore: () => {} };
+  return { products, isLoading, error };
 }
 
 /**
@@ -72,7 +70,6 @@ export function useCustomerOrders() {
   useEffect(() => {
     if (!db) return;
 
-    // Use a basic query without orderBy to avoid index requirements during prototyping
     const q = query(
       collection(db, 'orders'),
       limit(100)
@@ -84,7 +81,7 @@ export function useCustomerOrders() {
         ...doc.data() 
       })) as Order[];
       
-      // Sort on the client side
+      // Client-side sort to bypass index requirements
       const sortedOrders = [...ordersData].sort((a, b) => {
         const dateA = a.createdAt?.seconds || 0;
         const dateB = b.createdAt?.seconds || 0;

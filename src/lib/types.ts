@@ -72,6 +72,7 @@ export interface Conversation {
   itemId: string;
   itemName: string;
   customerName?: string;
+  status?: 'replied' | 'unreplied';
 }
 
 export interface ChatMessage {

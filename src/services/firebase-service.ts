@@ -12,7 +12,8 @@ import {
   increment,
   orderBy,
   getDocs,
-  setDoc
+  setDoc,
+  getDoc
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -134,15 +135,26 @@ export const FirebaseService = {
       itemName: item.name,
       customerName: customerName,
       lastMessage: 'Inquiry started',
+      status: 'unreplied',
       timestamp: serverTimestamp(),
     });
 
     return newConvRef.id;
   },
 
-  sendChatMessage: (db: Firestore, convId: string, senderId: string, text: string) => {
+  sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string) => {
     const messagesRef = collection(db, 'conversations', convId, 'messages');
     const convRef = doc(db, 'conversations', convId);
+
+    // Get conversation to check role
+    const convSnap = await getDoc(convRef);
+    const convData = convSnap.data();
+    
+    // Determine status (if sender is not the one who started it, it's likely a reply)
+    // For simplicity, if senderId matches participants[0] (usually customer), status is unreplied.
+    // If it's the seller (participants[1]), it's replied.
+    const isSeller = senderId === 'system-seller'; // In this app we use system-seller as main seller
+    const newStatus = isSeller ? 'replied' : 'unreplied';
 
     // Add message to sub-collection
     addDocumentNonBlocking(messagesRef, {
@@ -154,6 +166,7 @@ export const FirebaseService = {
     // Update conversation metadata
     updateDocumentNonBlocking(convRef, {
       lastMessage: text,
+      status: newStatus,
       timestamp: serverTimestamp()
     });
   },
@@ -209,7 +222,7 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Pure Gold Eternity Band (18K)",
+        name: "Pure Gold Eternity Band (18K Gold)",
         sku: "JW-R-PURE-18K",
         description: "Solid 18K gold band, perfectly polished for a lifetime of wear.",
         price: 45000,

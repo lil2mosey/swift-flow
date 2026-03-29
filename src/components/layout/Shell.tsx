@@ -70,15 +70,15 @@ export function Shell({ children, userRole }: ShellProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[#0f172a] text-white flex items-center justify-between px-6 shadow-md border-b border-slate-800">
+      <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-[#0f172a] text-white flex items-center justify-between px-6 shadow-md border-b border-slate-800">
         <div className="flex items-center gap-8">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="md:hidden text-white"
+            className="md:hidden text-white hover:bg-slate-800"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? <X /> : <Menu />}
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
           <Link href="/" className="text-xl font-bold tracking-tight flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-teal-400" />
@@ -136,42 +136,55 @@ export function Shell({ children, userRole }: ShellProps) {
         </div>
       </main>
 
+      {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-[#0f172a]/98 pt-20 px-8 md:hidden animate-in fade-in zoom-in duration-200">
-          <div className="flex flex-col gap-6">
+        <div className="fixed inset-0 z-[150] bg-[#0f172a] pt-20 px-8 md:hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex flex-col gap-4">
             {navItems.map((item) => (
               <Link 
                 key={item.href} 
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest border-b border-slate-800",
-                  pathname === item.href ? "text-teal-400" : "text-slate-500"
+                  "flex items-center gap-4 py-5 text-xl font-bold uppercase tracking-widest border-b border-slate-800 transition-colors",
+                  pathname === item.href ? "text-teal-400" : "text-white"
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-6 w-6" />
                 {item.name}
               </Link>
             ))}
             {user ? (
               <button 
-                onClick={handleLogout}
-                className="flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest text-rose-500"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="flex items-center gap-4 py-5 text-xl font-bold uppercase tracking-widest text-rose-500 border-b border-slate-800"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-6 w-6" />
                 Sign Out
               </button>
             ) : (
               <Link 
                 href="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-4 py-4 text-lg font-bold uppercase tracking-widest text-teal-400"
+                className="flex items-center gap-4 py-5 text-xl font-bold uppercase tracking-widest text-teal-400 border-b border-slate-800"
               >
-                <LogIn className="h-5 w-5" />
+                <LogIn className="h-6 w-6" />
                 Sign In
               </Link>
             )}
           </div>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute top-4 left-6 text-white hover:bg-slate-800"
+          >
+            <X className="h-6 w-6" />
+          </Button>
         </div>
       )}
     </div>

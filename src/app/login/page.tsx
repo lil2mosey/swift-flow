@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
+import { Loader2, LogIn, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { auth, firestore } = useFirebase();
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
@@ -97,78 +98,139 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-slate-900">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-teal-400 mb-4 shadow-lg">
-            <ShieldCheck className="h-6 w-6" />
+      <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
+        <div className="text-center space-y-2">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0f172a] text-teal-400 mb-4 shadow-2xl ring-4 ring-white">
+            <ShieldCheck className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">SwiftFlow</h1>
-          <p className="text-slate-500 mt-2 font-medium">Logistics & Order Management</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
+          <p className="text-slate-500 font-medium italic">Synchronized Logistics & Orders</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="login" className="rounded-lg">Login</TabsTrigger>
-            <TabsTrigger value="register" className="rounded-lg">Register</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-200/50 p-1.5 rounded-2xl">
+            <TabsTrigger value="login" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Login</TabsTrigger>
+            <TabsTrigger value="register" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">Register</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="login">
-            <Card className="border-none shadow-xl rounded-2xl bg-white">
+          <TabsContent value="login" className="animate-in slide-in-from-bottom-4 duration-500">
+            <Card className="border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[2rem] bg-white overflow-hidden">
               <form onSubmit={handleSignIn}>
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold">Welcome Back</CardTitle>
-                  <CardDescription>Enter your credentials to access the portal.</CardDescription>
+                <CardHeader className="pt-8 px-8">
+                  <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+                  <CardDescription className="text-slate-400 font-medium">Access your synchronized command center.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5 px-8 pb-8">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
+                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Work Email</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="name@example.com" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      required 
+                      className="bg-slate-50 h-14 border-none rounded-2xl px-4 focus-visible:ring-teal-500 font-medium" 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
+                    <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Secure Password</Label>
+                    <div className="relative group">
+                      <Input 
+                        id="password" 
+                        type={showPassword ? "text" : "password"} 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        required 
+                        className="bg-slate-50 h-14 border-none rounded-2xl px-4 pr-12 focus-visible:ring-teal-500 font-medium" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors focus:outline-none"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="w-full h-12 bg-primary text-white font-bold gap-2 rounded-xl">
-                    <LogIn className="h-4 w-4" /> Sign In
+                <CardFooter className="px-8 pb-8">
+                  <Button type="submit" className="w-full h-14 bg-[#0f172a] hover:bg-slate-800 text-white font-bold gap-3 rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
+                    <LogIn className="h-5 w-5 text-teal-400" /> Sign In to Portal
                   </Button>
                 </CardFooter>
               </form>
             </Card>
           </TabsContent>
 
-          <TabsContent value="register">
-            <Card className="border-none shadow-xl rounded-2xl bg-white">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold">Create Account</CardTitle>
-                <CardDescription>Select your primary role to get started.</CardDescription>
+          <TabsContent value="register" className="animate-in slide-in-from-bottom-4 duration-500">
+            <Card className="border-none shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[2rem] bg-white overflow-hidden">
+              <CardHeader className="pt-8 px-8">
+                <CardTitle className="text-2xl font-bold">New Account</CardTitle>
+                <CardDescription className="text-slate-400 font-medium">Join the SwiftFlow synchronization ecosystem.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 px-8 pb-8">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
+                  <Label htmlFor="fullName" className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</Label>
+                  <Input 
+                    id="fullName" 
+                    placeholder="John Doe" 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)} 
+                    required 
+                    className="bg-slate-50 h-14 border-none rounded-2xl px-4 focus-visible:ring-teal-500 font-medium" 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <Input id="reg-email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
+                  <Label htmlFor="reg-email" className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Work Email</Label>
+                  <Input 
+                    id="reg-email" 
+                    type="email" 
+                    placeholder="name@example.com" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    required 
+                    className="bg-slate-50 h-14 border-none rounded-2xl px-4 focus-visible:ring-teal-500 font-medium" 
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <Input id="reg-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-11 border-none rounded-xl" />
+                  <Label htmlFor="reg-password" className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Create Password</Label>
+                  <div className="relative group">
+                    <Input 
+                      id="reg-password" 
+                      type={showPassword ? "text" : "password"} 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      required 
+                      className="bg-slate-50 h-14 border-none rounded-2xl px-4 pr-12 focus-visible:ring-teal-500 font-medium" 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col gap-3">
-                <Button onClick={(e) => handleSignUp(e, 'seller')} className="w-full h-12 bg-primary text-white font-bold rounded-xl">
-                  Join as Seller (Admin)
+              <CardFooter className="flex flex-col gap-3 px-8 pb-8">
+                <Button onClick={(e) => handleSignUp(e, 'seller')} className="w-full h-14 bg-[#0f172a] hover:bg-slate-800 text-white font-bold rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
+                  Start as Seller (Admin)
                 </Button>
-                <Button onClick={(e) => handleSignUp(e, 'customer')} variant="outline" className="w-full h-12 border-slate-200 text-slate-700 font-bold rounded-xl">
+                <Button onClick={(e) => handleSignUp(e, 'customer')} variant="outline" className="w-full h-14 border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 transition-all active:scale-[0.98]">
                   Join as Customer (Storefront)
                 </Button>
               </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
+
+        <div className="text-center">
+          <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold">
+            Enterprise Secure Environment
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -19,7 +19,7 @@ import { query, collection, limit } from 'firebase/firestore';
 /**
  * Unified Messaging Page for SwiftFlow.
  * Handles both Seller (Conversation Management) and Customer (Direct Support) views.
- * Messages from customers now correctly appear in the seller's inbox.
+ * Real-time synchronization is achieved via consistent participant sorting.
  */
 export default function MessagesPage() {
   const { user, profile } = useUser();
@@ -30,10 +30,9 @@ export default function MessagesPage() {
   const isSeller = profile?.role === 'seller';
 
   // --- Recipient Discovery for Customers ---
-  // Customers need to find who the "seller" is to chat with them.
-  // We'll peek at the products to find a seller ID.
+  // Customers discover the actual Seller UID from the seeded products.
   const productsQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
-  const { data: sampleProducts } = useCollection<Product>(productsQuery);
+  const { data: sampleProducts, isLoading: isCatalogSyncing } = useCollection<Product>(productsQuery);
   
   const systemSellerId = useMemo(() => {
     if (sampleProducts && sampleProducts.length > 0) return sampleProducts[0].sellerId || 'system-seller';
@@ -41,6 +40,7 @@ export default function MessagesPage() {
   }, [sampleProducts]);
 
   // --- Conversation Loading ---
+  // We fetch all messages where the user is a participant.
   const allConversationsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return FirebaseService.getConversationsQuery(db, user.uid);
@@ -48,7 +48,7 @@ export default function MessagesPage() {
 
   const { data: allMessages, isLoading: isConversationsLoading } = useCollection<Message>(allConversationsQuery);
 
-  // Group messages into unique conversations for the seller's sidebar
+  // Group messages into unique conversations for the sidebar
   const uniqueConversations = useMemo(() => {
     if (!allMessages || !user) return [];
     
@@ -65,6 +65,7 @@ export default function MessagesPage() {
       }
     });
     
+    // Sort conversations locally by timestamp to avoid index requirements
     return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
   }, [allMessages, user, isSeller]);
 
@@ -165,7 +166,7 @@ export default function MessagesPage() {
           "border-none shadow-sm h-full flex flex-col bg-white rounded-3xl overflow-hidden",
           isSeller ? "lg:col-span-2" : "lg:col-span-3"
         )}>
-          {activeReceiverId || !isSeller ? (
+          {(activeReceiverId || !isSeller) ? (
             <>
               <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white z-10">
                 <div className="flex items-center gap-4">
@@ -174,17 +175,12 @@ export default function MessagesPage() {
                     <AvatarFallback><User className="h-5 w-5 text-slate-400" /></AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || "Workshop"}</h3>
+                    <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || (isCatalogSyncing ? "Syncing..." : "Workshop")}</h3>
                     <div className="flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 bg-teal-500 rounded-full animate-pulse" />
                       <span className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter">Synchronized</span>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-full">
-                    <Phone className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
 
@@ -198,7 +194,7 @@ export default function MessagesPage() {
                          <MessageSquare className="h-10 w-10 text-slate-100" />
                        </div>
                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Start of Conversation</p>
-                       <p className="text-[10px] text-slate-300 mt-1 italic">Type below to sync your jewelry inquiry.</p>
+                       <p className="text-[10px] text-slate-300 mt-1 italic">Type below to sync your inquiry with the workshop.</p>
                     </div>
                   ) : chatMessages.map((msg) => (
                     <div key={msg.id} className={cn(
@@ -226,12 +222,13 @@ export default function MessagesPage() {
                   <Input 
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    disabled={isCatalogSyncing && !isSeller}
                     className="bg-slate-50 border-none h-14 rounded-2xl px-6 font-medium text-slate-900 focus-visible:ring-1 focus-visible:ring-teal-200" 
-                    placeholder="Describe your jewelry request..." 
+                    placeholder={isCatalogSyncing && !isSeller ? "Syncing workshop connection..." : "Describe your jewelry request..."} 
                   />
                   <Button 
                     type="submit" 
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || (isCatalogSyncing && !isSeller)}
                     className="h-14 w-14 sm:w-auto sm:px-8 bg-primary hover:bg-slate-800 text-white font-bold gap-3 rounded-2xl shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
                   >
                     <Send className="h-4 w-4" />
@@ -247,7 +244,7 @@ export default function MessagesPage() {
               </div>
               <h3 className="text-xl font-bold text-slate-900">Select a Conversation</h3>
               <p className="text-sm text-slate-500 max-w-xs mt-3 leading-relaxed">
-                Choose a customer from your synchronized list to begin real-time logistics support.
+                Choose a customer from your list to begin synchronized logistics support.
               </p>
             </div>
           )}

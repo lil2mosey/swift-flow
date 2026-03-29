@@ -20,7 +20,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Enhanced with robust messaging and non-redundant inventory seeding.
+ * Optimized for real-time synchronization with minimal index requirements.
  */
 
 export const FirebaseService = {
@@ -97,14 +97,12 @@ export const FirebaseService = {
   confirmPayment: async (db: Firestore, order: Order) => {
     const orderRef = doc(db, 'orders', order.id);
     
-    // 1. Update order status to paid and completed
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'paid', 
       status: 'completed',
       updatedAt: serverTimestamp()
     });
 
-    // 2. Reduce inventory stock for each item in the order using the quantity from the order
     if (order.items && order.items.length > 0) {
       order.items.forEach(item => {
         if (item.productId) {
@@ -133,12 +131,10 @@ export const FirebaseService = {
   },
 
   seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
-    // Check if catalog is already seeded
     const productsRef = collection(db, 'products');
     const existing = await getDocs(query(productsRef, limit(1)));
     if (!existing.empty) return;
 
-    // Professional non-redundant catalog with naming conventions
     const inventory = [
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
@@ -244,7 +240,6 @@ export const FirebaseService = {
       await FirebaseService.addProduct(db, sellerId, item);
     }
 
-    // Seed raw materials
     const rawMaterials = [
       {
         name: "925 Sterling Silver Grain",
@@ -286,6 +281,7 @@ export const FirebaseService = {
       receiverId,
       content,
       senderName,
+      // Sort participants to create a consistent "conversation ID" for querying
       participants: [senderId, receiverId].sort(),
       createdAt: serverTimestamp()
     });
@@ -294,7 +290,8 @@ export const FirebaseService = {
   getMessagesQuery: (db: Firestore, participants: string[]) => {
     return query(
       collection(db, 'messages'),
-      where('participants', '==', participants.sort()),
+      // Query for the exact sorted participants array
+      where('participants', '==', [...participants].sort()),
       orderBy('createdAt', 'asc'),
       limit(100)
     );
@@ -304,7 +301,8 @@ export const FirebaseService = {
     return query(
       collection(db, 'messages'),
       where('participants', 'array-contains', userId),
-      orderBy('createdAt', 'desc'),
+      // Removed orderBy server-side to avoid index requirement issues in dev
+      // Sorting is handled client-side in the component
       limit(500)
     );
   },

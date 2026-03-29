@@ -81,7 +81,7 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
           <ShieldCheck className="h-8 w-8 text-teal-600" />
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">SwiftFlow</h1>
         </div>
-        <p className="text-slate-500 font-medium italic">Synchronized Logistics & Receipts</p>
+        <p className="text-slate-500 font-medium italic">Order Management and Inventory Tracking</p>
       </div>
 
       <div className="grid grid-cols-2 gap-8 mb-8">

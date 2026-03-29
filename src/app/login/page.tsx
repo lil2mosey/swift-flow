@@ -104,7 +104,7 @@ export default function LoginPage() {
             <ShieldCheck className="h-8 w-8" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
-          <p className="text-slate-500 font-medium italic">Synchronized Logistics & Orders</p>
+          <p className="text-slate-500 font-medium italic">Order Management and Inventory Tracking</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">

@@ -68,7 +68,7 @@ import { PermissionAwareCollection } from '@/components/PermissionAwareCollectio
 const ReceiptPrintView = ({ order }: { order: Order }) => {
   const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
   const orderTotal = order.totalAmount || order.total || 0;
-  const deliveryFee = orderTotal - itemsSubtotal;
+  const deliveryFee = Math.max(0, orderTotal - itemsSubtotal);
   const formattedDate = order.createdAt 
     ? (typeof order.createdAt === 'string' ? new Date(order.createdAt) : new Date(order.createdAt.seconds * 1000)).toLocaleString()
     : new Date().toLocaleString();
@@ -170,15 +170,17 @@ export default function OrdersPage() {
     paymentStatus: 'unpaid' as PaymentStatus
   });
 
+  const isSeller = profile?.role === 'seller';
+
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
     // Sellers see everything, Customers see only their own orders
-    if (profile.role === 'seller') {
+    if (isSeller) {
       return FirebaseService.getSellerOrdersQuery(db);
     } else {
       return FirebaseService.getCustomerOrdersQuery(db, user.uid);
     }
-  }, [db, user, profile]);
+  }, [db, user, profile, isSeller]);
   
   const productsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -189,8 +191,6 @@ export default function OrdersPage() {
   const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
   
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
-
-  const isSeller = profile?.role === 'seller';
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];

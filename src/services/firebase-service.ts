@@ -219,6 +219,10 @@ export const FirebaseService = {
   seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
     const productsRef = collection(db, 'products');
 
+    // Fetch existing SKUs in a single batch to avoid multiple serial queries
+    const existingSnapshot = await getDocs(productsRef);
+    const existingSkus = new Set(existingSnapshot.docs.map(doc => doc.data().sku));
+
     const inventory = [
       // --- Finished Goods (Visible to Customer Shop) ---
       {
@@ -406,14 +410,11 @@ export const FirebaseService = {
       }
     ];
 
-    for (const item of inventory) {
-      // Idempotent seed: check if SKU exists before adding
-      const q = query(productsRef, where('sku', '==', item.sku), limit(1));
-      const existingDocs = await getDocs(q);
-      
-      if (existingDocs.empty) {
-        await FirebaseService.addProduct(db, sellerId, item);
-      }
+    // Parallelize additions for much faster seeding
+    const missingItems = inventory.filter(item => !existingSkus.has(item.sku));
+    
+    if (missingItems.length > 0) {
+      await Promise.all(missingItems.map(item => FirebaseService.addProduct(db, sellerId, item)));
     }
   },
 
@@ -429,7 +430,10 @@ export const FirebaseService = {
     );
   },
 
-  getProductsQuery: (db: Firestore) => {
+  getProductsQuery: (db: Firestore, sellerId?: string) => {
+    if (sellerId) {
+      return query(collection(db, 'products'), where('sellerId', '==', sellerId), limit(200));
+    }
     return query(collection(db, 'products'), limit(200));
   }
 };

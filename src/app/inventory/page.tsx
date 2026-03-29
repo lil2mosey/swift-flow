@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -83,15 +82,19 @@ export default function InventoryPage() {
   });
 
   const productsQuery = useMemoFirebase(() => {
-    return FirebaseService.getProductsQuery(db);
-  }, [db]);
+    // Filter by seller ID to ensure personalized inventory sync
+    return FirebaseService.getProductsQuery(db, user?.uid);
+  }, [db, user?.uid]);
 
   const { data: allItems, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
 
   const filteredItems = useMemo(() => {
     if (!allItems) return [];
     return allItems.filter(item => {
-      const matchesTab = (item.itemType || 'product') === activeTab;
+      // Robust tab matching with explicit material/product check
+      const itemType = item.itemType || 'product';
+      const matchesTab = itemType === activeTab;
+      
       const matchesSearch = !searchTerm || 
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.sku.toLowerCase().includes(searchTerm.toLowerCase());
@@ -175,10 +178,11 @@ export default function InventoryPage() {
     if (!user) return;
     setIsSeeding(true);
     try {
+      // Parallelized seeding is now significantly faster
       await FirebaseService.seedKenyaJewelry(db, user.uid);
       toast({
         title: "Catalog Seeded",
-        description: "Successfully added Kenyan jewelry items to your inventory.",
+        description: "Successfully synchronized jewelry and workshop materials.",
       });
     } catch (error) {
       toast({ variant: "destructive", title: "Seed Failed", description: "Could not populate catalog." });

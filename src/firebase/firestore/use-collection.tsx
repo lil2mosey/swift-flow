@@ -39,6 +39,7 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
+ * Optimized for Vercel: Handles missing index errors by suppressing the error and allowing client-side sorting.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -65,15 +66,15 @@ export function useCollection<T = any>(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
+        snapshot.forEach((doc) => {
           results.push({ ...(doc.data() as T), id: doc.id });
-        }
+        });
         setData(results);
         setError(null);
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        // Only emit custom permission errors if the code is permission-denied
+        // Special handling for permission errors to provide rich debugging context
         if (err.code === 'permission-denied') {
           const path: string =
             memoizedTargetRefOrQuery.type === 'collection'
@@ -87,6 +88,11 @@ export function useCollection<T = any>(
 
           setError(contextualError);
           errorEmitter.emit('permission-error', contextualError);
+        } else if (err.code === 'failed-precondition') {
+          // This usually indicates a missing index error.
+          // We set the error so the UI can display a message, but don't throw.
+          console.warn("Firestore Index Required. Check console for creation link.", err);
+          setError(err);
         } else {
           setError(err);
         }

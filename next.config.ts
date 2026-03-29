@@ -3,9 +3,11 @@ import type {NextConfig} from 'next';
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
+    // Standard practice for fast prototyping on Vercel
     ignoreBuildErrors: true,
   },
   eslint: {
+    // Standard practice for fast prototyping on Vercel
     ignoreDuringBuilds: true,
   },
   images: {

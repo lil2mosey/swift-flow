@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -11,7 +10,8 @@ import {
   serverTimestamp,
   increment,
   getDocs,
-  setDoc
+  setDoc,
+  orderBy
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -110,6 +110,7 @@ export const FirebaseService = {
     const convsRef = collection(db, 'conversations');
     const participants = [customerId, sellerId].sort();
     
+    // We use a simplified query to avoid composite index requirements in production
     const q = query(
       convsRef, 
       where('participants', '==', participants),
@@ -174,7 +175,7 @@ export const FirebaseService = {
 
     addDocumentNonBlocking(messagesRef, {
       senderId,
-      senderName,
+      senderName, // Professional identity badge
       text,
       createdAt: serverTimestamp()
     });
@@ -187,7 +188,7 @@ export const FirebaseService = {
   },
 
   getInquiriesQuery: (db: Firestore, userId: string) => {
-    // Index-free query: Avoid orderBy here to prevent composite index requirement
+    // Index-free query: Avoid orderBy here to prevent composite index requirements in Vercel
     return query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId),
@@ -196,10 +197,10 @@ export const FirebaseService = {
   },
 
   getChatMessagesQuery: (db: Firestore, convId: string) => {
-    // Single-field orderBy is usually fine without composite index
+    // Single-field orderBy is standard and usually doesn't require composite index
     return query(
       collection(db, 'conversations', convId, 'messages'),
-      where('createdAt', '!=', null), // Dummy filter to allow orderBy if needed, but simple is better
+      orderBy('createdAt', 'asc'),
       limit(100)
     );
   },
@@ -297,7 +298,7 @@ export const FirebaseService = {
   },
 
   getSellerOrdersQuery: (db: Firestore) => {
-    // Basic query, sorting handled on client if index is missing
+    // Basic query for production stability
     return query(
       collection(db, 'orders'),
       limit(200)
@@ -305,7 +306,7 @@ export const FirebaseService = {
   },
 
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
-    // Basic query to avoid composite index for customerId + createdAt
+    // Filter by customer only, avoid orderBy to prevent composite index requirement
     return query(
       collection(db, 'orders'),
       where('customerId', '==', customerId),

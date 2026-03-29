@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -23,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, limit, where, orderBy } from 'firebase/firestore';
+import { collection, query, limit, where } from 'firebase/firestore';
 import { FirebaseService } from '@/services/firebase-service';
 import { Conversation, ChatMessage, Product } from '@/lib/types';
 import { format } from 'date-fns';
@@ -62,7 +61,7 @@ export default function MessagesPage() {
 
   const conversations = useMemo(() => {
     if (!rawConversations) return [];
-    // Client-side sort to avoid index requirements
+    // Client-side sort to avoid composite index requirements in Vercel
     return [...rawConversations].sort((a, b) => {
       const timeA = a.timestamp?.seconds || 0;
       const timeB = b.timestamp?.seconds || 0;
@@ -88,11 +87,7 @@ export default function MessagesPage() {
   // --- Chat Messages ---
   const chatQuery = useMemoFirebase(() => {
     if (!selectedConvId) return null;
-    return query(
-      collection(db, 'conversations', selectedConvId, 'messages'),
-      orderBy('createdAt', 'asc'),
-      limit(100)
-    );
+    return FirebaseService.getChatMessagesQuery(db, selectedConvId);
   }, [db, selectedConvId]);
 
   const { data: messages, isLoading: isChatLoading } = useCollection<ChatMessage>(chatQuery);
@@ -107,7 +102,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!selectedConvId || !user || !newMessage.trim()) return;
 
-    // Use full name for identity as requested
+    // Use professional full name for identity
     const senderName = profile?.fullName || profile?.firstName || user.email?.split('@')[0] || 'Member';
     FirebaseService.sendChatMessage(db, selectedConvId, user.uid, senderName, newMessage, isSeller);
     setNewMessage('');

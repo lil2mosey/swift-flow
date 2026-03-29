@@ -19,7 +19,7 @@ The Seed Catalog is an automated script that populates your database with a prof
 
 ### What is added:
 - **Finished Goods**: Premium jewelry pieces like "Infinity Bridal Sets" and "Maasai Beaded Chokers". These will appear instantly in the **Customer Shop**.
-- **Raw Materials**: Workshop essentials like "14K Gold Wire" and "Sterling Silver Sheets". These are only visible in the **Seller Inventory** for restocking and logistics tracking.
+- **Raw Materials**: Workshop essentials like "14K Gold Wire", "Sterling Silver Sheets", and "Natural Blue Sapphires". These are only visible in the **Seller Inventory** for restocking and logistics tracking.
 
 ### How to use it:
 1. Log in as a **Seller**.

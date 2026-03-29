@@ -218,8 +218,6 @@ export const FirebaseService = {
 
   seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
     const productsRef = collection(db, 'products');
-    const existing = await getDocs(query(productsRef, limit(1)));
-    if (!existing.empty) return;
 
     const inventory = [
       // --- Finished Goods (Visible to Customer Shop) ---
@@ -409,7 +407,13 @@ export const FirebaseService = {
     ];
 
     for (const item of inventory) {
-      await FirebaseService.addProduct(db, sellerId, item);
+      // Idempotent seed: check if SKU exists before adding
+      const q = query(productsRef, where('sku', '==', item.sku), limit(1));
+      const existingDocs = await getDocs(q);
+      
+      if (existingDocs.empty) {
+        await FirebaseService.addProduct(db, sellerId, item);
+      }
     }
   },
 

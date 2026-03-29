@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -14,10 +15,8 @@ import {
   X,
   Layers,
   ShoppingBag,
-  Package as PackageIcon,
   RefreshCcw,
   PlusCircle,
-  AlertCircle,
   Search,
   Sparkles
 } from 'lucide-react';

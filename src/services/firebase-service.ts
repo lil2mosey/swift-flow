@@ -12,8 +12,7 @@ import {
   increment,
   orderBy,
   getDocs,
-  setDoc,
-  getDoc
+  setDoc
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -264,17 +263,30 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Hammered Brass Cuff (Gold Finish)",
-        sku: "JW-B-HAM-GLD",
-        description: "Hand-hammered recycled brass cuff with a brilliant gold-tone finish.",
-        price: 2800,
-        currentStock: 8,
-        category: "Bracelets",
+        name: "14K Gold Wire (0.5mm)",
+        sku: "RM-GOLD-WIRE",
+        description: "High-quality 14K Gold wire for custom jewelry fabrication.",
+        price: 1200,
+        currentStock: 50,
+        category: "Metals",
         sellerId: sellerId,
-        lowStockThreshold: 3,
-        averageDailySales: 0.3,
+        lowStockThreshold: 10,
+        averageDailySales: 0,
         leadTimeDays: 5,
-        itemType: 'product' as const
+        itemType: 'material' as const
+      },
+      {
+        name: "925 Sterling Silver Sheets",
+        sku: "RM-SILVER-SHEET",
+        description: "Standard gauge Sterling Silver sheets for workshop use.",
+        price: 850,
+        currentStock: 25,
+        category: "Metals",
+        sellerId: sellerId,
+        lowStockThreshold: 5,
+        averageDailySales: 0,
+        leadTimeDays: 5,
+        itemType: 'material' as const
       }
     ];
 

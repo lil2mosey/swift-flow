@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ import {
 import { Product, Order } from '@/lib/types';
 
 /**
- * Real-time hook for fetching products that are in stock.
+ * Real-time hook for fetching products that are in stock and classified as finished goods.
  */
 export function useCustomerProducts(maxLimit = 24) {
   const db = useFirestore();
@@ -23,9 +24,11 @@ export function useCustomerProducts(maxLimit = 24) {
   useEffect(() => {
     if (!db) return;
 
-    // Filter products that have stock > 0 as requested
+    // Filter products that are "Finished Goods" (product) and have stock > 0
+    // Note: This query may require a composite index (itemType, currentStock) in production
     const q = query(
       collection(db, 'products'),
+      where('itemType', '==', 'product'),
       where('currentStock', '>', 0),
       limit(maxLimit)
     );

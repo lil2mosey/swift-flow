@@ -3,6 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Allow all authenticated users full access temporarily to unblock development
+    // This resolves the race condition between profile creation and role-based checks
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

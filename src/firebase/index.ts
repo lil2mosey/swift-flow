@@ -19,7 +19,7 @@ export function initializeFirebase() {
   if (typeof window !== 'undefined') {
     const globalStore = window as any;
 
-    // 1. Retrieve from global store if already initialized (survives HMR)
+    // 1. Retrieve from global store if already initialized (survives HMR and page transitions)
     if (globalStore.__firebaseApp && globalStore.__firebaseDb && globalStore.__firebaseAuth) {
       return {
         firebaseApp: globalStore.__firebaseApp,
@@ -49,12 +49,12 @@ export function initializeFirebase() {
           experimentalForceLongPolling: true,
         });
       } catch (e) {
-        // Fallback to getFirestore if initializeFirestore fails (already initialized)
+        // Fallback if already initialized
         db = getFirestore(app);
       }
     }
 
-    // Store in global window object
+    // Store in global window object for absolute singleton consistency
     globalStore.__firebaseApp = app;
     globalStore.__firebaseDb = db;
     globalStore.__firebaseAuth = auth;

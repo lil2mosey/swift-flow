@@ -5,7 +5,20 @@ import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package, UserPlus, CreditCard, AlertCircle } from 'lucide-react';
+import { 
+  ShoppingCart, 
+  Heart, 
+  Smartphone, 
+  Loader2, 
+  X, 
+  ShoppingBag, 
+  Package, 
+  UserPlus, 
+  CreditCard, 
+  AlertCircle,
+  Plus,
+  Minus
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -37,6 +50,9 @@ export default function ShopPage() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Local state for quantities per product card
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
 
   const [authData, setAuthData] = useState({
     email: '',
@@ -44,21 +60,32 @@ export default function ShopPage() {
     fullName: ''
   });
 
-  // Real-time jewelry catalog from inventory (products collection where stock > 0)
+  // Real-time jewelry catalog from inventory
   const { products, isLoading: isProductsLoading, error: productsError } = useCustomerProducts(24);
 
+  const updateItemQty = (id: string, delta: number, max: number) => {
+    setItemQuantities(prev => {
+      const current = prev[id] || 1;
+      const next = Math.max(1, Math.min(max, current + delta));
+      return { ...prev, [id]: next };
+    });
+  };
+
   const addToCart = (product: any) => {
+    const qty = itemQuantities[product.id] || 1;
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + qty } : item);
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: 1 }];
+      return [...prev, { id: product.id, name: product.name, price: product.price, quantity: qty }];
     });
     toast({
       title: "Added to Cart",
-      description: `${product.name} ready for checkout.`,
+      description: `${qty}x ${product.name} ready for checkout.`,
     });
+    // Reset local quantity counter
+    setItemQuantities(prev => ({ ...prev, [product.id]: 1 }));
   };
 
   const handleQuickBuy = async (product: any) => {
@@ -67,13 +94,15 @@ export default function ShopPage() {
       return;
     }
     
+    const qty = itemQuantities[product.id] || 1;
     setIsProcessing(true);
     try {
-      await FirebaseService.placeOrder(db, user.uid, profile?.fullName || user.email?.split('@')[0] || 'Customer', product);
+      await FirebaseService.placeOrder(db, user.uid, profile?.fullName || user.email?.split('@')[0] || 'Customer', product, qty);
       toast({
         title: "Order Placed!",
-        description: `Your order for ${product.name} has been synchronized.`,
+        description: `Your order for ${qty}x ${product.name} has been synchronized.`,
       });
+      setItemQuantities(prev => ({ ...prev, [product.id]: 1 }));
     } catch (error) {
       toast({ variant: "destructive", title: "Order Failed", description: "Could not process order." });
     } finally {
@@ -149,19 +178,22 @@ export default function ShopPage() {
   const proceedWithOrder = async (uid: string, customerName: string) => {
     setIsProcessing(true);
     try {
-      const orderTitle = cart.length > 1 ? `${cart[0].name} & ${cart.length - 1} more` : cart[0].name;
-
-      await FirebaseService.placeOrder(db, uid, customerName, {
-        id: cart[0].id,
-        name: orderTitle,
-        price: cartTotal,
-        category: 'Mixed',
-        currentStock: 0,
-        averageDailySales: 0,
-        leadTimeDays: 0,
-        sku: 'SHOP-ORDER',
-        sellerId: 'system-seller'
-      } as any);
+      // Use addManualOrder style structure to support multiple items with correct quantities
+      await FirebaseService.addManualOrder(db, 'system-seller', {
+        customerId: uid,
+        customerName: customerName,
+        customerPhone: phoneNumber,
+        deliveryLocation: 'Online Storefront',
+        totalAmount: cartTotal,
+        paymentStatus: 'unpaid',
+        status: 'pending',
+        items: cart.map(item => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          priceAtOrder: item.price
+        }))
+      });
 
       setTimeout(() => {
         setIsProcessing(false);
@@ -241,6 +273,7 @@ export default function ShopPage() {
               <>
                 {products.map((product) => {
                   const isLowStock = product.currentStock <= (product.lowStockThreshold || 5);
+                  const selectedQty = itemQuantities[product.id] || 1;
                   
                   return (
                     <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl transition-all hover:shadow-md relative">
@@ -277,8 +310,29 @@ export default function ShopPage() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
-                        <div className="text-lg font-bold text-slate-900">
-                          KES {product.price.toLocaleString()}
+                        <div className="flex justify-between items-center">
+                          <div className="text-lg font-bold text-slate-900">
+                            KES {product.price.toLocaleString()}
+                          </div>
+                          <div className="flex items-center bg-slate-100 rounded-lg p-1 gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 rounded-md hover:bg-white"
+                              onClick={() => updateItemQty(product.id, -1, product.currentStock)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="text-xs font-bold w-4 text-center">{selectedQty}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 rounded-md hover:bg-white"
+                              onClick={() => updateItemQty(product.id, 1, product.currentStock)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
                       </CardContent>

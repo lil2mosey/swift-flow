@@ -25,7 +25,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 export const FirebaseService = {
   // --- Orders ---
   
-  placeOrder: (db: Firestore, customerId: string, customerName: string, product: Product) => {
+  placeOrder: (db: Firestore, customerId: string, customerName: string, product: Product, quantity: number = 1) => {
     const ordersRef = collection(db, 'orders');
     const orderData = {
       customerId: customerId,
@@ -35,11 +35,11 @@ export const FirebaseService = {
       items: [{ 
         productId: product.id, 
         productName: product.name, 
-        quantity: 1, 
+        quantity: quantity, 
         priceAtOrder: product.price 
       }],
-      total: product.price, 
-      totalAmount: product.price,
+      total: product.price * quantity, 
+      totalAmount: product.price * quantity,
       status: 'pending',
       paymentStatus: 'unpaid',
       createdAt: serverTimestamp(),
@@ -131,7 +131,7 @@ export const FirebaseService = {
     });
   },
 
-  seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
+  seedJewelryCatalog: async (db: Firestore, sellerId: string) => {
     // Inventory (Finished Goods)
     const inventory = [
       {
@@ -139,11 +139,11 @@ export const FirebaseService = {
         sku: "JW-R-INF",
         description: "Elegant 925 Sterling Silver eternity band paired with a brilliant solitaire engagement ring.",
         price: 8800,
-        currentStock: 8,
+        currentStock: 12,
         category: "Rings",
         imageUrl: "https://picsum.photos/seed/ring1/600/600",
-        lowStockThreshold: 3,
-        criticalThreshold: 1,
+        lowStockThreshold: 5,
+        criticalThreshold: 2,
         averageDailySales: 0.2,
         leadTimeDays: 7,
         itemType: 'product' as const
@@ -189,66 +189,10 @@ export const FirebaseService = {
         averageDailySales: 1.2,
         leadTimeDays: 5,
         itemType: 'product' as const
-      },
-      {
-        name: "Raw Rose Quartz Stacking Ring",
-        sku: "JW-R-ROSE",
-        description: "Natural rose quartz stone set on a minimal silver band. Promotes love and healing.",
-        price: 6000,
-        currentStock: 3,
-        category: "Rings",
-        imageUrl: "https://picsum.photos/seed/rose/600/600",
-        lowStockThreshold: 5,
-        criticalThreshold: 2,
-        averageDailySales: 0.4,
-        leadTimeDays: 10,
-        itemType: 'product' as const
-      }
-    ];
-
-    // Raw Materials
-    const materials = [
-      {
-        name: "925 Sterling Silver Grain",
-        sku: "MET-SIL-01",
-        description: "Premium silver casting grain for jewelry production.",
-        price: 150,
-        currentStock: 500,
-        category: "Metals",
-        location: "Safe-A1",
-        itemType: 'material' as const,
-        averageDailySales: 0,
-        leadTimeDays: 10
-      },
-      {
-        name: "18K Yellow Gold Wire (1.0mm)",
-        sku: "MET-GLD-18K",
-        description: "Half-hard gold wire for jewelry wrapping.",
-        price: 6500,
-        currentStock: 45,
-        category: "Metals",
-        itemType: 'material' as const,
-        averageDailySales: 0,
-        leadTimeDays: 14
-      },
-      {
-        name: "Loose Round Amethyst (6mm)",
-        sku: "GEM-AMY-06",
-        description: "Vibrant purple amethyst gemstones.",
-        price: 450,
-        currentStock: 60,
-        category: "Stones",
-        location: "Drawer-B2",
-        itemType: 'material' as const,
-        averageDailySales: 0,
-        leadTimeDays: 20
       }
     ];
 
     for (const item of inventory) {
-      await FirebaseService.addProduct(db, sellerId, item);
-    }
-    for (const item of materials) {
       await FirebaseService.addProduct(db, sellerId, item);
     }
   },

@@ -19,7 +19,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Enhanced with robust inventory synchronization.
+ * Enhanced with robust inventory synchronization and quantity-aware mutations.
  */
 
 export const FirebaseService = {
@@ -103,7 +103,7 @@ export const FirebaseService = {
       updatedAt: serverTimestamp()
     });
 
-    // 2. Reduce inventory stock for each item in the order
+    // 2. Reduce inventory stock for each item in the order using the quantity from the order
     if (order.items && order.items.length > 0) {
       order.items.forEach(item => {
         if (item.productId) {
@@ -132,11 +132,11 @@ export const FirebaseService = {
   },
 
   seedJewelryCatalog: async (db: Firestore, sellerId: string) => {
-    // Inventory (Finished Goods)
+    // Curated Inventory with unique naming conventions
     const inventory = [
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
-        sku: "JW-R-INF",
+        sku: "JW-R-INF-SS",
         description: "Elegant 925 Sterling Silver eternity band paired with a brilliant solitaire engagement ring.",
         price: 8800,
         currentStock: 12,
@@ -149,9 +149,23 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Handcrafted Maasai Beaded Choker",
-        sku: "JW-N-MAA",
-        description: "Authentic Kenyan Maasai beadwork. Intricate patterns representing strength and unity.",
+        name: "Infinity Bridal Ring Set (14K Gold)",
+        sku: "JW-R-INF-YG",
+        description: "Timeless 14K Yellow Gold eternity band and solitaire engagement ring set.",
+        price: 32000,
+        currentStock: 8,
+        category: "Rings",
+        imageUrl: "https://picsum.photos/seed/ring2/600/600",
+        lowStockThreshold: 3,
+        criticalThreshold: 1,
+        averageDailySales: 0.1,
+        leadTimeDays: 14,
+        itemType: 'product' as const
+      },
+      {
+        name: "Maasai Beaded Choker (Classic Red)",
+        sku: "JW-N-MAA-RED",
+        description: "Authentic handcrafted Maasai beadwork in traditional bold red patterns.",
         price: 3500,
         currentStock: 15,
         category: "Necklaces",
@@ -163,13 +177,27 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
+        name: "Maasai Beaded Choker (Royal Blue)",
+        sku: "JW-N-MAA-BLU",
+        description: "Vibrant royal blue Maasai beadwork choker, representing peace and the sky.",
+        price: 3500,
+        currentStock: 10,
+        category: "Necklaces",
+        imageUrl: "https://picsum.photos/seed/neck2/600/600",
+        lowStockThreshold: 5,
+        criticalThreshold: 2,
+        averageDailySales: 0.3,
+        leadTimeDays: 3,
+        itemType: 'product' as const
+      },
+      {
         name: "Pure Gold Men's Wedding Band (10K)",
-        sku: "JW-R-GLD",
-        description: "Classic polished 10K yellow gold band. Durable and timeless for the modern gentleman.",
+        sku: "JW-R-GLD-10K",
+        description: "Classic polished 10K yellow gold band. Durable and affordable.",
         price: 48000,
         currentStock: 4,
         category: "Rings",
-        imageUrl: "https://picsum.photos/seed/goldband/600/600",
+        imageUrl: "https://picsum.photos/seed/gold10k/600/600",
         lowStockThreshold: 2,
         criticalThreshold: 1,
         averageDailySales: 0.1,
@@ -177,9 +205,23 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
+        name: "Pure Gold Men's Wedding Band (18K)",
+        sku: "JW-R-GLD-18K",
+        description: "Luxurious high-purity 18K yellow gold band. Rich color and premium weight.",
+        price: 75000,
+        currentStock: 3,
+        category: "Rings",
+        imageUrl: "https://picsum.photos/seed/gold18k/600/600",
+        lowStockThreshold: 2,
+        criticalThreshold: 1,
+        averageDailySales: 0.05,
+        leadTimeDays: 21,
+        itemType: 'product' as const
+      },
+      {
         name: "Hammered Brass Statement Earrings",
-        sku: "JW-E-BRS",
-        description: "Bold, lightweight earrings handcrafted from recycled brass. A unique fashion statement.",
+        sku: "JW-E-BRS-01",
+        description: "Bold, lightweight earrings handcrafted from recycled Kenyan brass.",
         price: 1800,
         currentStock: 20,
         category: "Earrings",
@@ -187,6 +229,48 @@ export const FirebaseService = {
         lowStockThreshold: 10,
         criticalThreshold: 5,
         averageDailySales: 1.2,
+        leadTimeDays: 5,
+        itemType: 'product' as const
+      },
+      {
+        name: "Raw Rose Quartz Stacking Ring",
+        sku: "JW-R-RQZ-STK",
+        description: "Natural, unpolished Rose Quartz set in a minimalist silver band.",
+        price: 6000,
+        currentStock: 11,
+        category: "Rings",
+        imageUrl: "https://picsum.photos/seed/ring3/600/600",
+        lowStockThreshold: 4,
+        criticalThreshold: 2,
+        averageDailySales: 0.4,
+        leadTimeDays: 7,
+        itemType: 'product' as const
+      },
+      {
+        name: "Sapphire Solitaire Pendant (White Gold)",
+        sku: "JW-N-SAP-WG",
+        description: "Brilliant blue sapphire suspended from a delicate 14K white gold chain.",
+        price: 45000,
+        currentStock: 5,
+        category: "Necklaces",
+        imageUrl: "https://picsum.photos/seed/neck3/600/600",
+        lowStockThreshold: 2,
+        criticalThreshold: 1,
+        averageDailySales: 0.1,
+        leadTimeDays: 14,
+        itemType: 'product' as const
+      },
+      {
+        name: "Pearl Essence Drop Earrings (Freshwater)",
+        sku: "JW-E-PRL-DROP",
+        description: "Lustrous AAA Freshwater pearls on elegant sterling silver hooks.",
+        price: 5500,
+        currentStock: 18,
+        category: "Earrings",
+        imageUrl: "https://picsum.photos/seed/ear2/600/600",
+        lowStockThreshold: 6,
+        criticalThreshold: 3,
+        averageDailySales: 0.8,
         leadTimeDays: 5,
         itemType: 'product' as const
       }

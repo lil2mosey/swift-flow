@@ -75,7 +75,7 @@ export default function ShopPage() {
       if (current + delta > max) {
         toast({ 
           title: "Stock Limit Reached", 
-          description: `Only ${max} units are currently available in our inventory.`,
+          description: `We only have ${max} units available. This is the maximum you can order.`,
           variant: "destructive"
         });
       }
@@ -92,9 +92,16 @@ export default function ShopPage() {
       toast({ 
         variant: "destructive", 
         title: "Quantity Restricted", 
-        description: `We only have ${product.currentStock} in stock. Adjusting your order.` 
+        description: `Only ${product.currentStock} units available. Adjusting to max.` 
       });
-      setItemQuantities(prev => ({ ...prev, [product.id]: product.currentStock }));
+      const validQty = product.currentStock;
+      setCart(prev => {
+        const existing = prev.find(item => item.id === product.id);
+        if (existing) {
+          return prev.map(item => item.id === product.id ? { ...item, quantity: validQty } : item);
+        }
+        return [...prev, { id: product.id, name: product.name, price: product.price, quantity: validQty }];
+      });
       return;
     }
 
@@ -127,7 +134,7 @@ export default function ShopPage() {
     if (qty > product.currentStock) {
       toast({ 
         variant: "destructive", 
-        title: "Quantity Error", 
+        title: "Quantity Restricted", 
         description: `Maximum available quantity for this item is ${product.currentStock}.` 
       });
       return;
@@ -329,7 +336,6 @@ export default function ShopPage() {
                           alt={product.name} 
                           fill 
                           className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          data-ai-hint="jewelry item"
                         />
                         <div className="absolute top-2 right-2">
                           <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-8 w-8 shadow-sm">

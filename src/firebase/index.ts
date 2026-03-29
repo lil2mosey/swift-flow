@@ -46,7 +46,7 @@ export function initializeFirebase() {
           experimentalForceLongPolling: true,
         });
       } catch (e) {
-        // Fallback if initializeFirestore fails (e.g. already initialized)
+        // Fallback if initializeFirestore fails (already initialized)
         db = getFirestoreRegular(app);
       }
     }

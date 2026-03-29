@@ -12,12 +12,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Message } from '@/lib/types';
+import { Message, Product } from '@/lib/types';
 import { format } from 'date-fns';
 
 /**
  * Unified Messaging Page for SwiftFlow.
  * Handles both Seller (Conversation Management) and Customer (Direct Support) views.
+ * Messages from customers now correctly appear in the seller's inbox.
  */
 export default function MessagesPage() {
   const { user, profile } = useUser();
@@ -26,19 +27,29 @@ export default function MessagesPage() {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
 
   const isSeller = profile?.role === 'seller';
-  const systemSellerId = "system-seller"; // Shared support ID for customers
 
-  // --- Seller Logic: Load all conversations where they are participants ---
-  const sellerConversationsQuery = useMemoFirebase(() => {
-    if (!user || !isSeller) return null;
+  // --- Recipient Discovery for Customers ---
+  // Customers need to find who the "seller" is to chat with them.
+  // We'll peek at the products to find a seller ID.
+  const productsQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
+  const { data: sampleProducts } = useCollection<Product>(productsQuery);
+  
+  const systemSellerId = useMemo(() => {
+    if (sampleProducts && sampleProducts.length > 0) return sampleProducts[0].sellerId || 'system-seller';
+    return 'system-seller';
+  }, [sampleProducts]);
+
+  // --- Conversation Loading ---
+  const allConversationsQuery = useMemoFirebase(() => {
+    if (!user) return null;
     return FirebaseService.getConversationsQuery(db, user.uid);
-  }, [db, user, isSeller]);
+  }, [db, user]);
 
-  const { data: allMessages, isLoading: isConversationsLoading } = useCollection<Message>(sellerConversationsQuery);
+  const { data: allMessages, isLoading: isConversationsLoading } = useCollection<Message>(allConversationsQuery);
 
-  // Group messages by the "other" participant to show a conversation list for the seller
+  // Group messages into unique conversations for the seller's sidebar
   const uniqueConversations = useMemo(() => {
-    if (!allMessages || !isSeller || !user) return [];
+    if (!allMessages || !user) return [];
     
     const map = new Map();
     allMessages.forEach(msg => {
@@ -46,7 +57,7 @@ export default function MessagesPage() {
       if (otherId && !map.has(otherId)) {
         map.set(otherId, {
           id: otherId,
-          name: msg.senderId === otherId ? (msg.senderName || "Customer") : "Customer",
+          name: msg.senderId === otherId ? (msg.senderName || "User") : (isSeller ? "Customer" : "Workshop Support"),
           lastMsg: msg.content,
           timestamp: msg.createdAt?.seconds ? msg.createdAt.seconds * 1000 : Date.now(),
         });
@@ -54,13 +65,13 @@ export default function MessagesPage() {
     });
     
     return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
-  }, [allMessages, isSeller, user]);
+  }, [allMessages, user, isSeller]);
 
   // --- Active Chat Logic ---
   const activeReceiverId = useMemo(() => {
-    if (!isSeller) return systemSellerId; // Customers always talk to the workshop/seller
+    if (!isSeller) return systemSellerId; 
     return selectedContactId;
-  }, [isSeller, selectedContactId]);
+  }, [isSeller, systemSellerId, selectedContactId]);
 
   const chatQuery = useMemoFirebase(() => {
     if (!user || !activeReceiverId) return null;
@@ -84,15 +95,15 @@ export default function MessagesPage() {
   };
 
   const activeContact = useMemo(() => {
-    if (!isSeller) return { name: 'SwiftFlow Support', id: systemSellerId };
+    if (!isSeller) return { name: 'SwiftFlow Workshop', id: systemSellerId };
     return uniqueConversations.find(c => c.id === selectedContactId);
-  }, [isSeller, uniqueConversations, selectedContactId]);
+  }, [isSeller, uniqueConversations, selectedContactId, systemSellerId]);
 
   return (
     <Shell userRole={profile?.role}>
       <PageHeader 
         title="Synchronized Messaging" 
-        description={isSeller ? "Manage your direct customer inquiries." : "Chat with our jewelry experts about your orders."}
+        description={isSeller ? "Manage your direct customer inquiries." : "Chat with our jewelry experts about your requests."}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[650px] max-w-6xl mx-auto">
@@ -153,7 +164,7 @@ export default function MessagesPage() {
           "border-none shadow-sm h-full flex flex-col bg-white rounded-3xl overflow-hidden",
           isSeller ? "lg:col-span-2" : "lg:col-span-3"
         )}>
-          {activeReceiverId ? (
+          {activeReceiverId || !isSeller ? (
             <>
               <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white z-10">
                 <div className="flex items-center gap-4">
@@ -162,10 +173,10 @@ export default function MessagesPage() {
                     <AvatarFallback><User className="h-5 w-5 text-slate-400" /></AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || "Support"}</h3>
+                    <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || "Workshop"}</h3>
                     <div className="flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 bg-teal-500 rounded-full animate-pulse" />
-                      <span className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter">Connected</span>
+                      <span className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter">Synchronized</span>
                     </div>
                   </div>
                 </div>
@@ -186,7 +197,7 @@ export default function MessagesPage() {
                          <MessageSquare className="h-10 w-10 text-slate-100" />
                        </div>
                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Start of Conversation</p>
-                       <p className="text-[10px] text-slate-300 mt-1 italic">Type below to synchronize your request.</p>
+                       <p className="text-[10px] text-slate-300 mt-1 italic">Type below to sync your jewelry inquiry.</p>
                     </div>
                   ) : chatMessages.map((msg) => (
                     <div key={msg.id} className={cn(

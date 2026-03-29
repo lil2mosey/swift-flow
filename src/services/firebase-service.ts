@@ -9,7 +9,7 @@ import {
   Firestore,
   serverTimestamp,
   increment,
-  writeBatch
+  orderBy
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -19,7 +19,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Enhanced with robust messaging and synchronized inventory seeding.
+ * Enhanced with robust messaging and non-redundant inventory seeding.
  */
 
 export const FirebaseService = {
@@ -131,7 +131,7 @@ export const FirebaseService = {
     });
   },
 
-  seedJewelryCatalog: async (db: Firestore, sellerId: string) => {
+  seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
     // Non-redundant inventory following naming constraints
     const inventory = [
       {
@@ -163,9 +163,9 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Maasai Beaded Choker (Classic Red)",
-        sku: "JW-N-MAA-RED",
-        description: "Authentic handcrafted Maasai beadwork in traditional bold red patterns.",
+        name: "Maasai Beaded Choker (Handcrafted)",
+        sku: "JW-N-MAA-BEAD",
+        description: "Authentic handcrafted Maasai beadwork in traditional bold patterns.",
         price: 3500,
         currentStock: 15,
         category: "Necklaces",
@@ -173,20 +173,6 @@ export const FirebaseService = {
         lowStockThreshold: 5,
         criticalThreshold: 2,
         averageDailySales: 0.5,
-        leadTimeDays: 3,
-        itemType: 'product' as const
-      },
-      {
-        name: "Maasai Beaded Choker (Royal Blue)",
-        sku: "JW-N-MAA-BLU",
-        description: "Vibrant royal blue Maasai beadwork choker, representing peace and the sky.",
-        price: 3500,
-        currentStock: 10,
-        category: "Necklaces",
-        imageUrl: "https://picsum.photos/seed/neck2/600/600",
-        lowStockThreshold: 5,
-        criticalThreshold: 2,
-        averageDailySales: 0.3,
         leadTimeDays: 3,
         itemType: 'product' as const
       },
@@ -245,34 +231,6 @@ export const FirebaseService = {
         averageDailySales: 0.4,
         leadTimeDays: 7,
         itemType: 'product' as const
-      },
-      {
-        name: "Sapphire Solitaire Pendant (White Gold)",
-        sku: "JW-N-SAP-WG",
-        description: "Brilliant blue sapphire suspended from a delicate 14K white gold chain.",
-        price: 45000,
-        currentStock: 5,
-        category: "Necklaces",
-        imageUrl: "https://picsum.photos/seed/neck3/600/600",
-        lowStockThreshold: 2,
-        criticalThreshold: 1,
-        averageDailySales: 0.1,
-        leadTimeDays: 14,
-        itemType: 'product' as const
-      },
-      {
-        name: "Pearl Essence Drop Earrings (Freshwater)",
-        sku: "JW-E-PRL-DROP",
-        description: "Lustrous AAA Freshwater pearls on elegant sterling silver hooks.",
-        price: 5500,
-        currentStock: 18,
-        category: "Earrings",
-        imageUrl: "https://picsum.photos/seed/ear2/600/600",
-        lowStockThreshold: 6,
-        criticalThreshold: 3,
-        averageDailySales: 0.8,
-        leadTimeDays: 5,
-        itemType: 'product' as const
       }
     ];
 
@@ -299,6 +257,7 @@ export const FirebaseService = {
     return query(
       collection(db, 'messages'),
       where('participants', '==', participants.sort()),
+      orderBy('createdAt', 'asc'),
       limit(100)
     );
   },
@@ -307,6 +266,7 @@ export const FirebaseService = {
     return query(
       collection(db, 'messages'),
       where('participants', 'array-contains', userId),
+      orderBy('createdAt', 'desc'),
       limit(500)
     );
   },
@@ -316,6 +276,7 @@ export const FirebaseService = {
   getSellerOrdersQuery: (db: Firestore) => {
     return query(
       collection(db, 'orders'),
+      orderBy('createdAt', 'desc'),
       limit(200)
     );
   },
@@ -324,6 +285,7 @@ export const FirebaseService = {
     return query(
       collection(db, 'orders'),
       where('customerId', '==', customerId),
+      orderBy('createdAt', 'desc'),
       limit(100)
     );
   },

@@ -34,7 +34,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border)); /* Fixed: Use direct variable to avoid @apply lookup errors in Turbopack */
   }
   body {
     @apply bg-background text-foreground font-body;

@@ -1,58 +1,21 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { initializeFirestore, getFirestore as getFirestoreRegular, Firestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 /**
- * Reinforced Firebase initialization for production environments like Vercel.
- * Prevents "Expected state (ID: ca9)" and "ID: b815" errors by enforcing a global singleton.
+ * Enterprise-grade Firebase initialization.
+ * Optimized for Vercel/Serverless environments to prevent multiple initializations
+ * and the "ca9" assertion errors during navigation.
  */
 export function initializeFirebase() {
-  if (typeof window !== 'undefined') {
-    const globalStore = window as any;
+  const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  const auth: Auth = getAuth(app);
+  const firestore: Firestore = getFirestore(app);
 
-    // Check if we've already initialized to prevent multiple instances
-    if (globalStore.__firebaseApp && globalStore.__firebaseDb && globalStore.__firebaseAuth) {
-      return {
-        firebaseApp: globalStore.__firebaseApp,
-        auth: globalStore.__firebaseAuth,
-        firestore: globalStore.__firebaseDb
-      };
-    }
-
-    const apps = getApps();
-    let app: FirebaseApp = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
-
-    let db: Firestore;
-    try {
-      // Use experimental settings for better reliability in some browser/network environments
-      db = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
-      });
-    } catch (e) {
-      db = getFirestoreRegular(app);
-    }
-
-    const auth = getAuth(app);
-
-    // Persist instances globally to survive HMR and navigation
-    globalStore.__firebaseApp = app;
-    globalStore.__firebaseDb = db;
-    globalStore.__firebaseAuth = auth;
-
-    return { firebaseApp: app, auth, firestore: db };
-  }
-
-  // Fallback for SSR
-  const apps = getApps();
-  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
-  return {
-    firebaseApp: app,
-    auth: getAuth(app),
-    firestore: getFirestoreRegular(app)
-  };
+  return { firebaseApp: app, auth, firestore };
 }
 
 export function getSdks() {

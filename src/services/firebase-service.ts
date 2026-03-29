@@ -222,6 +222,7 @@ export const FirebaseService = {
     if (!existing.empty) return;
 
     const inventory = [
+      // --- Finished Goods ---
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
         sku: "JW-R-INF-SS",
@@ -262,9 +263,23 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "14K Gold Wire (0.5mm)",
-        sku: "RM-GOLD-WIRE",
-        description: "High-quality 14K Gold wire for custom jewelry fabrication.",
+        name: "Savannah Hand-Hammered Brass Cuff",
+        sku: "JW-B-SAV-BRS",
+        description: "Brushed brass cuff featuring hand-hammered textures inspired by the Kenyan savannah.",
+        price: 2800,
+        currentStock: 20,
+        category: "Bracelets",
+        sellerId: sellerId,
+        lowStockThreshold: 8,
+        averageDailySales: 0.3,
+        leadTimeDays: 4,
+        itemType: 'product' as const
+      },
+      // --- Raw Materials ---
+      {
+        name: "14K Gold Wire (0.5mm Round)",
+        sku: "RM-GOLD-WIRE-05",
+        description: "High-quality 14K Yellow Gold wire for custom jewelry fabrication and repairs.",
         price: 1200,
         currentStock: 50,
         category: "Metals",
@@ -272,6 +287,71 @@ export const FirebaseService = {
         lowStockThreshold: 10,
         averageDailySales: 0,
         leadTimeDays: 5,
+        itemType: 'material' as const
+      },
+      {
+        name: "Sterling Silver Sheet (0.8mm)",
+        sku: "RM-SILV-SHEET-08",
+        description: "Dead-soft sterling silver sheet, ideal for sawing, stamping, and creating bezel backplates.",
+        price: 450,
+        currentStock: 25,
+        category: "Metals",
+        sellerId: sellerId,
+        lowStockThreshold: 5,
+        averageDailySales: 0,
+        leadTimeDays: 7,
+        itemType: 'material' as const
+      },
+      {
+        name: "14K Gold Solder (Hard)",
+        sku: "RM-GOLD-SOLD-H",
+        description: "High-temperature gold solder for strong structural joins in 14K gold pieces.",
+        price: 1800,
+        currentStock: 10,
+        category: "Soldering",
+        sellerId: sellerId,
+        lowStockThreshold: 3,
+        averageDailySales: 0,
+        leadTimeDays: 10,
+        itemType: 'material' as const
+      },
+      {
+        name: "Natural Blue Sapphire (5mm Round)",
+        sku: "RM-GEMS-SAPPH-5",
+        description: "Eye-clean natural blue sapphire, faceted round cut for premium solitaire settings.",
+        price: 15000,
+        currentStock: 5,
+        category: "Gemstones",
+        sellerId: sellerId,
+        lowStockThreshold: 2,
+        averageDailySales: 0,
+        leadTimeDays: 20,
+        itemType: 'material' as const
+      },
+      {
+        name: "Fine Silver Bezel Wire (3mm)",
+        sku: "RM-SILV-BEZEL-3",
+        description: "Dead-soft fine silver wire specifically for creating gemstone bezels.",
+        price: 320,
+        currentStock: 40,
+        category: "Findings",
+        sellerId: sellerId,
+        lowStockThreshold: 8,
+        averageDailySales: 0,
+        leadTimeDays: 5,
+        itemType: 'material' as const
+      },
+      {
+        name: "Jewelry Polishing Rouge (Red)",
+        sku: "RM-SUPP-ROUGE-R",
+        description: "Professional grade red rouge polishing compound for final high-luster finish on gold and silver.",
+        price: 850,
+        currentStock: 8,
+        category: "Supplies",
+        sellerId: sellerId,
+        lowStockThreshold: 2,
+        averageDailySales: 0,
+        leadTimeDays: 14,
         itemType: 'material' as const
       }
     ];

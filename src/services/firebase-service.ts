@@ -170,7 +170,7 @@ export const FirebaseService = {
     return newConvRef.id;
   },
 
-  sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string, isSeller: boolean) => {
+  sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string, isSeller?: boolean) => {
     const messagesRef = collection(db, 'conversations', convId, 'messages');
     const convRef = doc(db, 'conversations', convId);
 
@@ -190,11 +190,11 @@ export const FirebaseService = {
   },
 
   getInquiriesQuery: (db: Firestore, userId: string) => {
+    // Removed orderBy to avoid requiring a composite index for array-contains + orderBy
     return query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId),
-      orderBy('timestamp', 'desc'),
-      limit(50)
+      limit(100)
     );
   },
 
@@ -255,7 +255,7 @@ export const FirebaseService = {
       {
         name: "Maasai Beaded Choker (Traditional Red)",
         sku: "JW-N-MAA-RED",
-        description: "Authentic handcrafted Maasai beadwork in traditional bold red patterns.",
+        description: "Authentic handcrafted Maasai beatwork in traditional bold red patterns.",
         price: 3500,
         currentStock: 15,
         category: "Necklaces",

@@ -23,7 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, limit } from 'firebase/firestore';
+import { collection, query, limit, where } from 'firebase/firestore';
 import { FirebaseService } from '@/services/firebase-service';
 import { Conversation, ChatMessage, Product } from '@/lib/types';
 import { format } from 'date-fns';
@@ -41,18 +41,36 @@ export default function MessagesPage() {
 
   const isSeller = profile?.role === 'seller';
 
+  // --- Discovery for Customers ---
+  // Peek at products to find the main seller ID
+  const productsLookupQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
+  const { data: sampleProducts } = useCollection<Product>(productsLookupQuery);
+  
+  // Peek at userProfiles for a seller if no products exist
+  const sellerLookupQuery = useMemoFirebase(() => query(collection(db, 'userProfiles'), where('role', '==', 'seller'), limit(1)), [db]);
+  const { data: sellerProfiles } = useCollection<any>(sellerLookupQuery);
+
+  const systemSellerId = useMemo(() => {
+    return sampleProducts?.[0]?.sellerId || sellerProfiles?.[0]?.id || 'system-seller';
+  }, [sampleProducts, sellerProfiles]);
+
   // --- Conversations List ---
   const convsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return FirebaseService.getInquiriesQuery(db, user.uid);
   }, [db, user]);
 
-  const { data: conversations, isLoading: isConvsLoading } = useCollection<Conversation>(convsQuery);
+  const { data: rawConversations, isLoading: isConvsLoading } = useCollection<Conversation>(convsQuery);
 
-  // Discovery: Find the "Seller" ID to chat with (as a customer)
-  const productsLookupQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
-  const { data: sampleProducts } = useCollection<Product>(productsLookupQuery);
-  const systemSellerId = useMemo(() => sampleProducts?.[0]?.sellerId || 'system-seller', [sampleProducts]);
+  // Client-side sorting because we removed server-side orderBy to avoid complex index requirements
+  const conversations = useMemo(() => {
+    if (!rawConversations) return [];
+    return [...rawConversations].sort((a, b) => {
+      const timeA = a.timestamp?.seconds || 0;
+      const timeB = b.timestamp?.seconds || 0;
+      return timeB - timeA;
+    });
+  }, [rawConversations]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -340,7 +358,7 @@ export default function MessagesPage() {
             <h3 className="text-lg font-bold">Recent Messages</h3>
           </div>
 
-          {!selectedConvId && stats.total === 0 ? (
+          {conversations.length === 0 ? (
             <Card className="bg-slate-50 border-none py-20 text-center rounded-[2.5rem] border border-dashed border-slate-200">
               <div className="p-6 bg-white rounded-full inline-flex mb-4 shadow-sm">
                 <MessageSquare className="h-10 w-10 text-slate-200" />
@@ -350,60 +368,70 @@ export default function MessagesPage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {conversations?.map((conv) => (
-                <Card 
-                  key={conv.id} 
-                  className={cn(
-                    "border-none shadow-sm cursor-pointer hover:shadow-md transition-all rounded-3xl group overflow-hidden",
-                    selectedConvId === conv.id ? "ring-2 ring-teal-400" : ""
-                  )}
-                  onClick={() => setSelectedConvId(conv.id)}
-                >
-                  <CardContent className="p-6 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-teal-50 rounded-2xl text-teal-600 font-bold">
-                        {conv.itemName?.slice(0, 1) || 'G'}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900">{conv.itemName || 'Store Inquiry'}</h4>
-                        <p className="text-sm text-slate-400 line-clamp-1 italic">"{conv.lastMessage}"</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                        {conv.timestamp?.seconds ? format(new Date(conv.timestamp.seconds * 1000), 'MMM d, HH:mm') : 'Syncing...'}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-teal-400 transition-colors" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {selectedConvId && (
-                <Card className="border-none shadow-sm rounded-3xl overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
-                    <h4 className="font-bold text-sm uppercase tracking-widest">Chat History</h4>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedConvId(null)} className="h-8 text-slate-400 hover:text-white">Close Chat</Button>
-                  </div>
-                  <ScrollArea className="h-[400px] p-6 bg-slate-50/50">
-                    <div className="space-y-6">
-                      {isChatLoading ? (
-                        <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-teal-400" /></div>
-                      ) : messages?.map((msg) => (
-                        <div key={msg.id} className={cn("flex flex-col max-w-[85%]", msg.senderId === user?.uid ? "ml-auto items-end" : "items-start")}>
-                          <div className={cn("p-4 rounded-3xl text-sm font-medium shadow-sm", msg.senderId === user?.uid ? "bg-primary text-white rounded-tr-none" : "bg-white text-slate-800 rounded-tl-none border border-slate-100")}>
-                            {msg.text}
-                          </div>
-                          <span className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
-                            {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
-                          </span>
+              {conversations.map((conv) => (
+                <div key={conv.id} className="space-y-4">
+                  <Card 
+                    className={cn(
+                      "border-none shadow-sm cursor-pointer hover:shadow-md transition-all rounded-3xl group overflow-hidden",
+                      selectedConvId === conv.id ? "ring-2 ring-teal-400" : ""
+                    )}
+                    onClick={() => setSelectedConvId(selectedConvId === conv.id ? null : conv.id)}
+                  >
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-teal-50 rounded-2xl text-teal-600 font-bold">
+                          {conv.itemName?.slice(0, 1) || 'G'}
                         </div>
-                      ))}
-                      <div ref={scrollRef} />
-                    </div>
-                  </ScrollArea>
-                </Card>
-              )}
+                        <div>
+                          <h4 className="font-bold text-slate-900">{conv.itemName || 'Store Inquiry'}</h4>
+                          <p className="text-sm text-slate-400 line-clamp-1 italic">"{conv.lastMessage}"</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                          {conv.timestamp?.seconds ? format(new Date(conv.timestamp.seconds * 1000), 'MMM d, HH:mm') : 'Syncing...'}
+                        </span>
+                        <ChevronRight className={cn("h-4 w-4 text-slate-300 transition-transform", selectedConvId === conv.id && "rotate-90")} />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedConvId === conv.id && (
+                    <Card className="border-none shadow-sm rounded-3xl overflow-hidden animate-in slide-in-from-top-4 duration-300">
+                      <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
+                        <h4 className="font-bold text-sm uppercase tracking-widest">Chat History</h4>
+                        <div className="flex items-center gap-1">
+                          <span className="h-2 w-2 bg-teal-400 rounded-full animate-pulse" />
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Live</span>
+                        </div>
+                      </div>
+                      <ScrollArea className="h-[400px] p-6 bg-slate-50/50">
+                        <div className="space-y-6">
+                          {isChatLoading ? (
+                            <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-teal-400" /></div>
+                          ) : messages?.map((msg) => (
+                            <div key={msg.id} className={cn("flex flex-col max-w-[85%]", msg.senderId === user?.uid ? "ml-auto items-end" : "items-start")}>
+                              <div className={cn("p-4 rounded-3xl text-sm font-medium shadow-sm", msg.senderId === user?.uid ? "bg-primary text-white rounded-tr-none" : "bg-white text-slate-800 rounded-tl-none border border-slate-100")}>
+                                {msg.text}
+                              </div>
+                              <span className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
+                                {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
+                              </span>
+                            </div>
+                          ))}
+                          <div ref={scrollRef} />
+                        </div>
+                      </ScrollArea>
+                      <div className="p-5 bg-white border-t border-slate-100">
+                        <form className="flex gap-3" onSubmit={handleSendMessage}>
+                          <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="bg-slate-50 border-none h-12 rounded-xl px-4 font-medium" placeholder="Reply..." />
+                          <Button type="submit" disabled={!newMessage.trim()} className="h-12 w-12 bg-[#0f172a] text-white font-bold rounded-xl"><Send className="h-5 w-5" /></Button>
+                        </form>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

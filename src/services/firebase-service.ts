@@ -20,9 +20,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Optimized for real-time synchronization with minimal index requirements.
  */
-
 export const FirebaseService = {
   // --- Orders ---
   
@@ -75,14 +73,6 @@ export const FirebaseService = {
       items: orderDetails.items,
       createdAt: orderDetails.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
-  },
-
-  updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {
-    const orderRef = doc(db, 'orders', orderId);
-    updateDocumentNonBlocking(orderRef, { 
-      status, 
-      updatedAt: serverTimestamp() 
     });
   },
 
@@ -143,9 +133,8 @@ export const FirebaseService = {
         price: 8800,
         currentStock: 12,
         category: "Rings",
-        imageUrl: "https://picsum.photos/seed/ring1/600/600",
+        sellerId: sellerId,
         lowStockThreshold: 5,
-        criticalThreshold: 2,
         averageDailySales: 0.2,
         leadTimeDays: 7,
         itemType: 'product' as const
@@ -157,9 +146,8 @@ export const FirebaseService = {
         price: 32000,
         currentStock: 8,
         category: "Rings",
-        imageUrl: "https://picsum.photos/seed/ring2/600/600",
+        sellerId: sellerId,
         lowStockThreshold: 3,
-        criticalThreshold: 1,
         averageDailySales: 0.1,
         leadTimeDays: 14,
         itemType: 'product' as const
@@ -171,104 +159,16 @@ export const FirebaseService = {
         price: 3500,
         currentStock: 15,
         category: "Necklaces",
-        imageUrl: "https://picsum.photos/seed/neck1/600/600",
+        sellerId: sellerId,
         lowStockThreshold: 5,
-        criticalThreshold: 2,
         averageDailySales: 0.5,
         leadTimeDays: 3,
-        itemType: 'product' as const
-      },
-      {
-        name: "Pure Gold Men's Wedding Band (10K)",
-        sku: "JW-R-GLD-10K",
-        description: "Classic polished 10K yellow gold band. Durable and affordable.",
-        price: 48000,
-        currentStock: 4,
-        category: "Rings",
-        imageUrl: "https://picsum.photos/seed/gold10k/600/600",
-        lowStockThreshold: 2,
-        criticalThreshold: 1,
-        averageDailySales: 0.1,
-        leadTimeDays: 14,
-        itemType: 'product' as const
-      },
-      {
-        name: "Pure Gold Men's Wedding Band (18K)",
-        sku: "JW-R-GLD-18K",
-        description: "Luxurious high-purity 18K yellow gold band. Rich color and premium weight.",
-        price: 75000,
-        currentStock: 3,
-        category: "Rings",
-        imageUrl: "https://picsum.photos/seed/gold18k/600/600",
-        lowStockThreshold: 2,
-        criticalThreshold: 1,
-        averageDailySales: 0.05,
-        leadTimeDays: 21,
-        itemType: 'product' as const
-      },
-      {
-        name: "Hammered Brass Statement Earrings",
-        sku: "JW-E-BRS-01",
-        description: "Bold, lightweight earrings handcrafted from recycled Kenyan brass.",
-        price: 1800,
-        currentStock: 14,
-        category: "Earrings",
-        imageUrl: "https://picsum.photos/seed/ear1/600/600",
-        lowStockThreshold: 10,
-        criticalThreshold: 5,
-        averageDailySales: 1.2,
-        leadTimeDays: 5,
-        itemType: 'product' as const
-      },
-      {
-        name: "Raw Rose Quartz Stacking Ring",
-        sku: "JW-R-RQZ-STK",
-        description: "Natural, unpolished Rose Quartz set in a minimalist silver band.",
-        price: 6000,
-        currentStock: 11,
-        category: "Rings",
-        imageUrl: "https://picsum.photos/seed/ring3/600/600",
-        lowStockThreshold: 4,
-        criticalThreshold: 2,
-        averageDailySales: 0.4,
-        leadTimeDays: 7,
         itemType: 'product' as const
       }
     ];
 
     for (const item of inventory) {
       await FirebaseService.addProduct(db, sellerId, item);
-    }
-
-    const rawMaterials = [
-      {
-        name: "925 Sterling Silver Grain",
-        sku: "MET-SIL-01",
-        description: "Pure casting silver grain for jewelry production.",
-        price: 120,
-        currentStock: 500,
-        category: "Metals",
-        lowStockThreshold: 100,
-        itemType: 'material' as const,
-        averageDailySales: 0,
-        leadTimeDays: 7
-      },
-      {
-        name: "18K Yellow Gold Wire",
-        sku: "MET-GLD-18K",
-        description: "High quality jewelry wire for handmade designs.",
-        price: 5500,
-        currentStock: 50,
-        category: "Metals",
-        lowStockThreshold: 10,
-        itemType: 'material' as const,
-        averageDailySales: 0,
-        leadTimeDays: 14
-      }
-    ];
-
-    for (const material of rawMaterials) {
-      await FirebaseService.addProduct(db, sellerId, material);
     }
   },
 
@@ -281,7 +181,6 @@ export const FirebaseService = {
       receiverId,
       content,
       senderName,
-      // Sort participants to create a consistent "conversation ID" for querying
       participants: [senderId, receiverId].sort(),
       createdAt: serverTimestamp()
     });
@@ -290,7 +189,6 @@ export const FirebaseService = {
   getMessagesQuery: (db: Firestore, participants: string[]) => {
     return query(
       collection(db, 'messages'),
-      // Query for the exact sorted participants array
       where('participants', '==', [...participants].sort()),
       orderBy('createdAt', 'asc'),
       limit(100)
@@ -301,8 +199,6 @@ export const FirebaseService = {
     return query(
       collection(db, 'messages'),
       where('participants', 'array-contains', userId),
-      // Removed orderBy server-side to avoid index requirement issues in dev
-      // Sorting is handled client-side in the component
       limit(500)
     );
   },

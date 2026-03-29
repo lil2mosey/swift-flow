@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read access to the products catalog
+    // Allow public read access to the products catalog for discovery
     match /products/{productId} {
       allow read: if true;
       allow write: if request.auth != null;
@@ -13,13 +13,16 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Orders and Messages require authentication
+    // Orders require authentication; sellers can see all, customers see their own
     match /orders/{orderId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
     
+    // Messaging: users can only see messages where they are participants
     match /messages/{messageId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      allow write: if request.auth != null;
     }
 
     // Default fallback

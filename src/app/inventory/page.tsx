@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -177,10 +176,10 @@ export default function InventoryPage() {
     if (!user) return;
     setIsSeeding(true);
     try {
-      await FirebaseService.seedJewelryCatalog(db, user.uid);
+      await FirebaseService.seedKenyaJewelry(db, user.uid);
       toast({
         title: "Catalog Seeded",
-        description: "Successfully added jewelry items to your inventory.",
+        description: "Successfully added Kenyan jewelry items to your inventory.",
       });
     } catch (error) {
       toast({ variant: "destructive", title: "Seed Failed", description: "Could not populate catalog." });
@@ -257,7 +256,6 @@ export default function InventoryPage() {
                                       <span>{item.name}</span>
                                       <div className="flex gap-2">
                                         <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-bold uppercase">Stock: {item.currentStock}</span>
-                                        <span className="text-[10px] bg-teal-50 px-2 py-0.5 rounded-full text-teal-600 font-bold uppercase">{item.itemType || 'product'}</span>
                                       </div>
                                     </div>
                                   </SelectItem>
@@ -282,27 +280,10 @@ export default function InventoryPage() {
                               className="h-14 bg-slate-50 border-none rounded-xl pl-12 text-lg font-bold text-slate-900" 
                             />
                           </div>
-                          <p className="text-[10px] text-slate-400 font-medium px-1 flex items-center gap-1.5">
-                            <AlertCircle className="h-3 w-3" /> This will be added to the current stock level.
-                          </p>
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="flex gap-4 p-1 bg-slate-50 rounded-xl mb-2">
-                          <button 
-                            onClick={() => setFormData({...formData, itemType: 'product'})}
-                            className={cn("flex-1 py-2 text-[10px] font-bold rounded-lg transition-all", formData.itemType === 'product' ? "bg-white text-teal-600 shadow-sm border border-teal-100" : "text-slate-400")}
-                          >
-                            Finished Product
-                          </button>
-                          <button 
-                            onClick={() => setFormData({...formData, itemType: 'material'})}
-                            className={cn("flex-1 py-2 text-[10px] font-bold rounded-lg transition-all", formData.itemType === 'material' ? "bg-white text-teal-600 shadow-sm border border-teal-100" : "text-slate-400")}
-                          >
-                            Raw Material
-                          </button>
-                        </div>
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Name</Label>
@@ -311,16 +292,6 @@ export default function InventoryPage() {
                           <div className="space-y-2">
                             <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Price (KES)</Label>
                             <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Initial Stock</Label>
-                            <Input type="number" value={formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Low Stock Warning</Label>
-                            <Input type="number" value={formData.lowStockThreshold} onChange={(e) => setFormData({...formData, lowStockThreshold: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
                           </div>
                         </div>
                       </div>
@@ -379,15 +350,7 @@ export default function InventoryPage() {
                   <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
                 ) : filteredItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-32 text-slate-400">
-                      <div className="flex flex-col items-center gap-3">
-                        <PackageIcon className="h-10 w-10 opacity-10" />
-                        <p className="font-medium italic">
-                          {searchTerm ? `No results found for "${searchTerm}"` : "No items found in this category."}
-                        </p>
-                        {!searchTerm && <Button variant="link" onClick={() => setIsAddDialogOpen(true)} className="text-teal-600 font-bold">Register your first item</Button>}
-                      </div>
-                    </TableCell>
+                    <TableCell colSpan={4} className="text-center py-32 text-slate-400 font-medium italic">No items found.</TableCell>
                   </TableRow>
                 ) : filteredItems.map((item) => (
                   <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
@@ -401,8 +364,7 @@ export default function InventoryPage() {
                     <TableCell>
                       <span className={cn(
                         "font-bold px-3 py-1.5 rounded-lg inline-flex items-center",
-                        item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700" : 
-                        item.currentStock <= (item.lowStockThreshold || 20) ? "bg-amber-100 text-amber-700" : "bg-slate-50 text-slate-900"
+                        item.currentStock <= (item.lowStockThreshold || 5) ? "bg-rose-100 text-rose-700" : "bg-slate-50 text-slate-900"
                       )}>
                         {item.currentStock}
                       </span>

@@ -226,11 +226,11 @@ export default function OrdersPage() {
     });
   };
 
-  const handleMarkAsPaid = (order: Order) => {
-    FirebaseService.confirmPayment(db, order);
+  const handlePromptPay = (orderId: string) => {
+    FirebaseService.requestPayment(db, orderId);
     toast({ 
-      title: "Sync Success", 
-      description: `Manual order for ${order.customerName} marked as PAID and inventory updated.` 
+      title: "Prompt Sent", 
+      description: "Payment notification has been synchronized with the customer's portal." 
     });
   };
 
@@ -247,6 +247,7 @@ export default function OrdersPage() {
     }
 
     setIsProcessingPayment(true);
+    // Simulate STK Push delay
     setTimeout(() => {
       FirebaseService.confirmPayment(db, selectedOrder);
       setIsProcessingPayment(false);
@@ -520,15 +521,15 @@ export default function OrdersPage() {
                                   size="sm" 
                                   variant="outline" 
                                   className="h-8 border-teal-200 text-teal-700 bg-teal-50 font-bold px-3 text-[10px]" 
-                                  onClick={() => handleMarkAsPaid(order)}
+                                  onClick={() => handlePromptPay(order.id)}
                                  >
-                                   <CreditCard className="h-3 w-3 mr-1.5" /> Mark Paid
+                                   <Smartphone className="h-3 w-3 mr-1.5" /> Prompt Pay
                                  </Button>
                                ) : order.paymentStatus === 'paid' ? (
                                  <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600 font-bold px-2" onClick={() => handlePrintReceipt(order)}>
                                    <Printer className="h-4 w-4" />
                                  </Button>
-                               ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Syncing...</span>
+                               ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
                             ) : (
                               order.paymentStatus === 'pending_approval' ? (
                                 <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-2" onClick={() => handleOpenPinDialog(order)}>

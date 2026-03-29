@@ -8,7 +8,8 @@ import {
   limit, 
   Firestore,
   serverTimestamp,
-  increment
+  increment,
+  writeBatch
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -76,6 +77,48 @@ export const FirebaseService = {
     });
   },
 
+  updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {
+    const orderRef = doc(db, 'orders', orderId);
+    updateDocumentNonBlocking(orderRef, { 
+      status, 
+      updatedAt: serverTimestamp() 
+    });
+  },
+
+  requestPayment: (db: Firestore, orderId: string) => {
+    const orderRef = doc(db, 'orders', orderId);
+    updateDocumentNonBlocking(orderRef, { 
+      paymentStatus: 'pending_approval',
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  confirmPayment: async (db: Firestore, order: Order) => {
+    const orderRef = doc(db, 'orders', order.id);
+    
+    // 1. Update order status to paid and completed
+    updateDocumentNonBlocking(orderRef, { 
+      paymentStatus: 'paid', 
+      status: 'completed',
+      updatedAt: serverTimestamp()
+    });
+
+    // 2. Reduce inventory stock for each item in the order
+    if (order.items && order.items.length > 0) {
+      order.items.forEach(item => {
+        if (item.productId) {
+          const productRef = doc(db, 'products', item.productId);
+          updateDocumentNonBlocking(productRef, {
+            currentStock: increment(-item.quantity),
+            updatedAt: serverTimestamp()
+          });
+        }
+      });
+    }
+  },
+
+  // --- Products & Inventory ---
+
   addProduct: (db: Firestore, sellerId: string, productData: Omit<Product, 'id' | 'sellerId'>) => {
     const productsRef = collection(db, 'products');
     return addDocumentNonBlocking(productsRef, {
@@ -88,9 +131,9 @@ export const FirebaseService = {
     });
   },
 
-  seedJewelryCatalog: async (db: Firestore, sellerId: string) => {
-    const jewelryItems = [
-      // --- Finished Goods (itemType: 'product') ---
+  seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
+    // Inventory (Finished Goods)
+    const inventory = [
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
         sku: "JW-R-INF",
@@ -160,181 +203,53 @@ export const FirebaseService = {
         averageDailySales: 0.4,
         leadTimeDays: 10,
         itemType: 'product' as const
-      },
-      {
-        name: "Silver Kenyan Map Pendant",
-        sku: "JW-N-MAP",
-        description: "Finely detailed map of Kenya pendant in 925 sterling silver. Wear your pride.",
-        price: 4200,
-        currentStock: 12,
-        category: "Necklaces",
-        imageUrl: "https://picsum.photos/seed/kenya/600/600",
-        lowStockThreshold: 4,
-        criticalThreshold: 2,
-        averageDailySales: 0.3,
-        leadTimeDays: 7,
-        itemType: 'product' as const
-      },
-      {
-        name: "African Turquoise Stud Earrings",
-        sku: "JW-E-TURQ",
-        description: "Earthy African turquoise stones set in hypoallergenic surgical steel.",
-        price: 3200,
-        currentStock: 10,
-        category: "Earrings",
-        imageUrl: "https://picsum.photos/seed/turq/600/600",
-        lowStockThreshold: 3,
-        criticalThreshold: 1,
-        averageDailySales: 0.2,
-        leadTimeDays: 7,
-        itemType: 'product' as const
-      },
-      {
-        name: "Gold Vermeil Hoop Earrings",
-        sku: "JW-E-HOOP",
-        description: "18K Gold plated over sterling silver. The perfect everyday accessory.",
-        price: 5500,
-        currentStock: 7,
-        category: "Earrings",
-        imageUrl: "https://picsum.photos/seed/hoop/600/600",
-        lowStockThreshold: 3,
-        criticalThreshold: 1,
-        averageDailySales: 0.5,
-        leadTimeDays: 8,
-        itemType: 'product' as const
-      },
+      }
+    ];
 
-      // --- Raw Materials (itemType: 'material') ---
+    // Raw Materials
+    const materials = [
       {
         name: "925 Sterling Silver Grain",
         sku: "MET-SIL-01",
         description: "Premium silver casting grain for jewelry production.",
-        price: 150, // Per gram
+        price: 150,
         currentStock: 500,
         category: "Metals",
-        imageUrl: "https://picsum.photos/seed/silver/600/600",
-        lowStockThreshold: 100,
-        criticalThreshold: 50,
+        location: "Safe-A1",
+        itemType: 'material' as const,
         averageDailySales: 0,
-        leadTimeDays: 10,
-        itemType: 'material' as const
+        leadTimeDays: 10
       },
       {
         name: "18K Yellow Gold Wire (1.0mm)",
         sku: "MET-GLD-18K",
-        description: "Half-hard gold wire for jewelry wrapping and component creation.",
-        price: 6500, // Per gram
+        description: "Half-hard gold wire for jewelry wrapping.",
+        price: 6500,
         currentStock: 45,
         category: "Metals",
-        imageUrl: "https://picsum.photos/seed/goldwire/600/600",
-        lowStockThreshold: 10,
-        criticalThreshold: 5,
+        itemType: 'material' as const,
         averageDailySales: 0,
-        leadTimeDays: 14,
-        itemType: 'material' as const
+        leadTimeDays: 14
       },
       {
         name: "Loose Round Amethyst (6mm)",
         sku: "GEM-AMY-06",
-        description: "Vibrant purple amethyst gemstones, eye-clean clarity.",
-        price: 450, // Per piece
+        description: "Vibrant purple amethyst gemstones.",
+        price: 450,
         currentStock: 60,
         category: "Stones",
-        imageUrl: "https://picsum.photos/seed/amethyst/600/600",
-        lowStockThreshold: 20,
-        criticalThreshold: 10,
+        location: "Drawer-B2",
+        itemType: 'material' as const,
         averageDailySales: 0,
-        leadTimeDays: 20,
-        itemType: 'material' as const
-      },
-      {
-        name: "Freshwater Pearls AAA Grade",
-        sku: "GEM-PRL-01",
-        description: "High luster, nearly round freshwater pearls.",
-        price: 200, // Per piece
-        currentStock: 120,
-        category: "Stones",
-        imageUrl: "https://picsum.photos/seed/pearls/600/600",
-        lowStockThreshold: 30,
-        criticalThreshold: 15,
-        averageDailySales: 0,
-        leadTimeDays: 12,
-        itemType: 'material' as const
-      },
-      {
-        name: "Lobster Clasps - Sterling Silver",
-        sku: "FIN-CLP-SS",
-        description: "Durable 10mm clasps for chains and bracelets.",
-        price: 120, // Per piece
-        currentStock: 85,
-        category: "Findings",
-        imageUrl: "https://picsum.photos/seed/clasp/600/600",
-        lowStockThreshold: 20,
-        criticalThreshold: 10,
-        averageDailySales: 0,
-        leadTimeDays: 5,
-        itemType: 'material' as const
+        leadTimeDays: 20
       }
     ];
 
-    for (const item of jewelryItems) {
+    for (const item of inventory) {
       await FirebaseService.addProduct(db, sellerId, item);
     }
-
-    // Seed a demo completed order
-    await FirebaseService.addManualOrder(db, sellerId, {
-      customerName: "Jane M. Wambui",
-      customerPhone: "0712345678",
-      deliveryLocation: "Westlands, Nairobi",
-      totalAmount: 12300,
-      status: 'completed',
-      paymentStatus: 'paid',
-      items: [{
-        productName: "Infinity Bridal Ring Set & Maasai Choker",
-        quantity: 1,
-        priceAtOrder: 12300
-      }],
-      createdAt: serverTimestamp()
-    });
-  },
-
-  updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {
-    const orderRef = doc(db, 'orders', orderId);
-    updateDocumentNonBlocking(orderRef, { 
-      status, 
-      updatedAt: serverTimestamp() 
-    });
-  },
-
-  requestPayment: (db: Firestore, orderId: string) => {
-    const orderRef = doc(db, 'orders', orderId);
-    updateDocumentNonBlocking(orderRef, { 
-      paymentStatus: 'pending_approval',
-      updatedAt: serverTimestamp()
-    });
-  },
-
-  confirmPayment: (db: Firestore, order: Order) => {
-    const orderRef = doc(db, 'orders', order.id);
-    
-    // 1. Update order status to paid and completed
-    updateDocumentNonBlocking(orderRef, { 
-      paymentStatus: 'paid', 
-      status: 'completed',
-      updatedAt: serverTimestamp()
-    });
-
-    // 2. Reduce inventory stock for each item in the order
-    if (order.items && order.items.length > 0) {
-      order.items.forEach(item => {
-        if (item.productId) {
-          const productRef = doc(db, 'products', item.productId);
-          updateDocumentNonBlocking(productRef, {
-            currentStock: increment(-item.quantity),
-            updatedAt: serverTimestamp()
-          });
-        }
-      });
+    for (const item of materials) {
+      await FirebaseService.addProduct(db, sellerId, item);
     }
   },
 
@@ -360,7 +275,6 @@ export const FirebaseService = {
     );
   },
 
-  // For sellers to find all customers they've chatted with
   getConversationsQuery: (db: Firestore, sellerId: string) => {
     return query(
       collection(db, 'messages'),

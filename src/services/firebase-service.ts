@@ -219,7 +219,7 @@ export const FirebaseService = {
   seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
     const productsRef = collection(db, 'products');
 
-    // Fetch existing SKUs in a single batch to avoid multiple serial queries
+    // Batch fetch existing items by SKU to ensure idempotent parallel sync
     const existingSnapshot = await getDocs(productsRef);
     const existingSkus = new Set(existingSnapshot.docs.map(doc => doc.data().sku));
 
@@ -410,7 +410,7 @@ export const FirebaseService = {
       }
     ];
 
-    // Parallelize additions for much faster seeding
+    // Filter missing items and add them in parallel for maximum speed
     const missingItems = inventory.filter(item => !existingSkus.has(item.sku));
     
     if (missingItems.length > 0) {

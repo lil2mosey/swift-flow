@@ -66,7 +66,7 @@ import { PermissionAwareCollection } from '@/components/PermissionAwareCollectio
 import Link from 'next/link';
 
 /**
- * Receipt Layout for Printing
+ * Official Receipt Layout for Printing (Synchronized Business Branding)
  */
 const ReceiptPrintView = ({ order }: { order: Order }) => {
   const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
@@ -461,7 +461,7 @@ export default function OrdersPage() {
         >
           {(data) => (
             <div className="space-y-4">
-              {/* Mobile View: Card List */}
+              {/* Mobile View: High-Contrast Card List for Phones */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {data.map((order: Order) => (
                   <Card key={order.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
@@ -536,7 +536,7 @@ export default function OrdersPage() {
                 ))}
               </div>
 
-              {/* Desktop View: Table */}
+              {/* Desktop View: Professional Command Table */}
               <Card className="hidden md:block border-none shadow-sm overflow-hidden min-h-[400px]">
                 <CardContent className="p-0">
                   <Table>
@@ -655,6 +655,7 @@ export default function OrdersPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Hidden Print Container */}
         <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
           {orderToPrint && <ReceiptPrintView order={orderToPrint} />}
         </div>

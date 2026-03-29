@@ -18,7 +18,7 @@ import { query, collection, limit, where, orderBy } from 'firebase/firestore';
 
 /**
  * Synchronized Messaging Page.
- * Persists all chat history in Firestore for reference.
+ * Persists all chat history in Firestore for reference in a bubble format.
  */
 export default function MessagesPage() {
   const { user, profile } = useUser();

@@ -36,7 +36,8 @@
         "lastMessage": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
         "itemId": { "type": "string" },
-        "itemName": { "type": "string" }
+        "itemName": { "type": "string" },
+        "customerName": { "type": "string" }
       }
     },
     "ChatMessage": {

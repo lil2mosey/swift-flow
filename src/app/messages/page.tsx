@@ -118,7 +118,7 @@ export default function MessagesPage() {
           </ScrollArea>
         </Card>
 
-        {/* Chat History */}
+        {/* Chat History Area */}
         <Card className="lg:col-span-2 border-none shadow-sm h-full flex flex-col bg-white rounded-[2rem] overflow-hidden">
           {selectedConvId ? (
             <>

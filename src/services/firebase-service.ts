@@ -12,14 +12,13 @@ import {
   increment,
   orderBy,
   getDocs,
-  setDoc,
-  Timestamp
+  setDoc
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking 
 } from '@/firebase';
-import { OrderStatus, Product, OrderItem, Order, Conversation } from '@/lib/types';
+import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 export const FirebaseService = {
   // --- Orders ---
@@ -87,12 +86,14 @@ export const FirebaseService = {
   confirmPayment: async (db: Firestore, order: Order) => {
     const orderRef = doc(db, 'orders', order.id);
     
+    // Update order status
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'paid', 
       status: 'completed',
       updatedAt: serverTimestamp()
     });
 
+    // Reduce inventory for each item in the order
     if (order.items && order.items.length > 0) {
       order.items.forEach(item => {
         if (item.productId) {

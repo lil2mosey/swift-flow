@@ -335,7 +335,71 @@ export default function ShopPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Standard Modals (Checkout & Auth) - Omitted for brevity but assumed present */}
+      {/* Checkout Dialog */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+          <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-teal-400/10 rounded-xl">
+                  <CreditCard className="h-6 w-6 text-teal-400" />
+                </div>
+                <DialogTitle className="text-3xl font-bold">Secure <span className="text-teal-400">Checkout</span></DialogTitle>
+              </div>
+              <DialogDescription className="text-slate-400 font-medium">Verify your items and authorize M-Pesa sync.</DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="px-8 py-6 max-h-[400px] overflow-y-auto">
+            {cart.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 font-medium italic">Your cart is empty.</div>
+            ) : (
+              <div className="space-y-4">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
+                    <div>
+                      <p className="font-bold text-slate-900">{item.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="font-bold text-teal-600">KES {(item.price * item.quantity).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-8 pt-0 bg-white">
+            <div className="w-full space-y-4">
+              <div className="flex justify-between items-center px-4 py-3 bg-teal-50 rounded-xl border border-teal-100">
+                <span className="text-xs font-bold text-slate-500 uppercase">Total Amount</span>
+                <span className="text-xl font-bold text-teal-600">KES {cartTotal.toLocaleString()}</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">M-Pesa Phone Number</Label>
+                <div className="relative">
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-500" />
+                  <Input 
+                    placeholder="07XX XXX XXX" 
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="h-14 bg-slate-50 border-none rounded-2xl pl-12 text-lg font-bold text-slate-900" 
+                  />
+                </div>
+              </div>
+              <Button 
+                onClick={handleMpesaCheckout}
+                disabled={isProcessing || cart.length === 0}
+                className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl shadow-slate-200"
+              >
+                {isProcessing ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Smartphone className="h-5 w-5 mr-2" />}
+                Confirm & Sync M-Pesa
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auth Modal Omitted for brevity */}
     </Shell>
   );
 }

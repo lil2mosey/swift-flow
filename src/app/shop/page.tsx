@@ -5,7 +5,7 @@ import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package, UserPlus, CreditCard } from 'lucide-react';
+import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package, UserPlus, CreditCard, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { useCustomerProducts } from '@/hooks/use-customer-data';
+import { cn } from '@/lib/utils';
 
 export default function ShopPage() {
   const { user, profile } = useUser();
@@ -43,8 +44,8 @@ export default function ShopPage() {
     fullName: ''
   });
 
-  // Fetch items from the inventory (products collection)
-  const { products, isLoading: isProductsLoading, error: productsError, hasMore, loadMore } = useCustomerProducts(24);
+  // Real-time jewelry catalog from inventory (products collection where stock > 0)
+  const { products, isLoading: isProductsLoading, error: productsError } = useCustomerProducts(24);
 
   const addToCart = (product: any) => {
     setCart(prev => {
@@ -229,75 +230,76 @@ export default function ShopPage() {
                 </Card>
               ))
             ) : products.length === 0 && !isProductsLoading ? (
-              <div className="col-span-full py-20 text-center">
-                <div className="flex flex-col items-center gap-4 text-slate-400">
+              <div className="col-span-full py-20 text-center bg-white rounded-3xl shadow-sm border border-slate-100">
+                <div className="flex flex-col items-center gap-4 text-slate-400 p-12">
                   <Package className="h-12 w-12 opacity-20" />
-                  <p className="font-medium italic">Our catalog is being updated. Check back soon!</p>
+                  <p className="font-bold text-slate-500">Our catalog is being updated. Check back soon!</p>
+                  <p className="text-xs italic">Syncing live inventory from the workshop...</p>
                 </div>
               </div>
             ) : (
               <>
-                {products.map((product) => (
-                  <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl transition-all hover:shadow-md">
-                    <div className="relative aspect-square w-full">
-                      <Image 
-                        src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/400`} 
-                        alt={product.name} 
-                        fill 
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        data-ai-hint="jewelry item"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-8 w-8 shadow-sm">
-                          <Heart className="h-4 w-4 text-slate-400" />
+                {products.map((product) => {
+                  const isLowStock = product.currentStock <= (product.lowStockThreshold || 5);
+                  
+                  return (
+                    <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl transition-all hover:shadow-md relative">
+                      {isLowStock && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <div className="bg-rose-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg animate-pulse">
+                            <AlertCircle className="h-3 w-3" />
+                            Low Stock - Only {product.currentStock} left!
+                          </div>
+                        </div>
+                      )}
+                      <div className="relative aspect-square w-full">
+                        <Image 
+                          src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/400`} 
+                          alt={product.name} 
+                          fill 
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          data-ai-hint="jewelry item"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-8 w-8 shadow-sm">
+                            <Heart className="h-4 w-4 text-slate-400" />
+                          </Button>
+                        </div>
+                        <div className="absolute bottom-2 left-2">
+                          <span className="text-[10px] font-bold bg-white/90 text-teal-600 px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
+                            {product.category}
+                          </span>
+                        </div>
+                      </div>
+                      <CardHeader className="p-4 pb-1">
+                        <CardTitle className="text-base font-bold text-slate-900 line-clamp-1 group-hover:text-teal-600 transition-colors">
+                          {product.name}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="text-lg font-bold text-slate-900">
+                          KES {product.price.toLocaleString()}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-0 flex flex-col gap-2">
+                        <Button 
+                          onClick={() => addToCart(product)}
+                          className="w-full bg-slate-50 hover:bg-teal-50 hover:text-teal-700 text-slate-900 text-xs font-bold gap-2 h-10 border-none shadow-none rounded-xl transition-all"
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
                         </Button>
-                      </div>
-                      <div className="absolute bottom-2 left-2">
-                        <span className="text-[10px] font-bold bg-white/90 text-teal-600 px-2 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
-                          {product.category}
-                        </span>
-                      </div>
-                    </div>
-                    <CardHeader className="p-4 pb-1">
-                      <CardTitle className="text-base font-bold text-slate-900 line-clamp-1 group-hover:text-teal-600 transition-colors">
-                        {product.name}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="text-lg font-bold text-slate-900">
-                        KES {product.price.toLocaleString()}
-                      </div>
-                      <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
-                    </CardContent>
-                    <CardFooter className="p-4 pt-0 flex flex-col gap-2">
-                      <Button 
-                        onClick={() => addToCart(product)}
-                        className="w-full bg-slate-50 hover:bg-teal-50 hover:text-teal-700 text-slate-900 text-xs font-bold gap-2 h-10 border-none shadow-none rounded-xl transition-all"
-                      >
-                        <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
-                      </Button>
-                      <Button 
-                        onClick={() => handleQuickBuy(product)}
-                        className="w-full bg-primary hover:bg-slate-800 text-white text-xs font-bold gap-2 h-10 rounded-xl transition-all"
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CreditCard className="h-3.5 w-3.5" /> Buy Now</>}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-                {hasMore && (
-                  <div className="col-span-full flex justify-center mt-8">
-                    <Button 
-                      onClick={() => loadMore()} 
-                      disabled={isProductsLoading}
-                      variant="outline"
-                      className="h-12 px-10 border-slate-200 text-slate-600 font-bold rounded-2xl"
-                    >
-                      {isProductsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load More Products"}
-                    </Button>
-                  </div>
-                )}
+                        <Button 
+                          onClick={() => handleQuickBuy(product)}
+                          className="w-full bg-primary hover:bg-slate-800 text-white text-xs font-bold gap-2 h-10 rounded-xl transition-all"
+                          disabled={isProcessing}
+                        >
+                          {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CreditCard className="h-3.5 w-3.5" /> Buy Now</>}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
               </>
             )}
           </div>

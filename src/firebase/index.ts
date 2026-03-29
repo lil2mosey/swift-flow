@@ -3,7 +3,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, Firestore, getFirestore as getFirestoreRegular } from 'firebase/firestore';
+import { Firestore, initializeFirestore, getFirestore as getFirestoreRegular } from 'firebase/firestore';
 
 /**
  * Robust Firebase initialization for Next.js in a Studio environment.
@@ -42,7 +42,7 @@ export function initializeFirebase() {
         experimentalForceLongPolling: true,
       });
     } catch (e) {
-      // Fallback if already initialized
+      // Fallback if already initialized with settings
       db = getFirestoreRegular(app);
     }
 
@@ -71,8 +71,7 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
-  const auth = getAuth(firebaseApp);
-  const firestore = getFirestoreRegular(firebaseApp);
+  const { auth, firestore } = initializeFirebase();
   return {
     firebaseApp,
     auth,

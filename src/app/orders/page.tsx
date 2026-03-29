@@ -174,7 +174,7 @@ export default function OrdersPage() {
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
-    // Sellers see everything, Customers see only their own orders
+    // Sellers see everything for global management, Customers see only their own
     if (isSeller) {
       return FirebaseService.getSellerOrdersQuery(db);
     } else {

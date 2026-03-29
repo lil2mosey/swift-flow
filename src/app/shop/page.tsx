@@ -5,7 +5,7 @@ import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package, UserPlus } from 'lucide-react';
+import { ShoppingCart, Heart, Smartphone, Loader2, X, ShoppingBag, Package, UserPlus, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -24,7 +24,6 @@ import { FirebaseService } from '@/services/firebase-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { RoleGuard } from '@/components/RoleGuard';
 import { useCustomerProducts } from '@/hooks/use-customer-data';
 
 export default function ShopPage() {
@@ -59,6 +58,26 @@ export default function ShopPage() {
       title: "Added to Cart",
       description: `${product.name} ready for checkout.`,
     });
+  };
+
+  const handleQuickBuy = async (product: any) => {
+    if (!user) {
+      setIsAuthDialogOpen(true);
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      await FirebaseService.placeOrder(db, user.uid, profile?.fullName || user.email?.split('@')[0] || 'Customer', product);
+      toast({
+        title: "Order Placed!",
+        description: `Your order for ${product.name} has been synchronized.`,
+      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Order Failed", description: "Could not process order." });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const removeFromCart = (id: string) => {
@@ -131,7 +150,6 @@ export default function ShopPage() {
     try {
       const orderTitle = cart.length > 1 ? `${cart[0].name} & ${cart.length - 1} more` : cart[0].name;
 
-      // In a real flow, we'd record each item, but for the MVP we sum it up
       await FirebaseService.placeOrder(db, uid, customerName, {
         id: cart[0].id,
         name: orderTitle,
@@ -140,7 +158,8 @@ export default function ShopPage() {
         currentStock: 0,
         averageDailySales: 0,
         leadTimeDays: 0,
-        sku: 'SHOP-ORDER'
+        sku: 'SHOP-ORDER',
+        sellerId: 'system-seller'
       } as any);
 
       setTimeout(() => {
@@ -250,12 +269,19 @@ export default function ShopPage() {
                       </div>
                       <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
                     </CardContent>
-                    <CardFooter className="p-4 pt-0">
+                    <CardFooter className="p-4 pt-0 flex flex-col gap-2">
                       <Button 
                         onClick={() => addToCart(product)}
                         className="w-full bg-slate-50 hover:bg-teal-50 hover:text-teal-700 text-slate-900 text-xs font-bold gap-2 h-10 border-none shadow-none rounded-xl transition-all"
                       >
                         <ShoppingBag className="h-3.5 w-3.5" /> Add to Cart
+                      </Button>
+                      <Button 
+                        onClick={() => handleQuickBuy(product)}
+                        className="w-full bg-primary hover:bg-slate-800 text-white text-xs font-bold gap-2 h-10 rounded-xl transition-all"
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CreditCard className="h-3.5 w-3.5" /> Buy Now</>}
                       </Button>
                     </CardFooter>
                   </Card>

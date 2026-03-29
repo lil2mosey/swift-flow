@@ -75,8 +75,8 @@ function buildRequestObject(context: SecurityRuleContext): SecurityRuleRequest {
   try {
     const apps = getApps();
     if (apps.length > 0) {
+      // Safely attempt to get auth without triggering recursion if it's not ready
       const firebaseAuth = getAuth(apps[0]);
-      // Access currentUser safely as it may be null during init
       const currentUser = firebaseAuth?.currentUser;
       if (currentUser) {
         authObject = buildAuthObject(currentUser);

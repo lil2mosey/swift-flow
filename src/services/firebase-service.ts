@@ -222,7 +222,7 @@ export const FirebaseService = {
     if (!existing.empty) return;
 
     const inventory = [
-      // --- Finished Goods ---
+      // --- Finished Goods (Visible to Customer Shop) ---
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
         sku: "JW-R-INF-SS",
@@ -275,14 +275,14 @@ export const FirebaseService = {
         leadTimeDays: 4,
         itemType: 'product' as const
       },
-      // --- Raw Materials ---
+      // --- Raw Materials (Seller Only, Detailed Workshop Stock) ---
       {
         name: "14K Gold Wire (0.5mm Round)",
         sku: "RM-GOLD-WIRE-05",
         description: "High-quality 14K Yellow Gold wire for custom jewelry fabrication and repairs.",
         price: 1200,
         currentStock: 50,
-        category: "Metals",
+        category: "Precious Metals",
         sellerId: sellerId,
         lowStockThreshold: 10,
         averageDailySales: 0,
@@ -292,10 +292,10 @@ export const FirebaseService = {
       {
         name: "Sterling Silver Sheet (0.8mm)",
         sku: "RM-SILV-SHEET-08",
-        description: "Dead-soft sterling silver sheet, ideal for sawing, stamping, and creating bezel backplates.",
+        description: "Dead-soft sterling silver sheet, ideal for sawing, stamping, and bezel backplates.",
         price: 450,
         currentStock: 25,
-        category: "Metals",
+        category: "Precious Metals",
         sellerId: sellerId,
         lowStockThreshold: 5,
         averageDailySales: 0,
@@ -331,7 +331,7 @@ export const FirebaseService = {
       {
         name: "Fine Silver Bezel Wire (3mm)",
         sku: "RM-SILV-BEZEL-3",
-        description: "Dead-soft fine silver wire specifically for creating gemstone bezels.",
+        description: "Dead-soft fine silver wire specifically for creating professional gemstone bezels.",
         price: 320,
         currentStock: 40,
         category: "Findings",
@@ -344,14 +344,27 @@ export const FirebaseService = {
       {
         name: "Jewelry Polishing Rouge (Red)",
         sku: "RM-SUPP-ROUGE-R",
-        description: "Professional grade red rouge polishing compound for final high-luster finish on gold and silver.",
+        description: "Professional grade red rouge polishing compound for final high-luster finish.",
         price: 850,
         currentStock: 8,
-        category: "Supplies",
+        category: "Workshop Supplies",
         sellerId: sellerId,
         lowStockThreshold: 2,
         averageDailySales: 0,
         leadTimeDays: 14,
+        itemType: 'material' as const
+      },
+      {
+        name: "Ethically Sourced Kenyan Brass Bars",
+        sku: "RM-MET-BRS-KEN",
+        description: "Premium casting brass sourced locally, perfect for Savannah collection cuffs.",
+        price: 150,
+        currentStock: 100,
+        category: "Base Metals",
+        sellerId: sellerId,
+        lowStockThreshold: 20,
+        averageDailySales: 0,
+        leadTimeDays: 7,
         itemType: 'material' as const
       }
     ];

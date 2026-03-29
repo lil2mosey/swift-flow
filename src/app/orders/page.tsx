@@ -46,7 +46,8 @@ import {
   X,
   ShieldCheck,
   CreditCard,
-  Search
+  Search,
+  ShoppingBag
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -61,6 +62,7 @@ import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
 import { PermissionAwareCollection } from '@/components/PermissionAwareCollection';
+import Link from 'next/link';
 
 /**
  * Receipt Layout for Printing
@@ -440,6 +442,22 @@ export default function OrdersPage() {
           error={ordersError} 
           data={filteredOrders} 
           collectionName="orders"
+          fallback={
+            !isSeller && (
+              <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+                <div className="p-4 bg-teal-50 rounded-2xl mb-4">
+                  <ShoppingBag className="h-8 w-8 text-teal-500" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Your Order History is Empty</h3>
+                <p className="text-slate-500 mt-2 max-w-sm italic font-medium">
+                  You haven't placed any orders yet. Visit the shop to explore our jewelry collection.
+                </p>
+                <Button asChild className="mt-8 bg-primary hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-xl shadow-lg shadow-slate-200">
+                  <Link href="/shop">Go to Shop</Link>
+                </Button>
+              </div>
+            )
+          }
         >
           {(data) => (
             <Card className="border-none shadow-sm overflow-hidden min-h-[400px]">

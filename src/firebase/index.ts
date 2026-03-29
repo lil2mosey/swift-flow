@@ -35,18 +35,21 @@ export function initializeFirebase() {
 
     // 3. Initialize Firestore with required long-polling exactly once
     let db: Firestore;
-    try {
-      // The core fix: use initializeFirestore with forced long polling
-      // but only if it hasn't been initialized yet.
-      db = initializeFirestore(app, {
-        experimentalForceLongPolling: true,
-      });
-    } catch (e) {
-      // Fallback if already initialized with settings
-      db = getFirestoreRegular(app);
+    const existingDb = globalStore.__firebaseDb;
+    
+    if (existingDb) {
+      db = existingDb;
+    } else {
+      try {
+        db = initializeFirestore(app, {
+          experimentalForceLongPolling: true,
+        });
+      } catch (e) {
+        db = getFirestoreRegular(app);
+      }
     }
 
-    const auth = getAuth(app);
+    const auth = globalStore.__firebaseAuth || getAuth(app);
 
     // Store in global window object for absolute singleton consistency
     globalStore.__firebaseApp = app;

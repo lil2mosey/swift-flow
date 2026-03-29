@@ -52,15 +52,16 @@ export const FirebaseService = {
     deliveryLocation: string;
     items: OrderItem[];
     totalAmount: number;
-    createdAt?: string;
+    createdAt?: any;
     status?: OrderStatus;
     paymentStatus?: 'unpaid' | 'pending_approval' | 'paid';
+    customerId?: string;
   }) => {
     const ordersRef = collection(db, 'orders');
     return addDocumentNonBlocking(ordersRef, {
       sellerId: sellerId,
-      userId: sellerId, 
-      customerId: 'manual-dm',
+      userId: orderDetails.customerId || sellerId, 
+      customerId: orderDetails.customerId || 'manual-dm',
       customerName: orderDetails.customerName,
       customerPhone: orderDetails.customerPhone,
       deliveryLocation: orderDetails.deliveryLocation,
@@ -163,6 +164,22 @@ export const FirebaseService = {
     for (const item of jewelryItems) {
       await FirebaseService.addProduct(db, sellerId, item);
     }
+
+    // Seed a completed order for "real data" demo
+    await FirebaseService.addManualOrder(db, sellerId, {
+      customerName: "Initial Demo Client",
+      customerPhone: "0700000000",
+      deliveryLocation: "Nairobi Central",
+      totalAmount: 48000,
+      status: 'completed',
+      paymentStatus: 'paid',
+      items: [{
+        productName: "Midnight Sapphire Pendant",
+        quantity: 1,
+        priceAtOrder: 48000
+      }],
+      createdAt: serverTimestamp()
+    });
   },
 
   updateOrderStatus: (db: Firestore, orderId: string, status: OrderStatus) => {
@@ -231,7 +248,6 @@ export const FirebaseService = {
   },
 
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
-    // For "access everything" requested by user, we can return all orders or specific customer orders
     return query(
       collection(db, 'orders'),
       where('customerId', '==', customerId),

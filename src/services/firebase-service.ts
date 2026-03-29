@@ -19,32 +19,13 @@ import {
 } from '@/firebase';
 import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
+/**
+ * Enterprise Service Layer for SwiftFlow Synchronization.
+ * Handles logistics, inventory, and communications.
+ */
 export const FirebaseService = {
-  // --- Orders ---
+  // --- Orders & Logistics ---
   
-  placeOrder: (db: Firestore, customerId: string, customerName: string, product: Product, quantity: number = 1) => {
-    const ordersRef = collection(db, 'orders');
-    const orderData = {
-      customerId: customerId,
-      userId: customerId, 
-      customerName: customerName || 'Valued Customer',
-      sellerId: product.sellerId || 'system-seller', 
-      items: [{ 
-        productId: product.id, 
-        productName: product.name, 
-        quantity: quantity, 
-        priceAtOrder: product.price 
-      }],
-      total: product.price * quantity, 
-      totalAmount: product.price * quantity,
-      status: 'pending',
-      paymentStatus: 'unpaid',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-    return addDocumentNonBlocking(ordersRef, orderData);
-  },
-
   addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
     customerName: string;
     customerPhone: string;
@@ -104,7 +85,7 @@ export const FirebaseService = {
     }
   },
 
-  // --- Conversations & Inquiries ---
+  // --- Conversations & Direct Messaging ---
 
   findOrCreateConversation: async (db: Firestore, customerId: string, sellerId: string, item: Product, customerName: string) => {
     const convsRef = collection(db, 'conversations');
@@ -202,7 +183,7 @@ export const FirebaseService = {
     );
   },
 
-  // --- Products & Inventory ---
+  // --- Products & High-Speed Inventory Seeding ---
 
   addProduct: (db: Firestore, sellerId: string, productData: Omit<Product, 'id' | 'sellerId'>) => {
     const productsRef = collection(db, 'products');
@@ -224,7 +205,7 @@ export const FirebaseService = {
     const existingSkus = new Set(existingSnapshot.docs.map(doc => doc.data().sku));
 
     const inventory = [
-      // --- Finished Goods (Visible to Customer Shop) ---
+      // --- Professional Finished Goods ---
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
         sku: "JW-R-INF-SS",
@@ -236,19 +217,6 @@ export const FirebaseService = {
         lowStockThreshold: 5,
         averageDailySales: 0.2,
         leadTimeDays: 7,
-        itemType: 'product' as const
-      },
-      {
-        name: "Infinity Bridal Ring Set (14K Gold)",
-        sku: "JW-R-INF-14K",
-        description: "Premium 14K Yellow Gold variant of our signature bridal collection.",
-        price: 32000,
-        currentStock: 3,
-        category: "Rings",
-        sellerId: sellerId,
-        lowStockThreshold: 2,
-        averageDailySales: 0.05,
-        leadTimeDays: 14,
         itemType: 'product' as const
       },
       {
@@ -277,7 +245,7 @@ export const FirebaseService = {
         leadTimeDays: 4,
         itemType: 'product' as const
       },
-      // --- Raw Materials (Seller Only, Detailed Jewelry Workshop Stock) ---
+      // --- Professional Workshop Raw Materials ---
       {
         name: "24K Fine Gold Casting Grain",
         sku: "RM-GOLD-24K-GR",
@@ -305,19 +273,6 @@ export const FirebaseService = {
         itemType: 'material' as const
       },
       {
-        name: "18K Yellow Gold Bezel Wire (3mm)",
-        sku: "RM-GOLD-BEZEL-18K",
-        description: "Dead-soft 18K gold wire specifically for creating premium gemstone bezels.",
-        price: 4500,
-        currentStock: 25,
-        category: "Precious Metals",
-        sellerId: sellerId,
-        lowStockThreshold: 10,
-        averageDailySales: 0,
-        leadTimeDays: 7,
-        itemType: 'material' as const
-      },
-      {
         name: "Natural Blue Sapphire (4mm Round Cut)",
         sku: "RM-GEM-SAP-4RD",
         description: "AA Grade natural faceted blue sapphire for high-end solitaire and accent settings.",
@@ -328,19 +283,6 @@ export const FirebaseService = {
         lowStockThreshold: 5,
         averageDailySales: 0,
         leadTimeDays: 14,
-        itemType: 'material' as const
-      },
-      {
-        name: "Kenyan Emerald (5mm Trillion Cut)",
-        sku: "RM-GEM-EME-5TR",
-        description: "Vibrant ethically sourced Kenyan emerald with a unique trillion cut profile.",
-        price: 12000,
-        currentStock: 8,
-        category: "Gemstones",
-        sellerId: sellerId,
-        lowStockThreshold: 3,
-        averageDailySales: 0,
-        leadTimeDays: 20,
         itemType: 'material' as const
       },
       {
@@ -355,58 +297,6 @@ export const FirebaseService = {
         averageDailySales: 0,
         leadTimeDays: 5,
         itemType: 'material' as const
-      },
-      {
-        name: "Sterling Silver Paste Solder",
-        sku: "RM-SOLD-SILV-PST",
-        description: "Convenient paste solder with flux included for intricate sterling silver assemblies.",
-        price: 650,
-        currentStock: 30,
-        category: "Soldering Supplies",
-        sellerId: sellerId,
-        lowStockThreshold: 10,
-        averageDailySales: 0,
-        leadTimeDays: 4,
-        itemType: 'material' as const
-      },
-      {
-        name: "Professional White Diamond Polishing Compound",
-        sku: "RM-SUP-POL-WHT",
-        description: "High-grade finishing compound for achieving a mirror-like high-luster on precious metals.",
-        price: 1200,
-        currentStock: 12,
-        category: "Workshop Supplies",
-        sellerId: sellerId,
-        lowStockThreshold: 4,
-        averageDailySales: 0,
-        leadTimeDays: 10,
-        itemType: 'material' as const
-      },
-      {
-        name: "Borax Flux (Cone & Dish Set)",
-        sku: "RM-SUP-FLX-BRX",
-        description: "Traditional borax cone for preparing high-purity flux during precision soldering.",
-        price: 450,
-        currentStock: 50,
-        category: "Workshop Supplies",
-        sellerId: sellerId,
-        lowStockThreshold: 15,
-        averageDailySales: 0,
-        leadTimeDays: 5,
-        itemType: 'material' as const
-      },
-      {
-        name: "Ethically Sourced Kenyan Brass Sheet (1mm)",
-        sku: "RM-MET-BRS-10",
-        description: "High-quality Kenyan brass sheet for Savannah collection bracelets and accessories.",
-        price: 85,
-        currentStock: 500,
-        category: "Base Metals",
-        sellerId: sellerId,
-        lowStockThreshold: 100,
-        averageDailySales: 0,
-        leadTimeDays: 3,
-        itemType: 'material' as const
       }
     ];
 
@@ -414,6 +304,7 @@ export const FirebaseService = {
     const missingItems = inventory.filter(item => !existingSkus.has(item.sku));
     
     if (missingItems.length > 0) {
+      // Parallelized additions to minimize loading time
       await Promise.all(missingItems.map(item => FirebaseService.addProduct(db, sellerId, item)));
     }
   },

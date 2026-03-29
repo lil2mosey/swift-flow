@@ -7,12 +7,13 @@ import { initializeFirestore, getFirestore as getFirestoreRegular, Firestore } f
 
 /**
  * Reinforced Firebase initialization for production environments like Vercel.
- * Prevents "Expected state (ID: ca9)" errors by enforcing a global singleton.
+ * Prevents "Expected state (ID: ca9)" and "ID: b815" errors by enforcing a global singleton.
  */
 export function initializeFirebase() {
   if (typeof window !== 'undefined') {
     const globalStore = window as any;
 
+    // Check if we've already initialized to prevent multiple instances
     if (globalStore.__firebaseApp && globalStore.__firebaseDb && globalStore.__firebaseAuth) {
       return {
         firebaseApp: globalStore.__firebaseApp,
@@ -26,6 +27,7 @@ export function initializeFirebase() {
 
     let db: Firestore;
     try {
+      // Use experimental settings for better reliability in some browser/network environments
       db = initializeFirestore(app, {
         experimentalForceLongPolling: true,
       });
@@ -35,6 +37,7 @@ export function initializeFirebase() {
 
     const auth = getAuth(app);
 
+    // Persist instances globally to survive HMR and navigation
     globalStore.__firebaseApp = app;
     globalStore.__firebaseDb = db;
     globalStore.__firebaseAuth = auth;
@@ -42,6 +45,7 @@ export function initializeFirebase() {
     return { firebaseApp: app, auth, firestore: db };
   }
 
+  // Fallback for SSR
   const apps = getApps();
   const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
   return {

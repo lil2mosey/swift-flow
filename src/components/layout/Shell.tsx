@@ -29,6 +29,10 @@ interface ShellProps {
   userRole?: 'seller' | 'customer';
 }
 
+/**
+ * Enterprise Navigation Shell for SwiftFlow.
+ * Optimized for mobile-first visibility and Vercel stability.
+ */
 export function Shell({ children, userRole }: ShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
@@ -36,7 +40,6 @@ export function Shell({ children, userRole }: ShellProps) {
   const { user, profile, isUserLoading, isProfileLoading } = useUser();
   const auth = useAuth();
 
-  // Define public routes that don't require authentication
   const isPublicRoute = pathname === '/shop' || pathname === '/' || pathname === '/login';
 
   useEffect(() => {
@@ -64,7 +67,6 @@ export function Shell({ children, userRole }: ShellProps) {
     { name: 'Chat', href: '/messages', icon: MessageSquare },
   ];
 
-  // For guests, we show the customer nav but restricted
   const activeRole = userRole || profile?.role || 'customer';
   const navItems = activeRole === 'seller' ? sellerNav : customerNav;
 
@@ -136,21 +138,21 @@ export function Shell({ children, userRole }: ShellProps) {
         </div>
       </main>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu Dropdown: Solid background for maximum readability */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[150] bg-[#0f172a] pt-20 px-8 md:hidden animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex flex-col gap-4">
+        <div className="fixed inset-0 z-[150] bg-[#0f172a] pt-20 px-8 md:hidden animate-in fade-in slide-in-from-top-4 duration-300 overflow-y-auto">
+          <div className="flex flex-col gap-2">
             {navItems.map((item) => (
               <Link 
                 key={item.href} 
                 href={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-4 py-5 text-xl font-bold uppercase tracking-widest border-b border-slate-800 transition-colors",
+                  "flex items-center gap-4 py-6 text-lg font-bold uppercase tracking-widest border-b border-slate-800/50 transition-colors",
                   pathname === item.href ? "text-teal-400" : "text-white"
                 )}
               >
-                <item.icon className="h-6 w-6" />
+                <item.icon className="h-5 w-5" />
                 {item.name}
               </Link>
             ))}
@@ -160,18 +162,18 @@ export function Shell({ children, userRole }: ShellProps) {
                   setIsMobileMenuOpen(false);
                   handleLogout();
                 }}
-                className="flex items-center gap-4 py-5 text-xl font-bold uppercase tracking-widest text-rose-500 border-b border-slate-800"
+                className="flex items-center gap-4 py-6 text-lg font-bold uppercase tracking-widest text-rose-500"
               >
-                <LogOut className="h-6 w-6" />
+                <LogOut className="h-5 w-5" />
                 Sign Out
               </button>
             ) : (
               <Link 
                 href="/login"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-4 py-5 text-xl font-bold uppercase tracking-widest text-teal-400 border-b border-slate-800"
+                className="flex items-center gap-4 py-6 text-lg font-bold uppercase tracking-widest text-teal-400"
               >
-                <LogIn className="h-6 w-6" />
+                <LogIn className="h-5 w-5" />
                 Sign In
               </Link>
             )}

@@ -45,10 +45,8 @@ import {
   Lock,
   X,
   ShieldCheck,
-  CreditCard,
-  Search,
   ShoppingBag,
-  ChevronRight
+  Search
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -66,7 +64,7 @@ import { PermissionAwareCollection } from '@/components/PermissionAwareCollectio
 import Link from 'next/link';
 
 /**
- * Official Receipt Layout for Printing (Synchronized Business Branding)
+ * Official Receipt Layout for Printing.
  */
 const ReceiptPrintView = ({ order }: { order: Order }) => {
   const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
@@ -84,7 +82,6 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">SwiftFlow</h1>
         </div>
         <p className="text-slate-500 font-medium italic">Synchronized Logistics & Receipts</p>
-        <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Official Business Receipt</p>
       </div>
 
       <div className="grid grid-cols-2 gap-8 mb-8">
@@ -92,7 +89,6 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Details</p>
           <p className="text-sm font-bold">{order.customerName || 'Anonymous'}</p>
           <p className="text-xs text-slate-600">{order.customerPhone || 'N/A'}</p>
-          <p className="text-xs text-slate-600 italic">{order.deliveryLocation || 'Standard Delivery'}</p>
         </div>
         <div className="text-right space-y-1">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Reference</p>
@@ -108,7 +104,6 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
               <th className="py-2">Item Description</th>
               <th className="py-2 text-center">Qty</th>
               <th className="py-2 text-right">Price</th>
-              <th className="py-2 text-right">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -116,7 +111,6 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
               <tr key={idx}>
                 <td className="py-3 font-medium">{item.productName}</td>
                 <td className="py-3 text-center">{item.quantity}</td>
-                <td className="py-3 text-right">KES {item.priceAtOrder.toLocaleString()}</td>
                 <td className="py-3 text-right font-bold">KES {(item.priceAtOrder * item.quantity).toLocaleString()}</td>
               </tr>
             ))}
@@ -125,26 +119,9 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
       </div>
 
       <div className="border-t pt-4 space-y-2">
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-slate-500 font-medium uppercase tracking-wider">Subtotal (Worth)</span>
-          <span className="font-bold text-slate-700">KES {itemsSubtotal.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-slate-500 font-medium uppercase tracking-wider">Delivery Fees</span>
-          <span className="font-bold text-slate-700">KES {deliveryFee.toLocaleString()}</span>
-        </div>
         <div className="flex justify-between items-center pt-2 border-t border-slate-200">
           <span className="text-sm font-bold uppercase tracking-widest text-teal-600">Total Paid</span>
           <span className="text-xl font-bold text-slate-900">KES {orderTotal.toLocaleString()}</span>
-        </div>
-      </div>
-
-      <div className="mt-12 text-center">
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-2">Thank you for your business!</p>
-        <div className="flex justify-center items-center gap-1.5 opacity-50">
-          <div className="h-1 w-1 bg-teal-500 rounded-full" />
-          <div className="h-1 w-1 bg-teal-500 rounded-full" />
-          <div className="h-1 w-1 bg-teal-500 rounded-full" />
         </div>
       </div>
     </div>
@@ -220,18 +197,12 @@ export default function OrdersPage() {
 
   const handlePrintReceipt = (order: Order) => {
     setOrderToPrint(order);
-    toast({
-      title: "Preparing Print",
-      description: `Generating formatted receipt for Order #${order.id.slice(0,8).toUpperCase()}...`,
-    });
+    toast({ title: "Syncing Receipt...", description: "Formatting for professional output." });
   };
 
   const handlePromptPay = (orderId: string) => {
     FirebaseService.requestPayment(db, orderId);
-    toast({ 
-      title: "Prompt Sent", 
-      description: "Payment notification has been synchronized with the customer's portal." 
-    });
+    toast({ title: "Prompt Sent", description: "Customer notified for synchronization." });
   };
 
   const handleOpenPinDialog = (order: Order) => {
@@ -241,51 +212,26 @@ export default function OrdersPage() {
 
   const handleConfirmPayment = async () => {
     if (!selectedOrder) return;
-    if (pin.length < 4) {
-      toast({ variant: "destructive", title: "Invalid PIN", description: "PIN must be 4 digits." });
-      return;
-    }
-
     setIsProcessingPayment(true);
     setTimeout(() => {
       FirebaseService.confirmPayment(db, selectedOrder);
       setIsProcessingPayment(false);
       setIsPinDialogOpen(false);
       setPin('');
-      toast({ title: "Authorized", description: "Payment confirmation synced successfully and inventory updated." });
+      toast({ title: "Authorized", description: "Logistics synchronized and stock updated." });
     }, 1500);
   };
 
   const handleProductSelect = (productId: string) => {
     const product = products?.find(p => p.id === productId);
     if (product) {
-      setNewOrder(prev => ({
-        ...prev,
-        productId,
-        amount: product.price * prev.quantity
-      }));
+      setNewOrder(prev => ({ ...prev, productId, amount: product.price * prev.quantity }));
     }
-  };
-
-  const handleQuantityChange = (qty: string) => {
-    const q = parseInt(qty) || 1;
-    const product = products?.find(p => p.id === newOrder.productId);
-    setNewOrder(prev => ({
-      ...prev,
-      quantity: q,
-      amount: product ? product.price * q : 0
-    }));
   };
 
   const handleCreateOrder = () => {
     if (!user) return;
-    if (!newOrder.customerName || !newOrder.productId) {
-      toast({ variant: "destructive", title: "Incomplete", description: "Name and Item are required." });
-      return;
-    }
-
     const selectedProduct = products?.find(p => p.id === newOrder.productId);
-    
     FirebaseService.addManualOrder(db, user.uid, {
       customerName: newOrder.customerName,
       customerPhone: newOrder.customerPhone,
@@ -300,235 +246,76 @@ export default function OrdersPage() {
         priceAtOrder: selectedProduct?.price || 0
       }]
     });
-
     setIsOrderDialogOpen(false);
-    setNewOrder({ customerName: '', customerPhone: '', deliveryLocation: '', productId: '', quantity: 1, amount: 0, paymentStatus: 'unpaid' });
-    toast({ title: "Order Synced", description: "Direct order successfully recorded." });
+    toast({ title: "Order Recorded", description: "Manual sale synchronized successfully." });
   };
 
   return (
     <RoleGuard allowedRoles={['seller', 'customer']}>
       <Shell userRole={isSeller ? "seller" : "customer"}>
         <PageHeader 
-          title={isSeller ? "Logistics Command" : "Orders Dashboard"} 
-          description={isSeller ? "Synchronize manual DM sales and track platform fulfillment." : "View your order history and synchronization status."}
+          title={isSeller ? "Logistics Command" : "My Synchronized Orders"} 
+          description={isSeller ? "Track workshop fulfillment and manual DM sales." : "Track your jewelry pieces from workshop to delivery."}
           action={isSeller && (
             <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 shadow-lg shadow-slate-200">
+                <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11">
                   <PlusCircle className="h-4 w-4" /> Create Direct Order
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
-                <div className="bg-[#0f172a] p-8 pb-6 border-b border-slate-800 text-white">
-                  <div className="flex justify-between items-start mb-2">
-                    <DialogTitle className="text-3xl font-bold tracking-tight">
-                      Manual <span className="text-teal-400">Order Entry</span>
-                    </DialogTitle>
-                    <DialogClose className="rounded-full h-8 w-8 flex items-center justify-center hover:bg-slate-800 transition-colors shadow-sm bg-slate-700/50">
-                      <X className="h-4 w-4 text-slate-300" />
-                    </DialogClose>
-                  </div>
-                  <DialogDescription className="text-slate-400 font-medium italic">Record DM, Instagram, or direct shop sales.</DialogDescription>
+                <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
+                  <DialogTitle className="text-3xl font-bold">Direct <span className="text-teal-400">Order</span></DialogTitle>
+                  <DialogDescription className="text-slate-400">Sync sales from Instagram or direct shop visits.</DialogDescription>
                 </div>
-
                 <div className="px-8 py-6 space-y-6">
-                  <div className="grid gap-2">
-                    <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Customer Details</Label>
-                    <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input 
-                        placeholder="Customer Full Name" 
-                        className="pl-9 h-11 bg-slate-50 border-none rounded-xl font-bold"
-                        value={newOrder.customerName}
-                        onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})}
-                      />
-                    </div>
-                  </div>
+                  <Input placeholder="Customer Name" value={newOrder.customerName} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input 
-                        placeholder="Phone Number" 
-                        className="pl-9 h-11 bg-slate-50 border-none rounded-xl font-bold"
-                        value={newOrder.customerPhone}
-                        onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})}
-                      />
-                    </div>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input 
-                        placeholder="Location" 
-                        className="pl-9 h-11 bg-slate-50 border-none rounded-xl font-bold"
-                        value={newOrder.deliveryLocation}
-                        onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Select Item</Label>
-                      <Select onValueChange={handleProductSelect}>
-                        <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl font-bold">
-                          <SelectValue placeholder={isProductsLoading ? "Syncing catalog..." : "-- Choose Item --"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {products?.map(p => (
-                            <SelectItem key={p.id} value={p.id} className="py-3">
-                              <div className="flex flex-col">
-                                <span className="font-bold">{p.name}</span>
-                                <span className="text-[10px] text-slate-400 uppercase">KES {p.price.toLocaleString()}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Payment Status</Label>
-                      <Select value={newOrder.paymentStatus} onValueChange={(v) => setNewOrder({...newOrder, paymentStatus: v as PaymentStatus})}>
-                        <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl font-bold">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="unpaid">Unpaid (Awaiting)</SelectItem>
-                          <SelectItem value="paid">Paid (Cash/DM)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Quantity</Label>
-                      <Input 
-                        type="number" min="1"
-                        className="h-11 bg-slate-50 border-none rounded-xl font-bold"
-                        value={newOrder.quantity}
-                        onChange={(e) => handleQuantityChange(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-widest">Total KES</Label>
-                      <div className="h-11 flex items-center px-4 bg-teal-50 border border-teal-100 rounded-xl font-bold text-teal-600">
-                        KES {newOrder.amount.toLocaleString()}
-                      </div>
-                    </div>
+                    <Select onValueChange={handleProductSelect}>
+                      <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl"><SelectValue placeholder="Select Item" /></SelectTrigger>
+                      <SelectContent>{products?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Select value={newOrder.paymentStatus} onValueChange={(v) => setNewOrder({...newOrder, paymentStatus: v as PaymentStatus})}>
+                      <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="paid">Paid (Cash)</SelectItem></SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <DialogFooter className="p-8 pt-0 bg-slate-50/30">
-                  <Button onClick={handleCreateOrder} className="w-full h-14 bg-primary hover:bg-slate-800 text-white font-bold rounded-2xl shadow-xl shadow-slate-200 transition-all active:scale-[0.98]">
-                    Sync & Finalize Order
-                  </Button>
-                </DialogFooter>
+                <DialogFooter className="p-8 pt-0"><Button onClick={handleCreateOrder} className="w-full h-14 bg-primary text-white font-bold rounded-2xl">Finalize Sync</Button></DialogFooter>
               </DialogContent>
             </Dialog>
           )}
         />
-
-        {isSeller && (
-          <div className="mb-6 relative w-full max-w-md ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input 
-              placeholder="Search by Order ID or Customer Name..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-white border-none rounded-xl shadow-sm font-medium"
-            />
-          </div>
-        )}
 
         <PermissionAwareCollection 
           isLoading={isInitialLoading} 
           error={ordersError} 
           data={filteredOrders} 
           collectionName="orders"
-          fallback={
-            !isSeller && (
-              <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-                <div className="p-4 bg-teal-50 rounded-2xl mb-4">
-                  <ShoppingBag className="h-8 w-8 text-teal-500" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">Your Order History is Empty</h3>
-                <p className="text-slate-500 mt-2 max-w-sm italic font-medium">
-                  You haven't placed any orders yet. Visit the shop to explore our jewelry collection.
-                </p>
-                <Button asChild className="mt-8 bg-primary hover:bg-slate-800 text-white font-bold h-12 px-10 rounded-xl shadow-lg shadow-slate-200">
-                  <Link href="/shop">Go to Shop</Link>
-                </Button>
-              </div>
-            )
-          }
+          fallback={!isSeller && (
+            <div className="py-32 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+              <ShoppingBag className="h-10 w-10 mx-auto text-teal-200 mb-4" />
+              <h3 className="font-bold text-slate-900">No Orders Yet</h3>
+              <Button asChild className="mt-6 bg-primary text-white font-bold h-11 rounded-xl"><Link href="/shop">Go to Shop</Link></Button>
+            </div>
+          )}
         >
           {(data) => (
             <div className="space-y-4">
-              {/* Mobile View: High-Contrast Card List for Phones */}
+              {/* Mobile View: High-Usability Cards */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {data.map((order: Order) => (
                   <Card key={order.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
                     <CardContent className="p-5 space-y-4">
                       <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Order Ref</p>
-                          <p className="font-bold text-slate-900 text-xs">#{order.id.slice(0, 8).toUpperCase()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
-                          <p className="font-bold text-teal-600">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p>
-                        </div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase">Order Ref</p><p className="font-bold text-slate-900 text-xs">#{order.id.slice(0, 8).toUpperCase()}</p></div>
+                        <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase">Total</p><p className="font-bold text-teal-600 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p></div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4 py-3 border-y border-slate-50">
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Payment</p>
-                          <span className={cn(
-                            "text-[9px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
-                            order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
-                            order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                          )}>
-                            {order.paymentStatus.replace('_', ' ')}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                          <span className="text-[9px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-1">
-                        <div className="flex items-center gap-2">
-                           <UserIcon className="h-3 w-3 text-slate-400" />
-                           <span className="text-xs font-medium text-slate-600 truncate max-w-[120px]">{order.customerName || 'Anonymous'}</span>
-                        </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                        <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span>
                         <div className="flex gap-2">
-                          {isSeller ? (
-                             order.paymentStatus === 'unpaid' ? (
-                               <Button size="sm" className="h-8 bg-teal-50 text-teal-700 border-teal-100 font-bold px-3 text-[10px]" onClick={() => handlePromptPay(order.id)}>
-                                 Prompt
-                               </Button>
-                             ) : order.paymentStatus === 'paid' && (
-                               <Button size="sm" variant="ghost" className="h-8 text-slate-400 px-2" onClick={() => handlePrintReceipt(order)}>
-                                 <Printer className="h-4 w-4" />
-                               </Button>
-                             )
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {order.paymentStatus === 'pending_approval' && (
-                                <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-1.5 text-[10px]" onClick={() => handleOpenPinDialog(order)}>
-                                  <Smartphone className="h-3.5 w-3.5" /> Pay Now
-                                </Button>
-                              )}
-                              {order.paymentStatus === 'paid' && (
-                                <>
-                                  <CheckCircle2 className="h-4 w-4 text-teal-500" />
-                                  <Button size="sm" variant="ghost" className="h-8 text-slate-400 px-2" onClick={() => handlePrintReceipt(order)}>
-                                    <Printer className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                          {order.paymentStatus === 'pending_approval' && !isSeller && <Button size="sm" className="h-8 bg-teal-500 text-white font-bold text-[10px]" onClick={() => handleOpenPinDialog(order)}>Pay Now</Button>}
+                          {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
                         </div>
                       </div>
                     </CardContent>
@@ -536,94 +323,31 @@ export default function OrdersPage() {
                 ))}
               </div>
 
-              {/* Desktop View: Professional Command Table */}
+              {/* Desktop View: Professional Table */}
               <Card className="hidden md:block border-none shadow-sm overflow-hidden min-h-[400px]">
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader className="bg-primary text-white">
                       <TableRow className="border-none hover:bg-transparent">
-                        <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Order ID</TableHead>
-                        <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Customer</TableHead>
-                        <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Payment</TableHead>
-                        <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Fulfillment</TableHead>
-                        <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Total</TableHead>
+                        <TableHead className="font-bold pl-6 uppercase text-[10px] text-teal-400">Order Ref</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] text-slate-200">Customer</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] text-slate-200">Payment</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] text-slate-200">Status</TableHead>
+                        <TableHead className="text-right pr-6 font-bold uppercase text-[10px] text-slate-200">Total</TableHead>
                         <TableHead className="pr-6"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {data.map((order: Order) => (
-                        <TableRow key={order.id} className="border-slate-100 group hover:bg-slate-50/50 transition-colors">
+                        <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50">
                           <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                          <TableCell className="font-medium text-slate-600">
-                            {order.customerName || 'Anonymous'}
-                          </TableCell>
-                          <TableCell>
-                            <span className={cn(
-                              "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
-                              order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
-                              order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                            )}>
-                              {order.paymentStatus.replace('_', ' ')}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {isSeller ? (
-                              <Select value={order.status} onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}>
-                                <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200 bg-white">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="pending">Pending</SelectItem>
-                                  <SelectItem value="processing">Processing</SelectItem>
-                                  <SelectItem value="shipped">Shipped</SelectItem>
-                                  <SelectItem value="completed">Completed</SelectItem>
-                                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                                {order.status}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-teal-600 pr-6">
-                            KES {(order.totalAmount || order.total || 0).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="pr-6">
-                            <div className="flex items-center justify-end gap-2">
-                              {isSeller ? (
-                                 order.paymentStatus === 'unpaid' ? (
-                                   <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="h-8 border-teal-200 text-teal-700 bg-teal-50 font-bold px-3 text-[10px]" 
-                                    onClick={() => handlePromptPay(order.id)}
-                                   >
-                                     <Smartphone className="h-3 w-3 mr-1.5" /> Prompt Pay
-                                   </Button>
-                                 ) : order.paymentStatus === 'paid' ? (
-                                   <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600 font-bold px-2" onClick={() => handlePrintReceipt(order)}>
-                                     <Printer className="h-4 w-4" />
-                                   </Button>
-                                 ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
-                              ) : (
-                                <div className="flex items-center justify-end gap-2">
-                                  {order.paymentStatus === 'pending_approval' && (
-                                    <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-2" onClick={() => handleOpenPinDialog(order)}>
-                                      <Smartphone className="h-3.5 w-3.5" /> Pay Now
-                                    </Button>
-                                  )}
-                                  {order.paymentStatus === 'paid' && (
-                                    <>
-                                      <CheckCircle2 className="h-4 w-4 text-teal-500" />
-                                      <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600 font-bold px-2" onClick={() => handlePrintReceipt(order)}>
-                                        <Printer className="h-4 w-4" />
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                          <TableCell className="font-medium text-slate-600 text-xs">{order.customerName}</TableCell>
+                          <TableCell><span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span></TableCell>
+                          <TableCell><span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{order.status}</span></TableCell>
+                          <TableCell className="text-right font-bold text-teal-600 pr-6 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</TableCell>
+                          <TableCell className="pr-6 text-right">
+                             {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
+                             {order.paymentStatus === 'pending_approval' && !isSeller && <Button size="sm" className="h-8 bg-teal-500 text-white font-bold" onClick={() => handleOpenPinDialog(order)}>Pay Now</Button>}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -637,28 +361,17 @@ export default function OrdersPage() {
 
         <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
           <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900">
-                <Lock className="h-5 w-5 text-teal-600" /> M-Pesa Security
-              </DialogTitle>
-              <DialogDescription>Authorize payment of <strong>KES {(selectedOrder?.totalAmount || selectedOrder?.total || 0).toLocaleString()}</strong>.</DialogDescription>
-            </DialogHeader>
+            <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-teal-600" /> Secure Authorization</DialogTitle></DialogHeader>
             <div className="py-6 space-y-4 text-center">
-              <Label className="text-xs font-bold uppercase text-slate-400 tracking-widest block">Enter PIN to Complete Sync</Label>
+              <Label className="text-xs font-bold uppercase text-slate-400">Enter PIN to Complete Sync</Label>
               <Input type="password" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="****" className="h-14 text-center text-3xl tracking-[1em] bg-slate-50 border-none rounded-2xl font-bold" />
             </div>
-            <DialogFooter>
-              <Button className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-lg" onClick={handleConfirmPayment} disabled={isProcessingPayment}>
-                {isProcessingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Secure Payment"}
-              </Button>
-            </DialogFooter>
+            <DialogFooter><Button className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-lg" onClick={handleConfirmPayment} disabled={isProcessingPayment}>{isProcessingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Secure Payment"}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Hidden Print Container */}
-        <div className="hidden print:block fixed inset-0 z-[9999] bg-white">
-          {orderToPrint && <ReceiptPrintView order={orderToPrint} />}
-        </div>
+        {/* Print Layer */}
+        <div className="hidden print:block fixed inset-0 z-[9999] bg-white">{orderToPrint && <ReceiptPrintView order={orderToPrint} />}</div>
       </Shell>
     </RoleGuard>
   );

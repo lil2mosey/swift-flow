@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -142,6 +141,38 @@ export const FirebaseService = {
     return newConvRef.id;
   },
 
+  findOrCreateGeneralConversation: async (db: Firestore, customerId: string, sellerId: string, customerName: string) => {
+    const convsRef = collection(db, 'conversations');
+    const participants = [customerId, sellerId].sort();
+    
+    // Check if general conversation exists
+    const q = query(
+      convsRef, 
+      where('participants', '==', participants),
+      where('itemId', '==', 'general'),
+      limit(1)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      return snapshot.docs[0].id;
+    }
+
+    // Create new conversation
+    const newConvRef = doc(convsRef);
+    await setDoc(newConvRef, {
+      participants,
+      itemId: 'general',
+      itemName: 'General Inquiry',
+      customerName: customerName,
+      lastMessage: 'Customer started a general chat',
+      status: 'unreplied',
+      timestamp: serverTimestamp(),
+    });
+
+    return newConvRef.id;
+  },
+
   sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string) => {
     const messagesRef = collection(db, 'conversations', convId, 'messages');
     const convRef = doc(db, 'conversations', convId);
@@ -150,10 +181,7 @@ export const FirebaseService = {
     const convSnap = await getDoc(convRef);
     const convData = convSnap.data();
     
-    // Determine status (if sender is not the one who started it, it's likely a reply)
-    // For simplicity, if senderId matches participants[0] (usually customer), status is unreplied.
-    // If it's the seller (participants[1]), it's replied.
-    const isSeller = senderId === 'system-seller'; // In this app we use system-seller as main seller
+    const isSeller = senderId === 'system-seller'; 
     const newStatus = isSeller ? 'replied' : 'unreplied';
 
     // Add message to sub-collection

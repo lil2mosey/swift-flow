@@ -29,7 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
-} from "@/components/ui/dialog";
+} from "@/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
@@ -47,7 +47,8 @@ import {
   ShieldCheck,
   CreditCard,
   Search,
-  ShoppingBag
+  ShoppingBag,
+  ChevronRight
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -176,7 +177,6 @@ export default function OrdersPage() {
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
-    // Sellers see everything for global management, Customers see only their own
     if (isSeller) {
       return FirebaseService.getSellerOrdersQuery(db);
     } else {
@@ -247,7 +247,6 @@ export default function OrdersPage() {
     }
 
     setIsProcessingPayment(true);
-    // Simulate STK Push delay
     setTimeout(() => {
       FirebaseService.confirmPayment(db, selectedOrder);
       setIsProcessingPayment(false);
@@ -461,90 +460,158 @@ export default function OrdersPage() {
           }
         >
           {(data) => (
-            <Card className="border-none shadow-sm overflow-hidden min-h-[400px]">
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="bg-primary text-white">
-                    <TableRow className="border-none hover:bg-transparent">
-                      <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Order ID</TableHead>
-                      <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Customer</TableHead>
-                      <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Payment</TableHead>
-                      <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Fulfillment</TableHead>
-                      <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Total</TableHead>
-                      <TableHead className="pr-6"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.map((order: Order) => (
-                      <TableRow key={order.id} className="border-slate-100 group hover:bg-slate-50/50 transition-colors">
-                        <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                        <TableCell className="font-medium text-slate-600">
-                          {order.customerName || 'Anonymous'}
-                        </TableCell>
-                        <TableCell>
+            <div className="space-y-4">
+              {/* Mobile View: Card List */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {data.map((order: Order) => (
+                  <Card key={order.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
+                    <CardContent className="p-5 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Order Ref</p>
+                          <p className="font-bold text-slate-900 text-xs">#{order.id.slice(0, 8).toUpperCase()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
+                          <p className="font-bold text-teal-600">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 py-3 border-y border-slate-50">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Payment</p>
                           <span className={cn(
-                            "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
+                            "text-[9px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
                             order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
                             order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
                           )}>
                             {order.paymentStatus.replace('_', ' ')}
                           </span>
-                        </TableCell>
-                        <TableCell>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+                          <span className="text-[9px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-2">
+                           <UserIcon className="h-3 w-3 text-slate-400" />
+                           <span className="text-xs font-medium text-slate-600 truncate max-w-[120px]">{order.customerName || 'Anonymous'}</span>
+                        </div>
+                        <div className="flex gap-2">
                           {isSeller ? (
-                            <Select value={order.status} onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}>
-                              <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200 bg-white">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="processing">Processing</SelectItem>
-                                <SelectItem value="shipped">Shipped</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
-                              </SelectContent>
-                            </Select>
+                             order.paymentStatus === 'unpaid' ? (
+                               <Button size="sm" className="h-8 bg-teal-50 text-teal-700 border-teal-100 font-bold px-3 text-[10px]" onClick={() => handlePromptPay(order.id)}>
+                                 Prompt
+                               </Button>
+                             ) : order.paymentStatus === 'paid' && (
+                               <Button size="sm" variant="ghost" className="h-8 text-slate-400 px-2" onClick={() => handlePrintReceipt(order)}>
+                                 <Printer className="h-4 w-4" />
+                               </Button>
+                             )
                           ) : (
-                            <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                              {order.status}
-                            </span>
+                            order.paymentStatus === 'pending_approval' ? (
+                              <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-1.5 text-[10px]" onClick={() => handleOpenPinDialog(order)}>
+                                <Smartphone className="h-3.5 w-3.5" /> Pay Now
+                              </Button>
+                            ) : order.paymentStatus === 'paid' && <CheckCircle2 className="h-4 w-4 text-teal-500" />
                           )}
-                        </TableCell>
-                        <TableCell className="text-right font-bold text-teal-accent pr-6">
-                          KES {(order.totalAmount || order.total || 0).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="pr-6">
-                          <div className="flex items-center justify-end gap-2">
-                            {isSeller ? (
-                               order.paymentStatus === 'unpaid' ? (
-                                 <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="h-8 border-teal-200 text-teal-700 bg-teal-50 font-bold px-3 text-[10px]" 
-                                  onClick={() => handlePromptPay(order.id)}
-                                 >
-                                   <Smartphone className="h-3 w-3 mr-1.5" /> Prompt Pay
-                                 </Button>
-                               ) : order.paymentStatus === 'paid' ? (
-                                 <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600 font-bold px-2" onClick={() => handlePrintReceipt(order)}>
-                                   <Printer className="h-4 w-4" />
-                                 </Button>
-                               ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
-                            ) : (
-                              order.paymentStatus === 'pending_approval' ? (
-                                <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-2" onClick={() => handleOpenPinDialog(order)}>
-                                  <Smartphone className="h-3.5 w-3.5" /> Pay Now
-                                </Button>
-                              ) : order.paymentStatus === 'paid' && <CheckCircle2 className="h-4 w-4 text-teal-500" />
-                            )}
-                          </div>
-                        </TableCell>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop View: Table */}
+              <Card className="hidden md:block border-none shadow-sm overflow-hidden min-h-[400px]">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-primary text-white">
+                      <TableRow className="border-none hover:bg-transparent">
+                        <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Order ID</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Customer</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Payment</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Fulfillment</TableHead>
+                        <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Total</TableHead>
+                        <TableHead className="pr-6"></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {data.map((order: Order) => (
+                        <TableRow key={order.id} className="border-slate-100 group hover:bg-slate-50/50 transition-colors">
+                          <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                          <TableCell className="font-medium text-slate-600">
+                            {order.customerName || 'Anonymous'}
+                          </TableCell>
+                          <TableCell>
+                            <span className={cn(
+                              "text-[10px] font-bold uppercase px-2 py-0.5 rounded inline-flex items-center",
+                              order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
+                              order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                            )}>
+                              {order.paymentStatus.replace('_', ' ')}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {isSeller ? (
+                              <Select value={order.status} onValueChange={(val) => handleStatusChange(order.id, val as OrderStatus)}>
+                                <SelectTrigger className="w-[140px] h-8 text-xs font-bold border-slate-200 bg-white">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="processing">Processing</SelectItem>
+                                  <SelectItem value="shipped">Shipped</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                {order.status}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-teal-600 pr-6">
+                            KES {(order.totalAmount || order.total || 0).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="pr-6">
+                            <div className="flex items-center justify-end gap-2">
+                              {isSeller ? (
+                                 order.paymentStatus === 'unpaid' ? (
+                                   <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 border-teal-200 text-teal-700 bg-teal-50 font-bold px-3 text-[10px]" 
+                                    onClick={() => handlePromptPay(order.id)}
+                                   >
+                                     <Smartphone className="h-3 w-3 mr-1.5" /> Prompt Pay
+                                   </Button>
+                                 ) : order.paymentStatus === 'paid' ? (
+                                   <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600 font-bold px-2" onClick={() => handlePrintReceipt(order)}>
+                                     <Printer className="h-4 w-4" />
+                                   </Button>
+                                 ) : <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
+                              ) : (
+                                order.paymentStatus === 'pending_approval' ? (
+                                  <Button size="sm" className="h-8 bg-teal-500 text-white font-bold px-3 gap-2" onClick={() => handleOpenPinDialog(order)}>
+                                    <Smartphone className="h-3.5 w-3.5" /> Pay Now
+                                  </Button>
+                                ) : order.paymentStatus === 'paid' && <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </PermissionAwareCollection>
 

@@ -9,7 +9,8 @@ import {
   Firestore,
   serverTimestamp,
   increment,
-  orderBy
+  orderBy,
+  getDocs
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -132,7 +133,12 @@ export const FirebaseService = {
   },
 
   seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
-    // Non-redundant inventory following naming constraints
+    // Check if catalog is already seeded
+    const productsRef = collection(db, 'products');
+    const existing = await getDocs(query(productsRef, limit(1)));
+    if (!existing.empty) return;
+
+    // Professional non-redundant catalog with naming conventions
     const inventory = [
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
@@ -209,7 +215,7 @@ export const FirebaseService = {
         sku: "JW-E-BRS-01",
         description: "Bold, lightweight earrings handcrafted from recycled Kenyan brass.",
         price: 1800,
-        currentStock: 20,
+        currentStock: 14,
         category: "Earrings",
         imageUrl: "https://picsum.photos/seed/ear1/600/600",
         lowStockThreshold: 10,
@@ -236,6 +242,38 @@ export const FirebaseService = {
 
     for (const item of inventory) {
       await FirebaseService.addProduct(db, sellerId, item);
+    }
+
+    // Seed raw materials
+    const rawMaterials = [
+      {
+        name: "925 Sterling Silver Grain",
+        sku: "MET-SIL-01",
+        description: "Pure casting silver grain for jewelry production.",
+        price: 120,
+        currentStock: 500,
+        category: "Metals",
+        lowStockThreshold: 100,
+        itemType: 'material' as const,
+        averageDailySales: 0,
+        leadTimeDays: 7
+      },
+      {
+        name: "18K Yellow Gold Wire",
+        sku: "MET-GLD-18K",
+        description: "High quality jewelry wire for handmade designs.",
+        price: 5500,
+        currentStock: 50,
+        category: "Metals",
+        lowStockThreshold: 10,
+        itemType: 'material' as const,
+        averageDailySales: 0,
+        leadTimeDays: 14
+      }
+    ];
+
+    for (const material of rawMaterials) {
+      await FirebaseService.addProduct(db, sellerId, material);
     }
   },
 

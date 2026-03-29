@@ -14,6 +14,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebas
 import { FirebaseService } from '@/services/firebase-service';
 import { Message, Product } from '@/lib/types';
 import { format } from 'date-fns';
+import { query, collection, limit } from 'firebase/firestore';
 
 /**
  * Unified Messaging Page for SwiftFlow.

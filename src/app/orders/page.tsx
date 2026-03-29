@@ -227,10 +227,10 @@ export default function OrdersPage() {
   };
 
   const handleMarkAsPaid = (order: Order) => {
-    FirebaseService.confirmPayment(db, order.id);
+    FirebaseService.confirmPayment(db, order);
     toast({ 
       title: "Sync Success", 
-      description: `Manual order for ${order.customerName} marked as PAID.` 
+      description: `Manual order for ${order.customerName} marked as PAID and inventory updated.` 
     });
   };
 
@@ -248,11 +248,11 @@ export default function OrdersPage() {
 
     setIsProcessingPayment(true);
     setTimeout(() => {
-      FirebaseService.confirmPayment(db, selectedOrder.id);
+      FirebaseService.confirmPayment(db, selectedOrder);
       setIsProcessingPayment(false);
       setIsPinDialogOpen(false);
       setPin('');
-      toast({ title: "Authorized", description: "Payment confirmation synced successfully." });
+      toast({ title: "Authorized", description: "Payment confirmation synced successfully and inventory updated." });
     }, 1500);
   };
 

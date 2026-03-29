@@ -7,17 +7,18 @@ import {
   where, 
   limit, 
   Firestore,
-  serverTimestamp
+  serverTimestamp,
+  increment
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking 
 } from '@/firebase';
-import { OrderStatus, Product, OrderItem } from '@/lib/types';
+import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Enhanced with premium jewelry catalog seeding and robust inventory synchronization.
+ * Enhanced with robust inventory synchronization.
  */
 
 export const FirebaseService = {
@@ -212,13 +213,28 @@ export const FirebaseService = {
     });
   },
 
-  confirmPayment: (db: Firestore, orderId: string) => {
-    const orderRef = doc(db, 'orders', orderId);
+  confirmPayment: (db: Firestore, order: Order) => {
+    const orderRef = doc(db, 'orders', order.id);
+    
+    // 1. Update order status to paid and completed
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'paid', 
       status: 'completed',
       updatedAt: serverTimestamp()
     });
+
+    // 2. Reduce inventory stock for each item in the order
+    if (order.items && order.items.length > 0) {
+      order.items.forEach(item => {
+        if (item.productId) {
+          const productRef = doc(db, 'products', item.productId);
+          updateDocumentNonBlocking(productRef, {
+            currentStock: increment(-item.quantity),
+            updatedAt: serverTimestamp()
+          });
+        }
+      });
+    }
   },
 
   // --- Messages ---

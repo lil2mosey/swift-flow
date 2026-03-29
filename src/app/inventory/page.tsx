@@ -211,7 +211,7 @@ export default function InventoryPage() {
                     <Plus className="h-4 w-4" /> Stock Management
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
+                <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                   <div className="bg-[#0f172a] p-8 pb-6 border-b border-slate-800 text-white">
                     <div className="flex justify-between items-start mb-2">
                       <DialogTitle className="text-3xl font-bold tracking-tight">
@@ -243,7 +243,7 @@ export default function InventoryPage() {
                     {addMode === 'restock' ? (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Target Item</Label>
+                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Target Item (Goods & Materials)</Label>
                           <Select value={selectedItemId} onValueChange={setSelectedItemId}>
                             <SelectTrigger className="h-14 bg-slate-50 border-none rounded-xl text-slate-900 font-bold">
                               <SelectValue placeholder="-- Choose Item to Update --" />
@@ -252,8 +252,13 @@ export default function InventoryPage() {
                               {allItems && allItems.length > 0 ? (
                                 allItems.map(item => (
                                   <SelectItem key={item.id} value={item.id} className="py-3 font-medium">
-                                    <div className="flex justify-between items-center w-full min-w-[300px]">
-                                      <span>{item.name}</span>
+                                    <div className="flex justify-between items-center w-full min-w-[350px]">
+                                      <div className="flex flex-col">
+                                        <span>{item.name}</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase">
+                                          {item.itemType === 'material' ? 'Raw Material' : 'Finished Good'}
+                                        </span>
+                                      </div>
                                       <div className="flex gap-2">
                                         <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-bold uppercase">Stock: {item.currentStock}</span>
                                       </div>
@@ -284,13 +289,46 @@ export default function InventoryPage() {
                       </div>
                     ) : (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Name</Label>
-                            <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="E.g. Summer Dress" />
+                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Type</Label>
+                            <Select 
+                              value={formData.itemType} 
+                              onValueChange={(v) => setFormData({...formData, itemType: v as InventoryItemType})}
+                            >
+                              <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl font-bold">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="product">Finished Good</SelectItem>
+                                <SelectItem value="material">Raw Material</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Price (KES)</Label>
+                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Item Name</Label>
+                            <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="E.g. 14K Gold Wire" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Category</Label>
+                            <Input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="E.g. Metals / Rings" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">SKU (Optional)</Label>
+                            <Input value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" placeholder="Auto-generated if empty" />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Initial Stock</Label>
+                            <Input type="number" value={formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Price/Cost (KES)</Label>
                             <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} className="h-12 bg-slate-50 border-none rounded-xl font-bold" />
                           </div>
                         </div>

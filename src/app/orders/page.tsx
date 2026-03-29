@@ -172,8 +172,8 @@ export default function OrdersPage() {
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !profile) return null;
-    if (profile.role === 'seller') return FirebaseService.getSellerOrdersQuery(db);
-    return FirebaseService.getCustomerOrdersQuery(db, user.uid);
+    // As requested, customers now have the same global access as sellers for testing
+    return FirebaseService.getSellerOrdersQuery(db);
   }, [db, user, profile]);
   
   const productsQuery = useMemoFirebase(() => {
@@ -304,8 +304,8 @@ export default function OrdersPage() {
     <RoleGuard allowedRoles={['seller', 'customer']}>
       <Shell userRole={isSeller ? "seller" : "customer"}>
         <PageHeader 
-          title={isSeller ? "Logistics Command" : "My Orders"} 
-          description={isSeller ? "Synchronize manual DM sales and track platform fulfillment." : "Track your order history and synchronization status."}
+          title={isSeller ? "Logistics Command" : "Orders Dashboard"} 
+          description={isSeller ? "Synchronize manual DM sales and track platform fulfillment." : "View all platform orders and synchronization status."}
           action={isSeller && (
             <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
               <DialogTrigger asChild>
@@ -444,7 +444,7 @@ export default function OrdersPage() {
                   <TableHeader className="bg-primary text-white">
                     <TableRow className="border-none hover:bg-transparent">
                       <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Order ID</TableHead>
-                      <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">{isSeller ? "Client" : "Summary"}</TableHead>
+                      <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Customer</TableHead>
                       <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Payment</TableHead>
                       <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Fulfillment</TableHead>
                       <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Total</TableHead>
@@ -456,7 +456,7 @@ export default function OrdersPage() {
                       <TableRow key={order.id} className="border-slate-100 group hover:bg-slate-50/50 transition-colors">
                         <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
                         <TableCell className="font-medium text-slate-600">
-                          {isSeller ? (order.customerName || 'Anonymous') : `${order.items?.length || 0} items`}
+                          {order.customerName || 'Anonymous'}
                         </TableCell>
                         <TableCell>
                           <span className={cn(

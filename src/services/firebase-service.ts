@@ -5,7 +5,6 @@ import {
   doc, 
   query, 
   where, 
-  orderBy, 
   limit, 
   Firestore,
   serverTimestamp
@@ -18,6 +17,7 @@ import { OrderStatus, Product, OrderItem } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
+ * Queries are kept simple (no orderBy) to avoid index requirements during rapid prototyping.
  */
 
 export const FirebaseService = {
@@ -208,7 +208,6 @@ export const FirebaseService = {
     return query(
       collection(db, 'messages'),
       where('participants', '==', participants.sort()),
-      orderBy('createdAt', 'asc'),
       limit(100)
     );
   },
@@ -218,7 +217,6 @@ export const FirebaseService = {
     return query(
       collection(db, 'messages'),
       where('participants', 'array-contains', sellerId),
-      orderBy('createdAt', 'desc'),
       limit(500)
     );
   },
@@ -228,16 +226,15 @@ export const FirebaseService = {
   getSellerOrdersQuery: (db: Firestore) => {
     return query(
       collection(db, 'orders'),
-      orderBy('createdAt', 'desc'),
       limit(200)
     );
   },
 
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
+    // For "access everything" requested by user, we can return all orders or specific customer orders
     return query(
       collection(db, 'orders'),
       where('customerId', '==', customerId),
-      orderBy('createdAt', 'desc'),
       limit(100)
     );
   },
@@ -245,7 +242,6 @@ export const FirebaseService = {
   getProductsQuery: (db: Firestore) => {
     return query(
       collection(db, 'products'), 
-      orderBy('createdAt', 'desc'),
       limit(200)
     );
   }

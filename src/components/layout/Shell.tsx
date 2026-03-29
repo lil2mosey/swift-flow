@@ -55,6 +55,7 @@ export function Shell({ children, userRole }: ShellProps) {
     { name: 'Orders', href: '/orders', icon: ClipboardList },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Payments', href: '/payments', icon: CreditCard },
+    { name: 'Messages', href: '/messages', icon: MessageSquare },
   ];
 
   const customerNav = [

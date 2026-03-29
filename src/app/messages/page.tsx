@@ -42,11 +42,9 @@ export default function MessagesPage() {
   const isSeller = profile?.role === 'seller';
 
   // --- Discovery for Customers ---
-  // Peek at products to find the main seller ID
   const productsLookupQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
   const { data: sampleProducts } = useCollection<Product>(productsLookupQuery);
   
-  // Peek at userProfiles for a seller if no products exist
   const sellerLookupQuery = useMemoFirebase(() => query(collection(db, 'userProfiles'), where('role', '==', 'seller'), limit(1)), [db]);
   const { data: sellerProfiles } = useCollection<any>(sellerLookupQuery);
 
@@ -62,7 +60,6 @@ export default function MessagesPage() {
 
   const { data: rawConversations, isLoading: isConvsLoading } = useCollection<Conversation>(convsQuery);
 
-  // Client-side sorting because we removed server-side orderBy to avoid complex index requirements
   const conversations = useMemo(() => {
     if (!rawConversations) return [];
     return [...rawConversations].sort((a, b) => {
@@ -72,7 +69,6 @@ export default function MessagesPage() {
     });
   }, [rawConversations]);
 
-  // Stats calculation
   const stats = useMemo(() => {
     if (!conversations) return { total: 0, unreplied: 0, replied: 0 };
     return {
@@ -82,7 +78,6 @@ export default function MessagesPage() {
     };
   }, [conversations]);
 
-  // Filtering logic
   const filteredConversations = useMemo(() => {
     if (!conversations) return [];
     if (activeFilter === 'all') return conversations;
@@ -97,7 +92,6 @@ export default function MessagesPage() {
 
   const { data: messages, isLoading: isChatLoading } = useCollection<ChatMessage>(chatQuery);
 
-  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -108,7 +102,8 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!selectedConvId || !user || !newMessage.trim()) return;
 
-    FirebaseService.sendChatMessage(db, selectedConvId, user.uid, newMessage, isSeller);
+    const senderName = profile?.fullName || user.email?.split('@')[0] || 'User';
+    FirebaseService.sendChatMessage(db, selectedConvId, user.uid, senderName, newMessage, isSeller);
     setNewMessage('');
   };
 
@@ -117,13 +112,14 @@ export default function MessagesPage() {
     
     setIsSendingGeneral(true);
     try {
+      const customerName = profile?.fullName || user.email?.split('@')[0] || 'Customer';
       const convId = await FirebaseService.findOrCreateGeneralConversation(
         db, 
         user.uid, 
         systemSellerId, 
-        profile?.fullName || user.email?.split('@')[0] || 'Customer'
+        customerName
       );
-      await FirebaseService.sendChatMessage(db, convId, user.uid, generalInquiry, false);
+      await FirebaseService.sendChatMessage(db, convId, user.uid, customerName, generalInquiry, false);
       setGeneralInquiry('');
       setSelectedConvId(convId);
       toast({ title: "Message Sent", description: "The workshop will respond shortly." });
@@ -139,7 +135,6 @@ export default function MessagesPage() {
     [conversations, selectedConvId]
   );
 
-  // --- Seller View ---
   if (isSeller) {
     return (
       <Shell userRole="seller">
@@ -288,6 +283,9 @@ export default function MessagesPage() {
                         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-teal-500" /></div>
                       ) : messages?.map((msg) => (
                         <div key={msg.id} className={cn("flex flex-col max-w-[80%]", msg.senderId === user?.uid ? "ml-auto items-end" : "items-start")}>
+                          <span className="text-[10px] text-slate-400 mb-1 font-bold uppercase tracking-widest px-1">
+                            {msg.senderName}
+                          </span>
                           <div className={cn("p-4 rounded-2xl text-sm font-medium shadow-sm", msg.senderId === user?.uid ? "bg-[#0f172a] text-white rounded-tr-none" : "bg-white text-slate-800 rounded-tl-none border border-slate-100")}>
                             {msg.text}
                           </div>
@@ -321,7 +319,6 @@ export default function MessagesPage() {
     );
   }
 
-  // --- Customer View ---
   return (
     <Shell userRole="customer">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -330,12 +327,12 @@ export default function MessagesPage() {
             <div className="p-2 bg-slate-800 rounded-lg">
               <MessageSquare className="h-5 w-5 text-teal-400" />
             </div>
-            <h2 className="text-xl font-bold">Messages</h2>
+            <h2 className="text-xl font-bold">New Workshop Inquiry</h2>
           </div>
           <CardContent className="p-8 space-y-6">
             <div className="space-y-4">
               <Textarea 
-                placeholder="Type your inquiry to the workshop..." 
+                placeholder="Type your question or request to our craftsmen..." 
                 className="min-h-[160px] bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 text-lg font-medium focus-visible:ring-teal-400 focus-visible:border-transparent transition-all"
                 value={generalInquiry}
                 onChange={(e) => setGeneralInquiry(e.target.value)}
@@ -346,7 +343,7 @@ export default function MessagesPage() {
                 className="bg-[#b4ccc7] hover:bg-[#a1bdb7] text-slate-800 font-bold h-14 px-10 rounded-2xl shadow-lg transition-all active:scale-[0.98] gap-2"
               >
                 {isSendingGeneral ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                Send Message
+                Send to Seller
               </Button>
             </div>
           </CardContent>
@@ -355,7 +352,7 @@ export default function MessagesPage() {
         <div className="space-y-6">
           <div className="flex items-center gap-2 text-slate-800">
             <Clock className="h-5 w-5" />
-            <h3 className="text-lg font-bold">Recent Messages</h3>
+            <h3 className="text-lg font-bold">Recent Communications</h3>
           </div>
 
           {conversations.length === 0 ? (
@@ -363,7 +360,7 @@ export default function MessagesPage() {
               <div className="p-6 bg-white rounded-full inline-flex mb-4 shadow-sm">
                 <MessageSquare className="h-10 w-10 text-slate-200" />
               </div>
-              <h4 className="text-xl font-bold text-slate-900">No messages yet</h4>
+              <h4 className="text-xl font-bold text-slate-900">No message history yet</h4>
               <p className="text-sm text-slate-400 mt-2 font-medium">Send an inquiry above to synchronize with our workshop.</p>
             </Card>
           ) : (
@@ -399,10 +396,10 @@ export default function MessagesPage() {
                   {selectedConvId === conv.id && (
                     <Card className="border-none shadow-sm rounded-3xl overflow-hidden animate-in slide-in-from-top-4 duration-300">
                       <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
-                        <h4 className="font-bold text-sm uppercase tracking-widest">Chat History</h4>
+                        <h4 className="font-bold text-sm uppercase tracking-widest">Live Chat</h4>
                         <div className="flex items-center gap-1">
                           <span className="h-2 w-2 bg-teal-400 rounded-full animate-pulse" />
-                          <span className="text-[10px] font-bold text-slate-400 uppercase">Live</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">Synchronized</span>
                         </div>
                       </div>
                       <ScrollArea className="h-[400px] p-6 bg-slate-50/50">
@@ -411,6 +408,9 @@ export default function MessagesPage() {
                             <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-teal-400" /></div>
                           ) : messages?.map((msg) => (
                             <div key={msg.id} className={cn("flex flex-col max-w-[85%]", msg.senderId === user?.uid ? "ml-auto items-end" : "items-start")}>
+                              <span className="text-[10px] text-slate-400 mb-1 font-bold uppercase tracking-widest px-1">
+                                {msg.senderName}
+                              </span>
                               <div className={cn("p-4 rounded-3xl text-sm font-medium shadow-sm", msg.senderId === user?.uid ? "bg-primary text-white rounded-tr-none" : "bg-white text-slate-800 rounded-tl-none border border-slate-100")}>
                                 {msg.text}
                               </div>

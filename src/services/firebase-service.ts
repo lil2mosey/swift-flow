@@ -87,14 +87,12 @@ export const FirebaseService = {
   confirmPayment: async (db: Firestore, order: Order) => {
     const orderRef = doc(db, 'orders', order.id);
     
-    // Update order status
     updateDocumentNonBlocking(orderRef, { 
       paymentStatus: 'paid', 
       status: 'completed',
       updatedAt: serverTimestamp()
     });
 
-    // Reduce inventory for each item in the order
     if (order.items && order.items.length > 0) {
       order.items.forEach(item => {
         if (item.productId) {
@@ -170,7 +168,7 @@ export const FirebaseService = {
     return newConvRef.id;
   },
 
-  sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string, isSeller?: boolean) => {
+  sendChatMessage: async (db: Firestore, convId: string, senderId: string, senderName: string, text: string, isSeller?: boolean) => {
     const messagesRef = collection(db, 'conversations', convId, 'messages');
     const convRef = doc(db, 'conversations', convId);
 
@@ -178,6 +176,7 @@ export const FirebaseService = {
 
     addDocumentNonBlocking(messagesRef, {
       senderId,
+      senderName,
       text,
       createdAt: serverTimestamp()
     });
@@ -190,7 +189,6 @@ export const FirebaseService = {
   },
 
   getInquiriesQuery: (db: Firestore, userId: string) => {
-    // Removed orderBy to avoid requiring a composite index for array-contains + orderBy
     return query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId),
@@ -263,6 +261,19 @@ export const FirebaseService = {
         lowStockThreshold: 5,
         averageDailySales: 0.5,
         leadTimeDays: 3,
+        itemType: 'product' as const
+      },
+      {
+        name: "Hammered Brass Cuff (Gold Finish)",
+        sku: "JW-B-HAM-GLD",
+        description: "Hand-hammered recycled brass cuff with a brilliant gold-tone finish.",
+        price: 2800,
+        currentStock: 8,
+        category: "Bracelets",
+        sellerId: sellerId,
+        lowStockThreshold: 3,
+        averageDailySales: 0.3,
+        leadTimeDays: 5,
         itemType: 'product' as const
       }
     ];

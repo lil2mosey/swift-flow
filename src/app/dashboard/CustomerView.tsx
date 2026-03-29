@@ -1,46 +1,70 @@
+
 'use client';
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Heart, Package, Clock, ShoppingBag } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
-import { FirebaseService } from '@/services/firebase-service';
-import { Product } from '@/lib/types';
-import Image from 'next/image';
-import { toast } from '@/hooks/use-toast';
+import { 
+  ShoppingCart, 
+  Package, 
+  Clock, 
+  ShoppingBag, 
+  ClipboardList, 
+  MessageSquare,
+  ChevronRight,
+  TrendingUp
+} from 'lucide-react';
+import { useUser } from '@/firebase';
+import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomerProducts, useCustomerOrders } from '@/hooks/use-customer-data';
+import { cn } from '@/lib/utils';
 
 export default function CustomerView() {
-  const { profile, user } = useUser();
-  const db = useFirestore();
+  const { profile } = useUser();
 
   const { products, isLoading: isProductsLoading } = useCustomerProducts(6);
   const { orders, isLoading: isOrdersLoading } = useCustomerOrders();
 
-  const handlePlaceOrder = (product: Product) => {
-    if (!user) {
-      toast({ variant: "destructive", title: "Authentication Required", description: "Please log in to place an order." });
-      return;
-    }
-    FirebaseService.placeOrder(db, user.uid, profile?.fullName || user.email?.split('@')[0] || 'Customer', product);
-    toast({ title: "Order Placed!", description: `Successfully ordered ${product.name}.` });
-  };
-
   const activeOrdersCount = orders?.filter(o => o.status !== 'completed' && o.status !== 'cancelled').length || 0;
 
+  const quickActions = [
+    { 
+      title: 'Browse Shop', 
+      desc: 'Explore our latest unique jewelry pieces.', 
+      icon: ShoppingBag, 
+      href: '/shop', 
+      color: 'bg-teal-50 text-teal-600' 
+    },
+    { 
+      title: 'Track Orders', 
+      desc: 'View your delivery status and history.', 
+      icon: ClipboardList, 
+      href: '/orders', 
+      color: 'bg-blue-50 text-blue-600' 
+    },
+    { 
+      title: 'Message Workshop', 
+      desc: 'Connect directly with our craftsmen.', 
+      icon: MessageSquare, 
+      href: '/messages', 
+      color: 'bg-amber-50 text-amber-600' 
+    }
+  ];
+
   return (
-    <>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          Welcome back, {profile?.firstName || profile?.fullName?.split(' ')[0] || 'Valued Customer'}!
-        </h1>
-        <p className="text-slate-500 font-medium italic">Synchronizing your shopping experience ✨</p>
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+            Welcome, {profile?.firstName || profile?.fullName?.split(' ')[0] || 'Valued Customer'}! <TrendingUp className="h-6 w-6 text-teal-500" />
+          </h1>
+          <p className="text-slate-500 font-medium italic">Synchronizing your shopping experience with our workshop ✨</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <Card className="border-none shadow-sm bg-white overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-400">Total Orders</CardTitle>
             <div className="p-2 bg-slate-50 rounded-lg"><Package className="h-4 w-4 text-slate-400" /></div>
@@ -55,7 +79,7 @@ export default function CustomerView() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-white overflow-hidden">
+        <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-teal-600">Active Shipments</CardTitle>
             <div className="p-2 bg-teal-50 rounded-lg"><Clock className="h-4 w-4 text-teal-500" /></div>
@@ -70,10 +94,10 @@ export default function CustomerView() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-primary text-white overflow-hidden">
+        <Card className="border-none shadow-sm bg-[#0f172a] text-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-400">Available Shop</CardTitle>
-            <div className="p-2 bg-slate-800 rounded-lg"><ShoppingBag className="h-4 w-4 text-teal-400" /></div>
+            <div className="p-2 bg-slate-800 rounded-lg"><ShoppingCart className="h-4 w-4 text-teal-400" /></div>
           </CardHeader>
           <CardContent>
             {isProductsLoading ? (
@@ -86,57 +110,29 @@ export default function CustomerView() {
         </Card>
       </div>
 
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-slate-900">Recommended for You</h2>
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-slate-900">Your SwiftFlow Hub</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {quickActions.map((action, i) => (
+            <Link key={i} href={action.href} className="group">
+              <Card className="border-none shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden group-active:scale-[0.98]">
+                <CardContent className="p-6">
+                  <div className={cn("p-3 rounded-xl w-fit mb-4 group-hover:scale-110 transition-transform", action.color)}>
+                    <action.icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-lg">{action.title}</h3>
+                      <p className="text-sm text-slate-500 mt-1 font-medium italic">{action.desc}</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isProductsLoading && (!products || products.length === 0) ? (
-          Array(3).fill(0).map((_, i) => (
-            <Card key={i} className="border-none shadow-sm rounded-2xl overflow-hidden">
-              <Skeleton className="h-64 w-full" />
-              <CardHeader>
-                <Skeleton className="h-4 w-1/4 mb-2" />
-                <Skeleton className="h-6 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-12 w-full rounded-xl" />
-              </CardContent>
-            </Card>
-          ))
-        ) : products?.map((product) => (
-          <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl">
-            <div className="relative h-64 w-full">
-              <Image 
-                src={product.imageUrl || `https://picsum.photos/seed/${product.id}/600/400`} 
-                alt={product.name} 
-                fill 
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute top-3 right-3">
-                <Button size="icon" variant="ghost" className="bg-white/90 rounded-full h-9 w-9 shadow-sm">
-                  <Heart className="h-4 w-4 text-slate-400" />
-                </Button>
-              </div>
-            </div>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-teal-600 uppercase tracking-widest">{product.category}</span>
-                <span className="text-xs font-bold text-slate-900">KES {product.price.toLocaleString()}</span>
-              </div>
-              <CardTitle className="text-lg font-bold text-slate-900 group-hover:text-teal-600 transition-colors">{product.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => handlePlaceOrder(product)}
-                className="w-full bg-primary hover:bg-slate-800 text-white font-bold h-12 rounded-xl gap-2 shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
-              >
-                <ShoppingCart className="h-4 w-4" /> Quick Order
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </>
+    </div>
   );
 }

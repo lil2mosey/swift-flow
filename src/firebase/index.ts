@@ -8,7 +8,7 @@ import { Firestore, initializeFirestore, getFirestore as getFirestoreRegular } f
 
 /**
  * Robust Firebase initialization for Next.js in a Studio environment.
- * Strictly enforces a global singleton to prevent ca9 assertion failures.
+ * Strictly enforces a global singleton to prevent ca9 assertion failures during navigation.
  */
 export function initializeFirebase() {
   if (typeof window !== 'undefined') {
@@ -27,6 +27,7 @@ export function initializeFirebase() {
 
     let db: Firestore;
     try {
+      // Force long polling for reliable studio development
       db = initializeFirestore(app, {
         experimentalForceLongPolling: true,
       });

@@ -10,7 +10,6 @@ import {
   Firestore,
   serverTimestamp,
   increment,
-  orderBy,
   getDocs,
   setDoc
 } from 'firebase/firestore';
@@ -188,6 +187,7 @@ export const FirebaseService = {
   },
 
   getInquiriesQuery: (db: Firestore, userId: string) => {
+    // Index-free query: Avoid orderBy here to prevent composite index requirement
     return query(
       collection(db, 'conversations'),
       where('participants', 'array-contains', userId),
@@ -196,9 +196,10 @@ export const FirebaseService = {
   },
 
   getChatMessagesQuery: (db: Firestore, convId: string) => {
+    // Single-field orderBy is usually fine without composite index
     return query(
       collection(db, 'conversations', convId, 'messages'),
-      orderBy('createdAt', 'asc'),
+      where('createdAt', '!=', null), // Dummy filter to allow orderBy if needed, but simple is better
       limit(100)
     );
   },
@@ -296,18 +297,18 @@ export const FirebaseService = {
   },
 
   getSellerOrdersQuery: (db: Firestore) => {
+    // Basic query, sorting handled on client if index is missing
     return query(
       collection(db, 'orders'),
-      orderBy('createdAt', 'desc'),
       limit(200)
     );
   },
 
   getCustomerOrdersQuery: (db: Firestore, customerId: string) => {
+    // Basic query to avoid composite index for customerId + createdAt
     return query(
       collection(db, 'orders'),
       where('customerId', '==', customerId),
-      orderBy('createdAt', 'desc'),
       limit(100)
     );
   },

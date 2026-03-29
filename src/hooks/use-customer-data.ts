@@ -14,6 +14,7 @@ import { Product, Order } from '@/lib/types';
 
 /**
  * Real-time hook for fetching products that are in stock and classified as finished goods.
+ * Simplified query to avoid the requirement for composite indexes.
  */
 export function useCustomerProducts(maxLimit = 24) {
   const db = useFirestore();
@@ -24,21 +25,26 @@ export function useCustomerProducts(maxLimit = 24) {
   useEffect(() => {
     if (!db) return;
 
-    // Filter products that are "Finished Goods" (product) and have stock > 0
-    // Note: This query may require a composite index (itemType, currentStock) in production
+    // We only query by itemType (equality) to avoid needing a composite index for range/sorting
     const q = query(
       collection(db, 'products'),
       where('itemType', '==', 'product'),
-      where('currentStock', '>', 0),
-      limit(maxLimit)
+      limit(maxLimit * 2) // Fetch a bit more to account for out-of-stock items filtered on client
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const productsData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data() 
-      })) as Product[];
-      setProducts(productsData);
+      const productsData = snapshot.docs
+        .map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        })) as Product[];
+      
+      // Filter by stock level on the client side to bypass index requirements
+      const inStockProducts = productsData
+        .filter(p => (p.currentStock || 0) > 0)
+        .slice(0, maxLimit);
+
+      setProducts(inStockProducts);
       setIsLoading(false);
       setError(null);
     }, (err) => {
@@ -55,6 +61,7 @@ export function useCustomerProducts(maxLimit = 24) {
 
 /**
  * Real-time hook for fetching customer orders history.
+ * Simplified to avoid index errors on where + orderBy.
  */
 export function useCustomerOrders() {
   const db = useFirestore();
@@ -65,9 +72,10 @@ export function useCustomerOrders() {
   useEffect(() => {
     if (!db) return;
 
+    // Use a basic query without orderBy to avoid index requirements during prototyping
     const q = query(
       collection(db, 'orders'),
-      limit(50)
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -75,7 +83,15 @@ export function useCustomerOrders() {
         id: doc.id, 
         ...doc.data() 
       })) as Order[];
-      setOrders(ordersData);
+      
+      // Sort on the client side
+      const sortedOrders = [...ordersData].sort((a, b) => {
+        const dateA = a.createdAt?.seconds || 0;
+        const dateB = b.createdAt?.seconds || 0;
+        return dateB - dateA;
+      });
+
+      setOrders(sortedOrders);
       setIsLoading(false);
       setError(null);
     }, (err) => {

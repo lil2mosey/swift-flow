@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/card';
@@ -12,12 +12,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Message, UserProfile } from '@/lib/types';
+import { Message } from '@/lib/types';
 import { format } from 'date-fns';
 
 /**
- * Unified Messaging Page
- * Handles both Seller (Conversation List) and Customer (Direct Chat) views.
+ * Unified Messaging Page for SwiftFlow.
+ * Handles both Seller (Conversation Management) and Customer (Direct Support) views.
  */
 export default function MessagesPage() {
   const { user, profile } = useUser();
@@ -25,19 +25,20 @@ export default function MessagesPage() {
   const [message, setMessage] = useState('');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
 
-  // --- Seller Logic: Conversations List ---
-  const sellerId = "system-seller"; // In a real app, this would be the actual seller's UID
-  
-  const conversationsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'seller') return null;
+  const isSeller = profile?.role === 'seller';
+  const systemSellerId = "system-seller"; // Shared support ID for customers
+
+  // --- Seller Logic: Load all conversations where they are participants ---
+  const sellerConversationsQuery = useMemoFirebase(() => {
+    if (!user || !isSeller) return null;
     return FirebaseService.getConversationsQuery(db, user.uid);
-  }, [db, user, profile]);
+  }, [db, user, isSeller]);
 
-  const { data: allMessages, isLoading: isConversationsLoading } = useCollection<Message>(conversationsQuery);
+  const { data: allMessages, isLoading: isConversationsLoading } = useCollection<Message>(sellerConversationsQuery);
 
-  // Group messages by unique customer for the seller's list
+  // Group messages by the "other" participant to show a conversation list for the seller
   const uniqueConversations = useMemo(() => {
-    if (!allMessages || profile?.role !== 'seller' || !user) return [];
+    if (!allMessages || !isSeller || !user) return [];
     
     const map = new Map();
     allMessages.forEach(msg => {
@@ -45,20 +46,21 @@ export default function MessagesPage() {
       if (otherId && !map.has(otherId)) {
         map.set(otherId, {
           id: otherId,
-          name: msg.senderId === otherId ? msg.senderName : "Customer",
+          name: msg.senderId === otherId ? (msg.senderName || "Customer") : "Customer",
           lastMsg: msg.content,
-          time: msg.createdAt ? format(new Date(msg.createdAt?.seconds * 1000 || Date.now()), 'HH:mm') : '...',
+          timestamp: msg.createdAt?.seconds ? msg.createdAt.seconds * 1000 : Date.now(),
         });
       }
     });
-    return Array.from(map.values());
-  }, [allMessages, profile, user]);
+    
+    return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+  }, [allMessages, isSeller, user]);
 
-  // --- Chat Logic: Active Conversation ---
+  // --- Active Chat Logic ---
   const activeReceiverId = useMemo(() => {
-    if (profile?.role === 'customer') return sellerId;
+    if (!isSeller) return systemSellerId; // Customers always talk to the workshop/seller
     return selectedContactId;
-  }, [profile, selectedContactId]);
+  }, [isSeller, selectedContactId]);
 
   const chatQuery = useMemoFirebase(() => {
     if (!user || !activeReceiverId) return null;
@@ -76,62 +78,67 @@ export default function MessagesPage() {
       user.uid, 
       activeReceiverId, 
       message, 
-      profile?.fullName || "User"
+      profile?.fullName || user.email?.split('@')[0] || "User"
     );
     setMessage('');
   };
 
   const activeContact = useMemo(() => {
-    if (profile?.role === 'customer') return { name: 'Support / Seller', id: sellerId };
+    if (!isSeller) return { name: 'SwiftFlow Support', id: systemSellerId };
     return uniqueConversations.find(c => c.id === selectedContactId);
-  }, [profile, uniqueConversations, selectedContactId]);
+  }, [isSeller, uniqueConversations, selectedContactId]);
 
   return (
     <Shell userRole={profile?.role}>
       <PageHeader 
-        title="Messages" 
-        description={profile?.role === 'seller' ? "Direct communication with your customers." : "Chat with the seller about your orders."}
+        title="Synchronized Messaging" 
+        description={isSeller ? "Manage your direct customer inquiries." : "Chat with our jewelry experts about your orders."}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[650px] max-w-6xl mx-auto">
         {/* Contact List (Sellers Only) */}
-        {profile?.role === 'seller' && (
-          <Card className="border-none shadow-sm h-full flex flex-col">
-            <div className="p-4 border-b border-slate-100">
+        {isSeller && (
+          <Card className="border-none shadow-sm h-full flex flex-col bg-white rounded-3xl overflow-hidden">
+            <div className="p-6 border-b border-slate-50">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input className="pl-9 bg-slate-50 border-none" placeholder="Search customers..." />
+                <Input className="pl-10 bg-slate-50 border-none h-11 rounded-xl" placeholder="Search customers..." />
               </div>
             </div>
             <ScrollArea className="flex-1">
               {isConversationsLoading ? (
-                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-slate-200" /></div>
+                <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-teal-500" /></div>
               ) : uniqueConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-                  <MessageSquare className="h-8 w-8 text-slate-200 mb-2" />
-                  <p className="text-xs text-slate-400 font-medium italic">No active conversations found.</p>
+                <div className="flex flex-col items-center justify-center py-32 text-center px-6">
+                  <div className="p-4 bg-slate-50 rounded-2xl mb-4">
+                    <MessageSquare className="h-8 w-8 text-slate-200" />
+                  </div>
+                  <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">No Active Chats</p>
+                  <p className="text-xs text-slate-400 mt-1 italic">Waiting for customer inquiries...</p>
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-50">
                   {uniqueConversations.map((contact) => (
                     <button
                       key={contact.id}
                       onClick={() => setSelectedContactId(contact.id)}
                       className={cn(
-                        "w-full p-4 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left",
-                        selectedContactId === contact.id && "bg-slate-50 border-r-4 border-teal-500"
+                        "w-full p-6 flex items-center gap-4 hover:bg-slate-50/80 transition-all text-left group",
+                        selectedContactId === contact.id && "bg-teal-50/50 border-r-4 border-teal-500"
                       )}
                     >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={`https://picsum.photos/seed/${contact.id}/40`} />
-                        <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                        <AvatarImage src={`https://picsum.photos/seed/${contact.id}/60`} />
+                        <AvatarFallback className="bg-slate-100"><User className="h-5 w-5 text-slate-400" /></AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline mb-1">
-                          <span className="text-sm font-bold text-slate-900 truncate">{contact.name}</span>
-                          <span className="text-[10px] text-slate-400 uppercase font-bold">{contact.time}</span>
+                          <span className="text-sm font-bold text-slate-900 truncate group-hover:text-teal-600 transition-colors">{contact.name}</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-bold">
+                            {format(new Date(contact.timestamp), 'HH:mm')}
+                          </span>
                         </div>
-                        <p className="text-xs text-slate-500 truncate">{contact.lastMsg}</p>
+                        <p className="text-xs text-slate-500 truncate font-medium">{contact.lastMsg}</p>
                       </div>
                     </button>
                   ))}
@@ -143,75 +150,93 @@ export default function MessagesPage() {
 
         {/* Chat Window */}
         <Card className={cn(
-          "border-none shadow-sm h-full flex flex-col overflow-hidden",
-          profile?.role === 'seller' ? "lg:col-span-2" : "lg:col-span-3"
+          "border-none shadow-sm h-full flex flex-col bg-white rounded-3xl overflow-hidden",
+          isSeller ? "lg:col-span-2" : "lg:col-span-3"
         )}>
           {activeReceiverId ? (
             <>
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={`https://picsum.photos/seed/${activeReceiverId}/40`} />
-                    <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
+              <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white z-10">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 border-2 border-slate-100">
+                    <AvatarImage src={`https://picsum.photos/seed/${activeReceiverId}/60`} />
+                    <AvatarFallback><User className="h-5 w-5 text-slate-400" /></AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || "Customer"}</h3>
-                    <span className="text-[10px] text-teal-600 font-bold uppercase">Active Chat</span>
+                    <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || "Support"}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 bg-teal-500 rounded-full animate-pulse" />
+                      <span className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter">Connected</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="text-slate-400">
+                  <Button variant="ghost" size="icon" className="text-slate-300 hover:text-teal-600 hover:bg-teal-50 rounded-full">
                     <Phone className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 bg-slate-50/50 p-6">
-                <div className="space-y-6">
+              <ScrollArea className="flex-1 bg-slate-50/30 p-8">
+                <div className="space-y-8">
                   {isChatLoading ? (
-                    <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-slate-200" /></div>
-                  ) : chatMessages?.length === 0 ? (
-                    <div className="text-center py-10 text-slate-300 text-xs italic font-medium">Send a message to start the conversation.</div>
-                  ) : chatMessages?.map((msg) => (
+                    <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-teal-500" /></div>
+                  ) : !chatMessages || chatMessages.length === 0 ? (
+                    <div className="text-center py-20">
+                       <div className="p-4 bg-white rounded-3xl shadow-sm border border-slate-100 w-fit mx-auto mb-4">
+                         <MessageSquare className="h-10 w-10 text-slate-100" />
+                       </div>
+                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Start of Conversation</p>
+                       <p className="text-[10px] text-slate-300 mt-1 italic">Type below to synchronize your request.</p>
+                    </div>
+                  ) : chatMessages.map((msg) => (
                     <div key={msg.id} className={cn(
-                      "flex flex-col max-w-[80%]",
+                      "flex flex-col max-w-[85%]",
                       msg.senderId === user?.uid ? "ml-auto items-end" : "items-start"
                     )}>
                       <div className={cn(
-                        "p-3 rounded-2xl text-sm shadow-sm font-medium leading-relaxed",
-                        msg.senderId === user?.uid ? "bg-primary text-white rounded-tr-none" : "bg-white text-slate-800 rounded-tl-none border border-slate-100"
+                        "p-4 rounded-2xl text-sm shadow-sm font-medium leading-relaxed",
+                        msg.senderId === user?.uid 
+                          ? "bg-primary text-white rounded-tr-none" 
+                          : "bg-white text-slate-800 rounded-tl-none border border-slate-100"
                       )}>
                         {msg.content}
                       </div>
-                      <span className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
-                        {msg.createdAt ? format(new Date(msg.createdAt?.seconds * 1000 || Date.now()), 'HH:mm') : '...'}
+                      <span className="text-[10px] text-slate-400 mt-2 uppercase font-bold tracking-tighter">
+                        {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : 'Syncing...'}
                       </span>
                     </div>
                   ))}
                 </div>
               </ScrollArea>
 
-              <div className="p-4 bg-white border-t border-slate-100">
-                <form className="flex gap-2" onSubmit={handleSendMessage}>
+              <div className="p-6 bg-white border-t border-slate-50">
+                <form className="flex gap-3" onSubmit={handleSendMessage}>
                   <Input 
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="bg-slate-50 border-none h-11" 
-                    placeholder="Type your message here..." 
+                    className="bg-slate-50 border-none h-14 rounded-2xl px-6 font-medium text-slate-900 focus-visible:ring-1 focus-visible:ring-teal-200" 
+                    placeholder="Describe your jewelry request..." 
                   />
-                  <Button type="submit" className="h-11 px-6 bg-primary hover:bg-slate-800 text-white font-bold gap-2">
-                    <Send className="h-4 w-4" /> Send
+                  <Button 
+                    type="submit" 
+                    disabled={!message.trim()}
+                    className="h-14 w-14 sm:w-auto sm:px-8 bg-primary hover:bg-slate-800 text-white font-bold gap-3 rounded-2xl shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
+                  >
+                    <Send className="h-4 w-4" />
+                    <span className="hidden sm:inline">Send Sync</span>
                   </Button>
                 </form>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="h-20 w-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                <MessageSquare className="h-10 w-10 text-slate-200" />
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+              <div className="h-24 w-24 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner">
+                <MessageSquare className="h-12 w-12 text-slate-200" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900">Select a Conversation</h3>
-              <p className="text-sm text-slate-500 max-w-xs mt-2">Choose a customer from the left list to start synchronized communication.</p>
+              <h3 className="text-xl font-bold text-slate-900">Select a Conversation</h3>
+              <p className="text-sm text-slate-500 max-w-xs mt-3 leading-relaxed">
+                Choose a customer from your synchronized list to begin real-time logistics support.
+              </p>
             </div>
           )}
         </Card>

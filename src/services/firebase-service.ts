@@ -19,7 +19,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Service layer for all Firebase Firestore operations.
- * Enhanced with robust inventory synchronization and quantity-aware mutations.
+ * Enhanced with robust messaging and synchronized inventory seeding.
  */
 
 export const FirebaseService = {
@@ -132,7 +132,7 @@ export const FirebaseService = {
   },
 
   seedJewelryCatalog: async (db: Firestore, sellerId: string) => {
-    // Curated Inventory with unique naming conventions
+    // Non-redundant inventory following naming constraints
     const inventory = [
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
@@ -303,10 +303,10 @@ export const FirebaseService = {
     );
   },
 
-  getConversationsQuery: (db: Firestore, sellerId: string) => {
+  getConversationsQuery: (db: Firestore, userId: string) => {
     return query(
       collection(db, 'messages'),
-      where('participants', 'array-contains', sellerId),
+      where('participants', 'array-contains', userId),
       limit(500)
     );
   },

@@ -28,7 +28,7 @@ export function useCustomerProducts(pageSize = 12) {
   const [hasMore, setHasMore] = useState(true);
 
   const fetchProducts = useCallback(async (isNextPage = false) => {
-    if (!db || !user) return;
+    if (!db) return;
     
     try {
       if (!isNextPage) setIsLoading(true);
@@ -70,13 +70,13 @@ export function useCustomerProducts(pageSize = 12) {
     } finally {
       setIsLoading(false);
     }
-  }, [db, user, pageSize, lastDoc]);
+  }, [db, pageSize, lastDoc]);
 
   useEffect(() => {
-    if (user && db) {
+    if (db) {
       fetchProducts();
     }
-  }, [user, db]); 
+  }, [db]); 
 
   return { products, isLoading, error, hasMore, loadMore: () => fetchProducts(true) };
 }

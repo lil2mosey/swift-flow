@@ -1,146 +1,115 @@
+
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Search, MessageSquare, Loader2, User } from 'lucide-react';
+import { Send, Search, MessageSquare, Loader2, User, Package, Clock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
-import { Message, Product } from '@/lib/types';
+import { Conversation, ChatMessage } from '@/lib/types';
 import { format } from 'date-fns';
-import { query, collection, limit, where, orderBy } from 'firebase/firestore';
 
-/**
- * Synchronized Messaging Page.
- * Persists all chat history in Firestore for reference in a bubble format.
- */
 export default function MessagesPage() {
   const { user, profile } = useUser();
   const db = useFirestore();
-  const [message, setMessage] = useState('');
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const isSeller = profile?.role === 'seller';
 
-  // --- Recipient Discovery for Customers ---
-  const productsQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
-  const { data: sampleProducts, isLoading: isCatalogSyncing } = useCollection<Product>(productsQuery);
-  
-  const systemSellerId = useMemo(() => {
-    if (sampleProducts && sampleProducts.length > 0) return sampleProducts[0].sellerId || 'system-seller';
-    return 'system-seller';
-  }, [sampleProducts]);
-
-  // --- Conversation Sidebar Loading ---
-  const allConversationsQuery = useMemoFirebase(() => {
+  // --- Conversations List ---
+  const convsQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return FirebaseService.getConversationsQuery(db, user.uid);
+    return FirebaseService.getInquiriesQuery(db, user.uid);
   }, [db, user]);
 
-  const { data: allMessages, isLoading: isConversationsLoading } = useCollection<Message>(allConversationsQuery);
+  const { data: conversations, isLoading: isConvsLoading } = useCollection<Conversation>(convsQuery);
 
-  const uniqueConversations = useMemo(() => {
-    if (!allMessages || !user) return [];
-    
-    const map = new Map();
-    allMessages.forEach(msg => {
-      const otherId = msg.participants.find(p => p !== user.uid);
-      if (otherId && !map.has(otherId)) {
-        map.set(otherId, {
-          id: otherId,
-          name: msg.senderId === otherId ? (msg.senderName || "Customer") : (isSeller ? "Customer" : "Workshop Support"),
-          lastMsg: msg.content,
-          timestamp: msg.createdAt?.seconds ? msg.createdAt.seconds * 1000 : Date.now(),
-        });
-      }
-    });
-    
-    return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
-  }, [allMessages, user, isSeller]);
-
-  // --- Active Chat History ---
-  const activeReceiverId = useMemo(() => {
-    if (!isSeller) return systemSellerId; 
-    return selectedContactId;
-  }, [isSeller, systemSellerId, selectedContactId]);
-
+  // --- Chat Messages ---
   const chatQuery = useMemoFirebase(() => {
-    if (!user || !activeReceiverId) return null;
-    return FirebaseService.getMessagesQuery(db, [user.uid, activeReceiverId]);
-  }, [db, user, activeReceiverId]);
+    if (!selectedConvId) return null;
+    return FirebaseService.getChatMessagesQuery(db, selectedConvId);
+  }, [db, selectedConvId]);
 
-  const { data: chatMessages, isLoading: isChatLoading } = useCollection<Message>(chatQuery);
+  const { data: messages, isLoading: isChatLoading } = useCollection<ChatMessage>(chatQuery);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !message.trim() || !activeReceiverId) return;
+    if (!selectedConvId || !user || !newMessage.trim()) return;
 
-    FirebaseService.sendMessage(
-      db, 
-      user.uid, 
-      activeReceiverId, 
-      message, 
-      profile?.fullName || user.email?.split('@')[0] || "User"
-    );
-    setMessage('');
+    FirebaseService.sendChatMessage(db, selectedConvId, user.uid, newMessage);
+    setNewMessage('');
   };
 
-  const activeContact = useMemo(() => {
-    if (!isSeller) return { name: 'SwiftFlow Workshop', id: systemSellerId };
-    return uniqueConversations.find(c => c.id === selectedContactId);
-  }, [isSeller, uniqueConversations, selectedContactId, systemSellerId]);
+  const activeConv = useMemo(() => 
+    conversations?.find(c => c.id === selectedConvId), 
+    [conversations, selectedConvId]
+  );
 
   return (
     <Shell userRole={profile?.role}>
       <PageHeader 
-        title="Chat Reference" 
-        description="All communications are synchronized and persisted for your reference."
+        title="Inquiry Management" 
+        description="Synchronized conversations about specific jewelry items."
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px] max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[700px] max-w-6xl mx-auto">
         {/* Sidebar */}
-        <Card className={cn(
-          "border-none shadow-sm h-full flex flex-col bg-white rounded-3xl overflow-hidden",
-          !isSeller && "hidden lg:flex"
-        )}>
-          <div className="p-6 border-b border-slate-50">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input className="pl-10 bg-slate-50 border-none h-11 rounded-xl" placeholder="Search contacts..." />
-            </div>
+        <Card className="border-none shadow-sm h-full flex flex-col bg-white rounded-[2rem] overflow-hidden">
+          <div className="p-6 border-b border-slate-50 bg-[#0f172a] text-white">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Clock className="h-4 w-4 text-teal-400" /> Recent Inquiries
+            </h2>
           </div>
           <ScrollArea className="flex-1">
-            {isConversationsLoading ? (
+            {isConvsLoading ? (
               <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-teal-500" /></div>
-            ) : uniqueConversations.length === 0 ? (
-              <div className="p-12 text-center text-slate-300 italic text-xs">No previous chats.</div>
+            ) : !conversations || conversations.length === 0 ? (
+              <div className="p-12 text-center text-slate-300 italic text-xs">No active inquiries found.</div>
             ) : (
               <div className="divide-y divide-slate-50">
-                {uniqueConversations.map((contact) => (
+                {conversations.map((conv) => (
                   <button
-                    key={contact.id}
-                    onClick={() => setSelectedContactId(contact.id)}
+                    key={conv.id}
+                    onClick={() => setSelectedConvId(conv.id)}
                     className={cn(
-                      "w-full p-6 flex items-center gap-4 hover:bg-slate-50/80 transition-all text-left",
-                      selectedContactId === contact.id && "bg-teal-50/30 border-r-4 border-teal-500"
+                      "w-full p-6 flex items-start gap-4 hover:bg-slate-50 transition-all text-left group",
+                      selectedConvId === conv.id && "bg-teal-50/40 border-r-4 border-teal-500"
                     )}
                   >
-                    <Avatar className="h-10 w-10 border border-white shadow-sm">
-                      <AvatarImage src={`https://picsum.photos/seed/${contact.id}/60`} />
-                      <AvatarFallback><User className="h-4 w-4 text-slate-400" /></AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                        <AvatarImage src={`https://picsum.photos/seed/${conv.itemId}/60`} />
+                        <AvatarFallback><Package className="h-5 w-5 text-slate-400" /></AvatarFallback>
+                      </Avatar>
+                      <div className="absolute -top-1 -right-1 h-3 w-3 bg-teal-400 rounded-full border-2 border-white" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
-                        <span className="text-sm font-bold text-slate-900 truncate">{contact.name}</span>
-                        <span className="text-[10px] text-slate-400 font-bold">{format(new Date(contact.timestamp), 'HH:mm')}</span>
+                        <span className="text-sm font-bold text-slate-900 truncate">
+                          {isSeller ? conv.customerName || 'Inquiry' : 'SwiftFlow Workshop'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {conv.timestamp?.seconds ? format(new Date(conv.timestamp.seconds * 1000), 'HH:mm') : '...'}
+                        </span>
                       </div>
-                      <p className="text-xs text-slate-500 truncate">{contact.lastMsg}</p>
+                      <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-1 truncate">{conv.itemName}</p>
+                      <p className="text-xs text-slate-500 truncate group-hover:text-slate-900 transition-colors">{conv.lastMessage}</p>
                     </div>
                   </button>
                 ))}
@@ -150,73 +119,75 @@ export default function MessagesPage() {
         </Card>
 
         {/* Chat History */}
-        <Card className={cn(
-          "border-none shadow-sm h-full flex flex-col bg-white rounded-3xl overflow-hidden",
-          isSeller ? "lg:col-span-2" : "lg:col-span-3"
-        )}>
-          {(activeReceiverId || !isSeller) ? (
+        <Card className="lg:col-span-2 border-none shadow-sm h-full flex flex-col bg-white rounded-[2rem] overflow-hidden">
+          {selectedConvId ? (
             <>
-              <div className="p-6 border-b border-slate-50 flex items-center gap-4 bg-white z-10">
-                <Avatar className="h-10 w-10 border border-slate-100">
-                  <AvatarImage src={`https://picsum.photos/seed/${activeReceiverId}/60`} />
-                  <AvatarFallback><User className="h-4 w-4 text-slate-400" /></AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">{activeContact?.name || "Syncing..."}</h3>
-                  <p className="text-[10px] text-teal-600 font-bold uppercase tracking-widest">Active Reference</p>
+              <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-white z-10">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-10 w-10 border border-slate-100">
+                    <AvatarImage src={`https://picsum.photos/seed/${activeConv?.itemId}/60`} />
+                    <AvatarFallback><Package className="h-4 w-4 text-slate-400" /></AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">{activeConv?.itemName}</h3>
+                    <p className="text-[10px] text-teal-600 font-bold uppercase tracking-widest">
+                      {isSeller ? `Customer: ${activeConv?.customerName}` : 'Workshop Support'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 bg-slate-50/20 p-6">
+              <ScrollArea className="flex-1 bg-slate-50/30 p-8">
                 <div className="space-y-6">
                   {isChatLoading ? (
                     <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-teal-500" /></div>
-                  ) : !chatMessages || chatMessages.length === 0 ? (
-                    <div className="text-center py-20 text-slate-400 text-xs italic">Start a conversation. All messages are persisted.</div>
-                  ) : chatMessages.map((msg) => (
+                  ) : messages?.map((msg) => (
                     <div key={msg.id} className={cn(
                       "flex flex-col max-w-[80%]",
                       msg.senderId === user?.uid ? "ml-auto items-end" : "items-start"
                     )}>
                       <div className={cn(
-                        "p-4 rounded-2xl text-sm shadow-sm font-medium",
+                        "p-4 rounded-2xl text-sm font-medium shadow-sm",
                         msg.senderId === user?.uid 
                           ? "bg-primary text-white rounded-tr-none" 
                           : "bg-white text-slate-800 rounded-tl-none border border-slate-100"
                       )}>
-                        {msg.content}
+                        {msg.text}
                       </div>
-                      <span className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
+                      <span className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
                         {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'HH:mm') : '...'}
                       </span>
                     </div>
                   ))}
+                  <div ref={scrollRef} />
                 </div>
               </ScrollArea>
 
-              <div className="p-6 bg-white border-t border-slate-50">
+              <div className="p-6 bg-white border-t border-slate-100">
                 <form className="flex gap-3" onSubmit={handleSendMessage}>
                   <Input 
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="bg-slate-50 border-none h-12 rounded-xl px-6 font-medium text-slate-900" 
-                    placeholder="Type your message..." 
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="bg-slate-50 border-none h-14 rounded-2xl px-6 font-medium text-slate-900 focus-visible:ring-1 focus-visible:ring-teal-400" 
+                    placeholder="Type your response..." 
                   />
                   <Button 
                     type="submit" 
-                    disabled={!message.trim()}
-                    className="h-12 px-6 bg-primary text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98]"
+                    disabled={!newMessage.trim()}
+                    className="h-14 w-14 bg-primary text-white font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98]"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-5 w-5" />
                   </Button>
                 </form>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
-              <MessageSquare className="h-12 w-12 text-slate-200 mb-4" />
-              <h3 className="text-xl font-bold text-slate-900">Select a Contact</h3>
-              <p className="text-sm text-slate-400 mt-2">Pick a customer to see your chat history.</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50/20">
+              <div className="p-6 bg-white rounded-full shadow-sm mb-4">
+                <MessageSquare className="h-12 w-12 text-slate-100" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Select an Inquiry</h3>
+              <p className="text-sm text-slate-400 mt-2 max-w-xs">Pick a conversation from the sidebar to view the item details and chat history.</p>
             </div>
           )}
         </Card>

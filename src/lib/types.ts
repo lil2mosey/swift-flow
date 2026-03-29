@@ -1,3 +1,4 @@
+
 export type UserRole = 'seller' | 'customer';
 
 export interface UserProfile {
@@ -63,12 +64,19 @@ export interface Order {
   updatedAt: any;
 }
 
-export interface Message {
+export interface Conversation {
+  id: string;
+  participants: string[];
+  lastMessage: string;
+  timestamp: any;
+  itemId: string;
+  itemName: string;
+  customerName?: string;
+}
+
+export interface ChatMessage {
   id: string;
   senderId: string;
-  receiverId: string;
-  content: string;
-  participants: string[];
+  text: string;
   createdAt: any;
-  senderName?: string;
 }

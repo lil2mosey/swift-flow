@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -7,14 +8,12 @@ import { Firestore, initializeFirestore, getFirestore as getFirestoreRegular } f
 
 /**
  * Robust Firebase initialization for Next.js in a Studio environment.
- * Uses a strict singleton pattern and global window storage to prevent
- * "INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9)".
+ * Strictly enforces a global singleton to prevent ca9 assertion failures.
  */
 export function initializeFirebase() {
   if (typeof window !== 'undefined') {
     const globalStore = window as any;
 
-    // 1. Retrieve from global store if already initialized (survives HMR and page transitions)
     if (globalStore.__firebaseApp && globalStore.__firebaseDb && globalStore.__firebaseAuth) {
       return {
         firebaseApp: globalStore.__firebaseApp,
@@ -24,36 +23,19 @@ export function initializeFirebase() {
     }
 
     const apps = getApps();
-    let app: FirebaseApp;
-    
-    // 2. Initialize or retrieve the App
-    if (apps.length > 0) {
-      app = apps[0];
-    } else {
-      app = initializeApp(firebaseConfig);
-    }
+    let app: FirebaseApp = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
 
-    // 3. Initialize Firestore with required long-polling exactly once
     let db: Firestore;
-    const existingDb = globalStore.__firebaseDb;
-    
-    if (existingDb) {
-      db = existingDb;
-    } else {
-      try {
-        // Critical: In Studio, we must force long polling for reliable streams
-        db = initializeFirestore(app, {
-          experimentalForceLongPolling: true,
-        });
-      } catch (e) {
-        // Fallback if initializeFirestore fails (already initialized)
-        db = getFirestoreRegular(app);
-      }
+    try {
+      db = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      });
+    } catch (e) {
+      db = getFirestoreRegular(app);
     }
 
-    const auth = globalStore.__firebaseAuth || getAuth(app);
+    const auth = getAuth(app);
 
-    // Store in global window object for absolute singleton consistency
     globalStore.__firebaseApp = app;
     globalStore.__firebaseDb = db;
     globalStore.__firebaseAuth = auth;
@@ -65,7 +47,6 @@ export function initializeFirebase() {
     };
   }
 
-  // Minimal SSR Fallback
   const apps = getApps();
   const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
   return {

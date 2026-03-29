@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -10,17 +11,16 @@ import {
   serverTimestamp,
   increment,
   orderBy,
-  getDocs
+  getDocs,
+  setDoc,
+  Timestamp
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking 
 } from '@/firebase';
-import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
+import { OrderStatus, Product, OrderItem, Order, Conversation } from '@/lib/types';
 
-/**
- * Service layer for all Firebase Firestore operations.
- */
 export const FirebaseService = {
   // --- Orders ---
   
@@ -106,6 +106,74 @@ export const FirebaseService = {
     }
   },
 
+  // --- Conversations & Inquiries ---
+
+  findOrCreateConversation: async (db: Firestore, customerId: string, sellerId: string, item: Product, customerName: string) => {
+    const convsRef = collection(db, 'conversations');
+    const participants = [customerId, sellerId].sort();
+    
+    // Check if contextual conversation already exists for this specific item
+    const q = query(
+      convsRef, 
+      where('participants', '==', participants),
+      where('itemId', '==', item.id),
+      limit(1)
+    );
+    
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      return snapshot.docs[0].id;
+    }
+
+    // Create new conversation
+    const newConvRef = doc(convsRef);
+    await setDoc(newConvRef, {
+      participants,
+      itemId: item.id,
+      itemName: item.name,
+      customerName: customerName,
+      lastMessage: 'Inquiry started',
+      timestamp: serverTimestamp(),
+    });
+
+    return newConvRef.id;
+  },
+
+  sendChatMessage: (db: Firestore, convId: string, senderId: string, text: string) => {
+    const messagesRef = collection(db, 'conversations', convId, 'messages');
+    const convRef = doc(db, 'conversations', convId);
+
+    // Add message to sub-collection
+    addDocumentNonBlocking(messagesRef, {
+      senderId,
+      text,
+      createdAt: serverTimestamp()
+    });
+
+    // Update conversation metadata
+    updateDocumentNonBlocking(convRef, {
+      lastMessage: text,
+      timestamp: serverTimestamp()
+    });
+  },
+
+  getInquiriesQuery: (db: Firestore, userId: string) => {
+    return query(
+      collection(db, 'conversations'),
+      where('participants', 'array-contains', userId),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+  },
+
+  getChatMessagesQuery: (db: Firestore, convId: string) => {
+    return query(
+      collection(db, 'conversations', convId, 'messages'),
+      orderBy('createdAt', 'asc'),
+      limit(100)
+    );
+  },
+
   // --- Products & Inventory ---
 
   addProduct: (db: Firestore, sellerId: string, productData: Omit<Product, 'id' | 'sellerId'>) => {
@@ -140,15 +208,15 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Infinity Bridal Ring Set (14K Gold)",
-        sku: "JW-R-INF-YG",
-        description: "Timeless 14K Yellow Gold eternity band and solitaire engagement ring set.",
-        price: 32000,
-        currentStock: 8,
+        name: "Pure Gold Eternity Band (18K)",
+        sku: "JW-R-PURE-18K",
+        description: "Solid 18K gold band, perfectly polished for a lifetime of wear.",
+        price: 45000,
+        currentStock: 5,
         category: "Rings",
         sellerId: sellerId,
-        lowStockThreshold: 3,
-        averageDailySales: 0.1,
+        lowStockThreshold: 2,
+        averageDailySales: 0.05,
         leadTimeDays: 14,
         itemType: 'product' as const
       },
@@ -170,37 +238,6 @@ export const FirebaseService = {
     for (const item of inventory) {
       await FirebaseService.addProduct(db, sellerId, item);
     }
-  },
-
-  // --- Messages ---
-
-  sendMessage: (db: Firestore, senderId: string, receiverId: string, content: string, senderName: string) => {
-    const messagesRef = collection(db, 'messages');
-    return addDocumentNonBlocking(messagesRef, {
-      senderId,
-      receiverId,
-      content,
-      senderName,
-      participants: [senderId, receiverId].sort(),
-      createdAt: serverTimestamp()
-    });
-  },
-
-  getMessagesQuery: (db: Firestore, participants: string[]) => {
-    return query(
-      collection(db, 'messages'),
-      where('participants', '==', [...participants].sort()),
-      orderBy('createdAt', 'asc'),
-      limit(100)
-    );
-  },
-
-  getConversationsQuery: (db: Firestore, userId: string) => {
-    return query(
-      collection(db, 'messages'),
-      where('participants', 'array-contains', userId),
-      limit(500)
-    );
   },
 
   // --- Queries ---

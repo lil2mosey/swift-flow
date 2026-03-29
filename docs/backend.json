@@ -1,112 +1,74 @@
+
 {
   "entities": {
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
+      "description": "Represents a user within the system.",
       "type": "object",
-      "description": "Represents a user within the system, either a customer or a seller.",
       "properties": {
         "id": { "type": "string" },
         "authSystemId": { "type": "string" },
-        "firstName": { "type": "string" },
-        "lastName": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string", "enum": ["customer", "seller"] },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "fullName": { "type": "string" }
       },
       "required": ["id", "authSystemId", "email", "role"]
     },
     "Product": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
+      "description": "Represents a jewelry item.",
       "type": "object",
-      "description": "Represents a product available for sale.",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "description": { "type": "string" },
         "price": { "type": "number" },
-        "sku": { "type": "string" },
         "currentStock": { "type": "number" },
-        "imageUrl": { "type": "string", "format": "uri" },
-        "sellerId": { "type": "string" },
-        "isActive": { "type": "boolean", "description": "Whether the product is currently visible in the storefront." },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "name", "price", "sku", "currentStock", "sellerId"]
+        "sellerId": { "type": "string" }
+      }
     },
-    "Order": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Order",
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Metadata for a chat inquiry.",
       "type": "object",
-      "description": "Represents a customer's order.",
       "properties": {
         "id": { "type": "string" },
-        "customerId": { "type": "string" },
-        "sellerId": { "type": "string" },
-        "status": { "type": "string" },
-        "paymentStatus": { "type": "string" },
-        "totalAmount": { "type": "number" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "customerId", "sellerId", "totalAmount"]
-    },
-    "Message": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Message",
-      "type": "object",
-      "description": "Represents a direct message between customer and seller.",
-      "properties": {
-        "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "content": { "type": "string" },
         "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" }
+      }
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A single chat bubble within a conversation.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["senderId", "receiverId", "content", "participants"]
+      }
     }
   },
   "auth": {
     "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/userProfiles/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": { "$ref": "#/backend/entities/UserProfile" },
-          "description": "Stores individual user profiles."
-        }
-      },
-      {
-        "path": "/products/{productId}",
-        "definition": {
-          "entityName": "Product",
-          "schema": { "$ref": "#/backend/entities/Product" },
-          "description": "Global collection for all products."
-        }
-      },
-      {
-        "path": "/orders/{orderId}",
-        "definition": {
-          "entityName": "Order",
-          "schema": { "$ref": "#/backend/entities/Order" },
-          "description": "Represents customer orders."
-        }
-      },
-      {
-        "path": "/messages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": { "$ref": "#/backend/entities/Message" },
-          "description": "Real-time messages between users."
-        }
-      }
-    ]
+    "/userProfiles/{userId}": {
+      "schema": "#/backend/entities/UserProfile",
+      "description": "User profiles."
+    },
+    "/products/{productId}": {
+      "schema": "#/backend/entities/Product",
+      "description": "Jewelry items."
+    },
+    "/conversations/{convId}": {
+      "schema": "#/backend/entities/Conversation",
+      "description": "Chat conversation metadata."
+    },
+    "/conversations/{convId}/messages/{msgId}": {
+      "schema": "#/backend/entities/ChatMessage",
+      "description": "Chat messages."
+    }
   }
 }

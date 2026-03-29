@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -113,7 +114,6 @@ export const FirebaseService = {
     const convsRef = collection(db, 'conversations');
     const participants = [customerId, sellerId].sort();
     
-    // Check if contextual conversation already exists for this specific item
     const q = query(
       convsRef, 
       where('participants', '==', participants),
@@ -126,7 +126,6 @@ export const FirebaseService = {
       return snapshot.docs[0].id;
     }
 
-    // Create new conversation
     const newConvRef = doc(convsRef);
     await setDoc(newConvRef, {
       participants,
@@ -145,7 +144,6 @@ export const FirebaseService = {
     const convsRef = collection(db, 'conversations');
     const participants = [customerId, sellerId].sort();
     
-    // Check if general conversation exists
     const q = query(
       convsRef, 
       where('participants', '==', participants),
@@ -158,7 +156,6 @@ export const FirebaseService = {
       return snapshot.docs[0].id;
     }
 
-    // Create new conversation
     const newConvRef = doc(convsRef);
     await setDoc(newConvRef, {
       participants,
@@ -173,25 +170,18 @@ export const FirebaseService = {
     return newConvRef.id;
   },
 
-  sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string) => {
+  sendChatMessage: async (db: Firestore, convId: string, senderId: string, text: string, isSeller: boolean) => {
     const messagesRef = collection(db, 'conversations', convId, 'messages');
     const convRef = doc(db, 'conversations', convId);
 
-    // Get conversation to check role
-    const convSnap = await getDoc(convRef);
-    const convData = convSnap.data();
-    
-    const isSeller = senderId === 'system-seller'; 
     const newStatus = isSeller ? 'replied' : 'unreplied';
 
-    // Add message to sub-collection
     addDocumentNonBlocking(messagesRef, {
       senderId,
       text,
       createdAt: serverTimestamp()
     });
 
-    // Update conversation metadata
     updateDocumentNonBlocking(convRef, {
       lastMessage: text,
       status: newStatus,
@@ -250,11 +240,11 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Pure Gold Eternity Band (18K Gold)",
-        sku: "JW-R-PURE-18K",
-        description: "Solid 18K gold band, perfectly polished for a lifetime of wear.",
-        price: 45000,
-        currentStock: 5,
+        name: "Infinity Bridal Ring Set (14K Gold)",
+        sku: "JW-R-INF-14K",
+        description: "Premium 14K Yellow Gold variant of our signature bridal collection.",
+        price: 32000,
+        currentStock: 3,
         category: "Rings",
         sellerId: sellerId,
         lowStockThreshold: 2,
@@ -263,9 +253,9 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Maasai Beaded Choker (Handcrafted)",
-        sku: "JW-N-MAA-BEAD",
-        description: "Authentic handcrafted Maasai beadwork in traditional bold patterns.",
+        name: "Maasai Beaded Choker (Traditional Red)",
+        sku: "JW-N-MAA-RED",
+        description: "Authentic handcrafted Maasai beadwork in traditional bold red patterns.",
         price: 3500,
         currentStock: 15,
         category: "Necklaces",
@@ -281,8 +271,6 @@ export const FirebaseService = {
       await FirebaseService.addProduct(db, sellerId, item);
     }
   },
-
-  // --- Queries ---
 
   getSellerOrdersQuery: (db: Firestore) => {
     return query(

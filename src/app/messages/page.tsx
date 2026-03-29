@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -22,8 +23,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, limit } from 'firebase/firestore';
 import { FirebaseService } from '@/services/firebase-service';
-import { Conversation, ChatMessage } from '@/lib/types';
+import { Conversation, ChatMessage, Product } from '@/lib/types';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -46,6 +48,11 @@ export default function MessagesPage() {
   }, [db, user]);
 
   const { data: conversations, isLoading: isConvsLoading } = useCollection<Conversation>(convsQuery);
+
+  // Discovery: Find the "Seller" ID to chat with (as a customer)
+  const productsLookupQuery = useMemoFirebase(() => query(collection(db, 'products'), limit(1)), [db]);
+  const { data: sampleProducts } = useCollection<Product>(productsLookupQuery);
+  const systemSellerId = useMemo(() => sampleProducts?.[0]?.sellerId || 'system-seller', [sampleProducts]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -83,7 +90,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!selectedConvId || !user || !newMessage.trim()) return;
 
-    FirebaseService.sendChatMessage(db, selectedConvId, user.uid, newMessage);
+    FirebaseService.sendChatMessage(db, selectedConvId, user.uid, newMessage, isSeller);
     setNewMessage('');
   };
 
@@ -95,10 +102,10 @@ export default function MessagesPage() {
       const convId = await FirebaseService.findOrCreateGeneralConversation(
         db, 
         user.uid, 
-        'system-seller', 
+        systemSellerId, 
         profile?.fullName || user.email?.split('@')[0] || 'Customer'
       );
-      await FirebaseService.sendChatMessage(db, convId, user.uid, generalInquiry);
+      await FirebaseService.sendChatMessage(db, convId, user.uid, generalInquiry, false);
       setGeneralInquiry('');
       setSelectedConvId(convId);
       toast({ title: "Message Sent", description: "The workshop will respond shortly." });
@@ -124,8 +131,8 @@ export default function MessagesPage() {
               <MessageSquare className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Customer Messages</h1>
-              <p className="text-slate-500 font-medium">Manage and respond to customer inquiries</p>
+              <h1 className="text-3xl font-bold text-slate-900">Inquiry Command Center</h1>
+              <p className="text-slate-500 font-medium">Manage and respond to customer questions</p>
             </div>
           </div>
 
@@ -133,7 +140,7 @@ export default function MessagesPage() {
             <Card className="border-none shadow-sm bg-white">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Messages</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Inquiries</p>
                   <h3 className="text-3xl font-bold text-slate-900">{stats.total}</h3>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-full">
@@ -144,7 +151,7 @@ export default function MessagesPage() {
             <Card className="border-none shadow-sm bg-white">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Unreplied</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Awaiting Response</p>
                   <h3 className="text-3xl font-bold text-amber-500">{stats.unreplied}</h3>
                 </div>
                 <div className="p-3 bg-amber-50 rounded-full">
@@ -155,7 +162,7 @@ export default function MessagesPage() {
             <Card className="border-none shadow-sm bg-white">
               <CardContent className="p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Replied</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Resolved/Replied</p>
                   <h3 className="text-3xl font-bold text-teal-500">{stats.replied}</h3>
                 </div>
                 <div className="p-3 bg-teal-50 rounded-full">
@@ -171,19 +178,19 @@ export default function MessagesPage() {
               onClick={() => setActiveFilter('all')}
               className={cn("h-10 rounded-lg font-bold px-6", activeFilter === 'all' ? "bg-[#0f172a]" : "text-slate-500")}
             >
-              All Messages
+              All Threads
             </Button>
             <Button 
               variant={activeFilter === 'unreplied' ? 'default' : 'ghost'} 
               onClick={() => setActiveFilter('unreplied')}
-              className={cn("h-10 rounded-lg font-bold px-6", activeFilter === 'unreplied' ? "bg-[#0f172a]" : "text-slate-500")}
+              className={cn("h-10 rounded-lg font-bold px-6", activeFilter === 'unreplied' ? "bg-amber-500" : "text-slate-500")}
             >
               Unreplied ({stats.unreplied})
             </Button>
             <Button 
               variant={activeFilter === 'replied' ? 'default' : 'ghost'} 
               onClick={() => setActiveFilter('replied')}
-              className={cn("h-10 rounded-lg font-bold px-6", activeFilter === 'replied' ? "bg-[#0f172a]" : "text-slate-500")}
+              className={cn("h-10 rounded-lg font-bold px-6", activeFilter === 'replied' ? "bg-teal-500" : "text-slate-500")}
             >
               Replied
             </Button>
@@ -193,13 +200,13 @@ export default function MessagesPage() {
             <Card className="lg:col-span-2 border-none shadow-sm h-full flex flex-col bg-white rounded-2xl overflow-hidden">
               <div className="p-5 border-b border-slate-50 bg-[#0f172a] text-white flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                <h2 className="text-sm font-bold">Inquiries ({filteredConversations.length})</h2>
+                <h2 className="text-sm font-bold">Conversations ({filteredConversations.length})</h2>
               </div>
               <ScrollArea className="flex-1">
                 {isConvsLoading ? (
                   <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-teal-500" /></div>
                 ) : filteredConversations.length === 0 ? (
-                  <div className="p-12 text-center text-slate-300 italic text-sm">No inquiries found.</div>
+                  <div className="p-12 text-center text-slate-300 italic text-sm">No conversations found.</div>
                 ) : (
                   <div className="divide-y divide-slate-50">
                     {filteredConversations.map((conv) => (
@@ -228,7 +235,7 @@ export default function MessagesPage() {
                           <p className="text-xs text-slate-500 italic mb-1 truncate">"{conv.lastMessage}"</p>
                           <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase">
                             <Clock className="h-3 w-3" />
-                            {conv.timestamp?.seconds ? format(new Date(conv.timestamp.seconds * 1000), 'HH:mm') : '...'}
+                            {conv.timestamp?.seconds ? format(new Date(conv.timestamp.seconds * 1000), 'MMM d, HH:mm') : '...'}
                           </div>
                         </div>
                       </button>
@@ -286,7 +293,7 @@ export default function MessagesPage() {
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
                   <div className="p-6 bg-slate-50 rounded-full mb-4"><MessageSquare className="h-12 w-12 text-slate-200" /></div>
                   <h3 className="text-xl font-bold text-slate-900">Select an Inquiry</h3>
-                  <p className="text-sm text-slate-400 mt-2 max-w-xs italic">Choose a message from the sidebar to respond to your customers.</p>
+                  <p className="text-sm text-slate-400 mt-2 max-w-xs italic">Choose a conversation from the sidebar to respond to your customers.</p>
                 </div>
               )}
             </Card>
@@ -310,7 +317,7 @@ export default function MessagesPage() {
           <CardContent className="p-8 space-y-6">
             <div className="space-y-4">
               <Textarea 
-                placeholder="Type your message to the seller..." 
+                placeholder="Type your inquiry to the workshop..." 
                 className="min-h-[160px] bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 text-lg font-medium focus-visible:ring-teal-400 focus-visible:border-transparent transition-all"
                 value={generalInquiry}
                 onChange={(e) => setGeneralInquiry(e.target.value)}
@@ -339,7 +346,7 @@ export default function MessagesPage() {
                 <MessageSquare className="h-10 w-10 text-slate-200" />
               </div>
               <h4 className="text-xl font-bold text-slate-900">No messages yet</h4>
-              <p className="text-sm text-slate-400 mt-2 font-medium">Send a message above to get started</p>
+              <p className="text-sm text-slate-400 mt-2 font-medium">Send an inquiry above to synchronize with our workshop.</p>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -375,7 +382,7 @@ export default function MessagesPage() {
               {selectedConvId && (
                 <Card className="border-none shadow-sm rounded-3xl overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
                   <div className="p-5 bg-slate-900 text-white flex justify-between items-center">
-                    <h4 className="font-bold text-sm uppercase tracking-widest">Live Thread History</h4>
+                    <h4 className="font-bold text-sm uppercase tracking-widest">Chat History</h4>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedConvId(null)} className="h-8 text-slate-400 hover:text-white">Close Chat</Button>
                   </div>
                   <ScrollArea className="h-[400px] p-6 bg-slate-50/50">

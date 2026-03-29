@@ -64,22 +64,49 @@ export default function ShopPage() {
   const { products, isLoading: isProductsLoading, error: productsError } = useCustomerProducts(24);
 
   const updateItemQty = (id: string, delta: number, max: number) => {
+    if (max <= 0) {
+       toast({ variant: "destructive", title: "Out of Stock", description: "This item is currently unavailable." });
+       return;
+    }
     setItemQuantities(prev => {
       const current = prev[id] || 1;
       const next = Math.max(1, Math.min(max, current + delta));
+      
+      if (current + delta > max) {
+        toast({ 
+          title: "Stock Limit Reached", 
+          description: `Only ${max} units are currently available in our inventory.`,
+          variant: "destructive"
+        });
+      }
+      
       return { ...prev, [id]: next };
     });
   };
 
   const addToCart = (product: any) => {
     const qty = itemQuantities[product.id] || 1;
+    
+    // Safety check against inventory
+    if (qty > product.currentStock) {
+      toast({ 
+        variant: "destructive", 
+        title: "Quantity Restricted", 
+        description: `We only have ${product.currentStock} in stock. Adjusting your order.` 
+      });
+      setItemQuantities(prev => ({ ...prev, [product.id]: product.currentStock }));
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + qty } : item);
+        const newQty = Math.min(product.currentStock, existing.quantity + qty);
+        return prev.map(item => item.id === product.id ? { ...item, quantity: newQty } : item);
       }
       return [...prev, { id: product.id, name: product.name, price: product.price, quantity: qty }];
     });
+
     toast({
       title: "Added to Cart",
       description: `${qty}x ${product.name} ready for checkout.`,
@@ -95,6 +122,17 @@ export default function ShopPage() {
     }
     
     const qty = itemQuantities[product.id] || 1;
+
+    // Safety check against inventory
+    if (qty > product.currentStock) {
+      toast({ 
+        variant: "destructive", 
+        title: "Quantity Error", 
+        description: `Maximum available quantity for this item is ${product.currentStock}.` 
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       await FirebaseService.placeOrder(db, user.uid, profile?.fullName || user.email?.split('@')[0] || 'Customer', product, qty);
@@ -178,7 +216,6 @@ export default function ShopPage() {
   const proceedWithOrder = async (uid: string, customerName: string) => {
     setIsProcessing(true);
     try {
-      // Use addManualOrder style structure to support multiple items with correct quantities
       await FirebaseService.addManualOrder(db, 'system-seller', {
         customerId: uid,
         customerName: customerName,
@@ -274,6 +311,7 @@ export default function ShopPage() {
                 {products.map((product) => {
                   const isLowStock = product.currentStock <= (product.lowStockThreshold || 5);
                   const selectedQty = itemQuantities[product.id] || 1;
+                  const isAtMax = selectedQty >= product.currentStock;
                   
                   return (
                     <Card key={product.id} className="border-none shadow-sm overflow-hidden group bg-white rounded-2xl transition-all hover:shadow-md relative">
@@ -320,6 +358,7 @@ export default function ShopPage() {
                               size="icon" 
                               className="h-6 w-6 rounded-md hover:bg-white"
                               onClick={() => updateItemQty(product.id, -1, product.currentStock)}
+                              disabled={selectedQty <= 1}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
@@ -327,14 +366,18 @@ export default function ShopPage() {
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-6 w-6 rounded-md hover:bg-white"
+                              className={cn("h-6 w-6 rounded-md hover:bg-white", isAtMax && "opacity-30")}
                               onClick={() => updateItemQty(product.id, 1, product.currentStock)}
+                              disabled={isAtMax}
                             >
                               <Plus className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-1 font-medium">SKU: {product.sku}</p>
+                        <p className="text-[10px] text-slate-400 mt-1 font-medium flex justify-between">
+                          <span>SKU: {product.sku}</span>
+                          <span className="font-bold text-teal-600">Stock: {product.currentStock}</span>
+                        </p>
                       </CardContent>
                       <CardFooter className="p-4 pt-0 flex flex-col gap-2">
                         <Button 

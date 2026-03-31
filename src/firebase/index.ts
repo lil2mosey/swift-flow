@@ -5,6 +5,10 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
+/**
+ * Professional Firebase Singleton for Next.js & Vercel.
+ * Prevents multiple initializations in serverless and HMR environments.
+ */
 declare global {
   var __firebase_app: FirebaseApp | undefined;
   var __firebase_auth: Auth | undefined;
@@ -26,6 +30,7 @@ export function initializeFirebase() {
     };
   }
   
+  // Server-side initialization (fallback)
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   return { firebaseApp: app, auth: getAuth(app), firestore: getFirestore(app) };
 }

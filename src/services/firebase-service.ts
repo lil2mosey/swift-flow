@@ -19,6 +19,10 @@ import {
 } from '@/firebase';
 import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
+/**
+ * High-performance backend services for SwiftFlow.
+ * Optimized for Vercel with parallel batch processing.
+ */
 export const FirebaseService = {
   addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
     customerName: string;
@@ -67,15 +71,17 @@ export const FirebaseService = {
     });
 
     if (order.items && order.items.length > 0) {
-      order.items.forEach(item => {
+      // Parallelize stock updates for speed
+      await Promise.all(order.items.map(item => {
         if (item.productId) {
           const productRef = doc(db, 'products', item.productId);
-          updateDocumentNonBlocking(productRef, {
+          return updateDocumentNonBlocking(productRef, {
             currentStock: increment(-item.quantity),
             updatedAt: serverTimestamp()
           });
         }
-      });
+        return Promise.resolve();
+      }));
     }
   },
 
@@ -249,6 +255,7 @@ export const FirebaseService = {
 
     const missingItems = inventory.filter(item => !existingSkus.has(item.sku));
     if (missingItems.length > 0) {
+      // High-speed parallelized seeding
       await Promise.all(missingItems.map(item => FirebaseService.addProduct(db, sellerId, item)));
     }
   },

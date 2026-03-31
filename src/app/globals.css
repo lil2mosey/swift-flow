@@ -4,31 +4,28 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* Slate-50 #f8fafc */
+    --background: 210 40% 98%; /* Slate-50 */
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%; /* Slate-900 #0f172a */
+    --primary: 222.2 47.4% 11.2%; /* Slate-900 */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 171 66% 50%; /* Teal-400 #2dd4bfish */
+    --accent: 171 66% 50%; /* Teal-400 */
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.75rem;
+    --radius: 1rem;
     --chart-1: 171 66% 50%;
     --chart-2: 222 47% 11%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
   }
 }
 
@@ -41,10 +38,15 @@
   }
 }
 
+/* Custom UI Utility Classes */
 .status-pending {
-  @apply bg-[#fef3c7] text-[#92400e];
+  @apply bg-amber-100 text-amber-700;
 }
 
 .text-teal-accent {
-  @apply text-[#2dd4bf];
+  @apply text-teal-400;
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
 }

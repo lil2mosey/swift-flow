@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, LogIn, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -37,14 +37,14 @@ export default function LoginPage() {
             customerId: user.uid,
             customerName: profile.fullName || profile.firstName || user.email?.split('@')[0] || 'Customer',
             customerPhone: pendingOrder.customerPhone,
-            deliveryLocation: 'Online Storefront (Auto-Sync)',
+            deliveryLocation: 'Online Storefront',
             totalAmount: pendingOrder.totalAmount,
             paymentStatus: 'unpaid',
             status: 'pending',
             items: pendingOrder.items
           });
           localStorage.removeItem('swiftflow_pending_order');
-          toast({ title: "Order Synchronized", description: "Your items have been added to your profile." });
+          toast({ title: "Order Synced", description: "Your items have been added to your profile." });
           router.push('/orders');
           return;
         } catch (e) {
@@ -141,7 +141,7 @@ export default function LoginPage() {
               <form onSubmit={handleSignIn}>
                 <CardHeader className="pt-8 px-8">
                   <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-                  <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest">Enterprise Command Center</CardDescription>
+                  <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Enterprise Command Center</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 px-8 pb-8">
                   <div className="space-y-2">
@@ -152,14 +152,14 @@ export default function LoginPage() {
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                     <div className="relative">
                       <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500">
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors">
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="px-8 pb-8">
-                  <Button type="submit" className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl">Sign In to Portal</Button>
+                  <Button type="submit" className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all">Sign In to Portal</Button>
                 </CardFooter>
               </form>
             </Card>
@@ -169,7 +169,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden">
               <CardHeader className="pt-8 px-8">
                 <CardTitle className="text-2xl font-bold">New Account</CardTitle>
-                <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest">Join the ecosystem</CardDescription>
+                <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Join the ecosystem</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 px-8 pb-8">
                 <div className="space-y-1.5">
@@ -184,15 +184,15 @@ export default function LoginPage() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                   <div className="relative">
                     <Input type={showPassword ? "text" : "password"} placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors">
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3 px-8 pb-8">
-                <Button onClick={(e) => handleSignUp(e, 'seller')} className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl">Start as Seller</Button>
-                <Button onClick={(e) => handleSignUp(e, 'customer')} variant="outline" className="w-full h-14 border-slate-200 font-bold rounded-2xl">Join as Customer</Button>
+                <Button onClick={(e) => handleSignUp(e, 'seller')} className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all">Start as Seller</Button>
+                <Button onClick={(e) => handleSignUp(e, 'customer')} variant="outline" className="w-full h-14 border-slate-200 font-bold rounded-2xl hover:bg-slate-50">Join as Customer</Button>
               </CardFooter>
             </Card>
           </TabsContent>

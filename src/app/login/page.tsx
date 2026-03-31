@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -38,14 +37,14 @@ export default function LoginPage() {
             customerId: user.uid,
             customerName: profile.fullName || profile.firstName || user.email?.split('@')[0] || 'Customer',
             customerPhone: pendingOrder.customerPhone,
-            deliveryLocation: 'Online Storefront (Post-Auth Sync)',
+            deliveryLocation: 'Online Storefront (Auto-Sync)',
             totalAmount: pendingOrder.totalAmount,
             paymentStatus: 'unpaid',
             status: 'pending',
             items: pendingOrder.items
           });
           localStorage.removeItem('swiftflow_pending_order');
-          toast({ title: "Order Synchronized", description: "Your pending items have been added to your profile." });
+          toast({ title: "Order Synchronized", description: "Your items have been added to your profile." });
           router.push('/orders');
           return;
         } catch (e) {
@@ -185,7 +184,7 @@ export default function LoginPage() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                   <div className="relative">
                     <Input type={showPassword ? "text" : "password"} placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500">
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>

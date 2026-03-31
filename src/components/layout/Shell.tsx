@@ -29,10 +29,6 @@ interface ShellProps {
   userRole?: 'seller' | 'customer';
 }
 
-/**
- * Enterprise Navigation Shell for SwiftFlow.
- * Optimized for mobile-first visibility and Vercel stability.
- */
 export function Shell({ children, userRole }: ShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
@@ -62,6 +58,7 @@ export function Shell({ children, userRole }: ShellProps) {
   ];
 
   const customerNav = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Shop', href: '/shop', icon: ShoppingBag },
     { name: 'My Orders', href: '/orders', icon: ClipboardList },
     { name: 'Chat', href: '/messages', icon: MessageSquare },
@@ -138,7 +135,6 @@ export function Shell({ children, userRole }: ShellProps) {
         </div>
       </main>
 
-      {/* Mobile Menu Dropdown: Solid background for maximum readability */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[150] bg-[#0f172a] pt-20 px-8 md:hidden animate-in fade-in slide-in-from-top-4 duration-300 overflow-y-auto">
           <div className="flex flex-col gap-2">

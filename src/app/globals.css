@@ -23,7 +23,7 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.75rem; /* rounded-xl as requested */
+    --radius: 0.75rem;
     --chart-1: 171 66% 50%;
     --chart-2: 222 47% 11%;
     --chart-3: 197 37% 24%;
@@ -34,7 +34,7 @@
 
 @layer base {
   * {
-    border-color: hsl(var(--border)); /* Fixed: Use direct variable to avoid @apply lookup errors in Turbopack */
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-background text-foreground font-body;

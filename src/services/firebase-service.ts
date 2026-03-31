@@ -1,4 +1,3 @@
-
 'use client';
 
 import { 
@@ -20,13 +19,7 @@ import {
 } from '@/firebase';
 import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
-/**
- * Enterprise Service Layer for SwiftFlow Synchronization.
- * Handles logistics, inventory, and communications with high-precision timestamps.
- */
 export const FirebaseService = {
-  // --- Orders & Logistics ---
-  
   addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
     customerName: string;
     customerPhone: string;
@@ -86,8 +79,6 @@ export const FirebaseService = {
     }
   },
 
-  // --- Conversations & Direct Messaging ---
-
   findOrCreateConversation: async (db: Firestore, customerId: string, sellerId: string, item: Product, customerName: string) => {
     const convsRef = collection(db, 'conversations');
     const participants = [customerId, sellerId].sort();
@@ -140,7 +131,7 @@ export const FirebaseService = {
       itemId: 'general',
       itemName: 'General Inquiry',
       customerName: customerName,
-      lastMessage: 'Customer started a general chat',
+      lastMessage: 'Customer started a chat',
       status: 'unreplied',
       timestamp: serverTimestamp(),
     });
@@ -183,8 +174,6 @@ export const FirebaseService = {
       limit(100)
     );
   },
-
-  // --- Products & High-Speed Inventory Seeding ---
 
   addProduct: (db: Firestore, sellerId: string, productData: Omit<Product, 'id' | 'sellerId'>) => {
     const productsRef = collection(db, 'products');

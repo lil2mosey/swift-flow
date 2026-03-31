@@ -61,11 +61,7 @@ import { PermissionAwareCollection } from '@/components/PermissionAwareCollectio
 import Link from 'next/link';
 import { format } from 'date-fns';
 
-/**
- * Official Receipt Layout for Printing.
- */
 const ReceiptPrintView = ({ order }: { order: Order }) => {
-  const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
   const orderTotal = order.totalAmount || order.total || 0;
   const formattedDate = order.createdAt 
     ? (order.createdAt.seconds ? format(new Date(order.createdAt.seconds * 1000), 'MMMM d, yyyy HH:mm') : format(new Date(order.createdAt), 'MMMM d, yyyy HH:mm'))
@@ -200,7 +196,7 @@ export default function OrdersPage() {
   }, [orderToPrint]);
 
   const formatDate = (date: any) => {
-    if (!date) return 'Loading...';
+    if (!date) return 'Recently';
     const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
     return isNaN(d.getTime()) ? 'Recently' : format(d, 'MMM d, yyyy');
   };
@@ -252,7 +248,7 @@ export default function OrdersPage() {
       }]
     });
     setIsOrderDialogOpen(false);
-    toast({ title: "Order Recorded", description: "The manual sale has been successfully recorded." });
+    toast({ title: "Order Recorded", description: "The sale has been successfully recorded." });
   };
 
   return (
@@ -271,7 +267,7 @@ export default function OrdersPage() {
               <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                 <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
                   <DialogTitle className="text-3xl font-bold">New <span className="text-teal-400">Order</span></DialogTitle>
-                  <DialogDescription className="text-slate-400">Record sales from Instagram or direct shop visits.</DialogDescription>
+                  <DialogDescription className="text-slate-400">Record sales from DM or direct shop visits.</DialogDescription>
                 </div>
                 <div className="px-8 py-6 space-y-6">
                   <Input placeholder="Customer Name" value={newOrder.customerName} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
@@ -292,7 +288,7 @@ export default function OrdersPage() {
           )}
         />
 
-        {!isSeller && !isInitialLoading && orders && orders.length > 0 && (
+        {!isInitialLoading && orders && orders.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Card className="border-none shadow-sm bg-[#0f172a] text-white">
               <CardContent className="p-6">

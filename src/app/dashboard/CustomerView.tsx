@@ -92,14 +92,13 @@ export default function CustomerView() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
-      {/* Header Section */}
       <div className="flex items-center gap-5">
         <div className="h-16 w-16 bg-[#0f172a] rounded-2xl flex items-center justify-center shadow-2xl ring-4 ring-white">
           <Package className="h-8 w-8 text-teal-400" />
         </div>
         <div>
           <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
-            Welcome back, {profile?.firstName || profile?.fullName?.split(' ')[0] || 'Member'}!
+            Welcome, {profile?.firstName || profile?.fullName?.split(' ')[0] || 'Member'}!
           </h1>
           <p className="text-slate-500 font-medium mt-1">
             <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest mr-2 border-r pr-2">Member since</span>
@@ -109,7 +108,6 @@ export default function CustomerView() {
         </div>
       </div>
 
-      {/* Analytics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-none shadow-sm bg-white overflow-hidden group">
           <CardContent className="p-6">
@@ -164,7 +162,6 @@ export default function CustomerView() {
         </Card>
       </div>
 
-      {/* Status Badges Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
           { label: 'Pending', value: stats.statusCounts.pending, color: 'text-amber-500', bg: 'bg-amber-50' },
@@ -180,9 +177,7 @@ export default function CustomerView() {
         ))}
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Orders Section */}
         <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden flex flex-col">
           <div className="p-6 bg-[#0f172a] text-white flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -252,7 +247,6 @@ export default function CustomerView() {
           </CardContent>
         </Card>
 
-        {/* Messaging Section */}
         <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden flex flex-col">
           <div className="p-6 bg-[#0f172a] text-white flex items-center gap-3">
             <MessageSquare className="h-5 w-5 text-teal-400" />

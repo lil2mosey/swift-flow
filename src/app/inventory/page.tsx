@@ -61,11 +61,9 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
 
-  // Restock State
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [restockAmount, setRestockAmount] = useState<number>(0);
 
-  // New Item State
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -213,7 +211,7 @@ export default function InventoryPage() {
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Target Item</Label>
-                          <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                          <Select value={selectedItemId || ''} onValueChange={setSelectedItemId}>
                             <SelectTrigger className="h-14 bg-slate-50 border-none rounded-xl font-bold">
                               <SelectValue placeholder="-- Select Item --" />
                             </SelectTrigger>
@@ -288,7 +286,7 @@ export default function InventoryPage() {
                 <TableRow className="border-none hover:bg-transparent">
                   <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Details</TableHead>
                   <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Current Stock</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Last Updated</TableHead>
+                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Last Sync</TableHead>
                   <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Unit Price</TableHead>
                 </TableRow>
               </TableHeader>

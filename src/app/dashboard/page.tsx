@@ -7,7 +7,6 @@ import { useUser } from '@/firebase';
 import { BrandLoader } from '@/components/layout/BrandLoader';
 import { RoleGuard } from '@/components/RoleGuard';
 
-// Lazily load role-specific views for better bundle splitting
 const SellerView = dynamic(() => import('./SellerView'), { 
   loading: () => <BrandLoader />,
   ssr: false 
@@ -18,10 +17,6 @@ const CustomerView = dynamic(() => import('./CustomerView'), {
   ssr: false 
 });
 
-/**
- * Enterprise Dashboard Entry Point.
- * Synchronizes with the user's role to display the appropriate command center.
- */
 export default function DashboardPage() {
   const { profile } = useUser();
 

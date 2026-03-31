@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -21,7 +22,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * Enterprise Service Layer for SwiftFlow Synchronization.
- * Handles logistics, inventory, and communications.
+ * Handles logistics, inventory, and communications with high-precision timestamps.
  */
 export const FirebaseService = {
   // --- Orders & Logistics ---
@@ -199,13 +200,10 @@ export const FirebaseService = {
 
   seedKenyaJewelry: async (db: Firestore, sellerId: string) => {
     const productsRef = collection(db, 'products');
-
-    // Batch fetch existing items by SKU to ensure idempotent parallel sync
     const existingSnapshot = await getDocs(productsRef);
     const existingSkus = new Set(existingSnapshot.docs.map(doc => doc.data().sku));
 
     const inventory = [
-      // --- Professional Finished Goods ---
       {
         name: "Infinity Bridal Ring Set (925 Silver)",
         sku: "JW-R-INF-SS",
@@ -233,20 +231,6 @@ export const FirebaseService = {
         itemType: 'product' as const
       },
       {
-        name: "Savannah Hand-Hammered Brass Cuff",
-        sku: "JW-B-SAV-BRS",
-        description: "Brushed brass cuff featuring hand-hammered textures inspired by the Kenyan savannah.",
-        price: 2800,
-        currentStock: 20,
-        category: "Bracelets",
-        sellerId: sellerId,
-        lowStockThreshold: 8,
-        averageDailySales: 0.3,
-        leadTimeDays: 4,
-        itemType: 'product' as const
-      },
-      // --- Professional Workshop Raw Materials ---
-      {
         name: "24K Fine Gold Casting Grain",
         sku: "RM-GOLD-24K-GR",
         description: "Pure 24K gold grains for high-purity casting and custom alloying.",
@@ -257,19 +241,6 @@ export const FirebaseService = {
         lowStockThreshold: 50,
         averageDailySales: 0,
         leadTimeDays: 5,
-        itemType: 'material' as const
-      },
-      {
-        name: "Sterling Silver Square Wire (1.5mm)",
-        sku: "RM-SILV-WIRE-SQ15",
-        description: "Half-hard sterling silver square wire, perfect for structural jewelry elements.",
-        price: 180,
-        currentStock: 200,
-        category: "Precious Metals",
-        sellerId: sellerId,
-        lowStockThreshold: 40,
-        averageDailySales: 0,
-        leadTimeDays: 3,
         itemType: 'material' as const
       },
       {
@@ -284,27 +255,11 @@ export const FirebaseService = {
         averageDailySales: 0,
         leadTimeDays: 14,
         itemType: 'material' as const
-      },
-      {
-        name: "14K Gold Solder (Hard - 2DWT)",
-        sku: "RM-SOLD-GOLD-H",
-        description: "Professional high-temperature 14K gold solder for durable jewelry joins.",
-        price: 2800,
-        currentStock: 15,
-        category: "Soldering Supplies",
-        sellerId: sellerId,
-        lowStockThreshold: 5,
-        averageDailySales: 0,
-        leadTimeDays: 5,
-        itemType: 'material' as const
       }
     ];
 
-    // Filter missing items and add them in parallel for maximum speed
     const missingItems = inventory.filter(item => !existingSkus.has(item.sku));
-    
     if (missingItems.length > 0) {
-      // Parallelized additions to minimize loading time
       await Promise.all(missingItems.map(item => FirebaseService.addProduct(db, sellerId, item)));
     }
   },

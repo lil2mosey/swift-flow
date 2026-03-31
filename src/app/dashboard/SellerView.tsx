@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -32,6 +33,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { format } from 'date-fns';
 
 export default function SellerView() {
   const { user, profile } = useUser();
@@ -44,7 +46,7 @@ export default function SellerView() {
 
   const productsQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'seller') return null;
-    return FirebaseService.getProductsQuery(db);
+    return FirebaseService.getProductsQuery(db, user?.uid);
   }, [db, user, profile]);
 
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
@@ -52,9 +54,14 @@ export default function SellerView() {
 
   const lowStockItems = useMemo(() => {
     if (!products) return [];
-    // Filter items that are at or below their individual lowStockThreshold
     return products.filter(p => p.currentStock <= (p.lowStockThreshold || 20));
   }, [products]);
+
+  const formatDate = (date: any) => {
+    if (!date) return 'Recently joined';
+    const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    return isNaN(d.getTime()) ? 'Recently joined' : `Managing since ${format(d, 'MMM d, yyyy')}`;
+  };
 
   const processedChartData = useMemo(() => {
     if (!sellerOrders || sellerOrders.length === 0) return [];
@@ -115,17 +122,18 @@ export default function SellerView() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-            Seller Command Center <TrendingUp className="h-6 w-6 text-teal-500" />
-          </h1>
-          <p className="text-slate-500 font-medium italic">Synchronizing your Instagram sales flow</p>
+      <div className="flex items-center gap-4">
+        <div className="h-14 w-14 bg-[#0f172a] rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-white">
+          <TrendingUp className="h-7 w-7 text-teal-400" />
         </div>
-        
-        <Button asChild className="bg-primary hover:bg-slate-800 text-white font-bold rounded-xl h-11 w-full sm:w-auto shadow-lg shadow-slate-200">
-          <Link href="/orders">View All Orders</Link>
-        </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 leading-tight">
+            Seller Command Center
+          </h1>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-0.5">
+            {formatDate(profile?.createdAt)}
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -234,125 +242,9 @@ export default function SellerView() {
               </Table>
             </CardContent>
           </Card>
-
-          <Card className="border-none shadow-sm overflow-hidden">
-            <CardHeader className="bg-rose-50/50 border-b border-rose-100 flex flex-row items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-rose-100 rounded-xl">
-                  <AlertTriangle className="h-5 w-5 text-rose-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">Critical Inventory Alerts</CardTitle>
-                  <CardDescription className="text-rose-600 font-medium">Replenish these items immediately</CardDescription>
-                </div>
-              </div>
-              <Button asChild variant="ghost" className="text-xs font-bold text-slate-400 hover:text-rose-600 gap-1">
-                <Link href="/inventory">Manage Inventory <ChevronRight className="h-3 w-3" /></Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-slate-50/30">
-                  <TableRow className="border-slate-100">
-                    <TableHead className="pl-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Item Name</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Type</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Stock Level</TableHead>
-                    <TableHead className="text-right pr-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Threshold</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isProductsLoading ? (
-                    Array(3).fill(0).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="pl-6"><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                        <TableCell className="text-right pr-6"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : lowStockItems.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-12 text-slate-400 font-medium italic">
-                        All inventory levels are healthy.
-                      </TableCell>
-                    </TableRow>
-                  ) : lowStockItems.slice(0, 5).map((item) => (
-                    <TableRow key={item.id} className="border-slate-100 hover:bg-slate-50/30">
-                      <TableCell className="pl-6">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{item.name}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase">{item.category}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">
-                          {item.itemType === 'material' ? 'Raw Material' : 'Finished Good'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "font-bold px-2 py-0.5 rounded",
-                          item.currentStock <= (item.criticalThreshold || 5) ? "bg-rose-100 text-rose-700 animate-pulse" : "bg-amber-100 text-amber-700"
-                        )}>
-                          {item.currentStock}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">
-                          min {item.lowStockThreshold || 20}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">Sales Trajectory (Paid)</CardTitle>
-              <CardDescription className="text-[10px] uppercase font-bold text-slate-400">Past 7 Days Growth</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[180px]">
-              {processedChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={processedChartData}>
-                    <defs>
-                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
-                    <YAxis hide />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontWeight: 'bold' }}
-                      formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Revenue']}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#2dd4bf" 
-                      fillOpacity={1} 
-                      fill="url(#colorValue)" 
-                      strokeWidth={3} 
-                      animationDuration={1500}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                   <TrendingUp className="h-8 w-8 text-slate-100 mb-2" />
-                   <p className="text-[10px] text-slate-400 font-bold uppercase">No sales data available yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           <Card className="border-none shadow-sm bg-[#0f172a] text-white">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">

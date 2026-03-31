@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCustomerProducts, useCustomerOrders } from '@/hooks/use-customer-data';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function CustomerView() {
   const { profile } = useUser();
@@ -52,14 +53,25 @@ export default function CustomerView() {
     }
   ];
 
+  const formatDate = (date: any) => {
+    if (!date) return 'Recently joined';
+    const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    return isNaN(d.getTime()) ? 'Recently joined' : `Member since ${format(d, 'MMMM d, yyyy')}`;
+  };
+
   return (
     <div className="space-y-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center gap-4">
+        <div className="h-14 w-14 bg-[#0f172a] rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-white">
+          <Package className="h-7 w-7 text-teal-400" />
+        </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-            Welcome, {profile?.firstName || profile?.fullName?.split(' ')[0] || 'Valued Customer'}! <TrendingUp className="h-6 w-6 text-teal-500" />
+          <h1 className="text-3xl font-bold text-slate-900 leading-tight">
+            Welcome back, {profile?.firstName || 'Valued Customer'}!
           </h1>
-          <p className="text-slate-500 font-medium italic">Synchronizing your shopping experience with our workshop ✨</p>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-0.5">
+            {formatDate(profile?.createdAt)}
+          </p>
         </div>
       </div>
 

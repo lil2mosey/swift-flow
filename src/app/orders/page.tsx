@@ -40,7 +40,10 @@ import {
   Smartphone,
   Lock,
   ShieldCheck,
-  ShoppingBag
+  ShoppingBag,
+  DollarSign,
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -174,6 +177,18 @@ export default function OrdersPage() {
     );
   }, [orders, searchTerm]);
 
+  const stats = useMemo(() => {
+    if (!orders) return { totalSpent: 0, pendingAmount: 0, totalOrders: 0 };
+    const paid = orders.filter(o => o.paymentStatus === 'paid');
+    const unpaid = orders.filter(o => o.paymentStatus !== 'paid');
+    
+    return {
+      totalSpent: paid.reduce((acc, o) => acc + (o.totalAmount || o.total || 0), 0),
+      pendingAmount: unpaid.reduce((acc, o) => acc + (o.totalAmount || o.total || 0), 0),
+      totalOrders: orders.length
+    };
+  }, [orders]);
+
   useEffect(() => {
     if (orderToPrint) {
       const timer = setTimeout(() => {
@@ -276,6 +291,50 @@ export default function OrdersPage() {
             </Dialog>
           )}
         />
+
+        {/* Financial Summary Row for Customers */}
+        {!isSeller && !isInitialLoading && orders && orders.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Card className="border-none shadow-sm bg-[#0f172a] text-white">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-teal-500/10 rounded-xl">
+                    <DollarSign className="h-5 w-5 text-teal-400" />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Investment</span>
+                </div>
+                <div className="text-3xl font-bold">KES {stats.totalSpent.toLocaleString()}</div>
+                <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 tracking-tighter">Lifetime Synchronized Spent</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm bg-white">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-amber-50 rounded-xl">
+                    <Clock className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending Balance</span>
+                </div>
+                <div className="text-3xl font-bold text-slate-900">KES {stats.pendingAmount.toLocaleString()}</div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Awaiting Sync/Payment</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm bg-white">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-slate-50 rounded-xl">
+                    <TrendingUp className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Pool</span>
+                </div>
+                <div className="text-3xl font-bold text-slate-900">{stats.totalOrders}</div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Total Synchronized Pieces</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <PermissionAwareCollection 
           isLoading={isInitialLoading} 

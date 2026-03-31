@@ -13,6 +13,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'fire
 import { doc } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { BrandLoader } from '@/components/layout/BrandLoader';
+import { FirebaseService } from '@/services/firebase-service';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -24,18 +25,43 @@ export default function LoginPage() {
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
 
-  // Unified redirect logic
+  // Unified redirect and Synchronized Order flow
   useEffect(() => {
     if (isUserLoading || isProfileLoading) return;
 
     if (user && profile) {
+      // Check for Synchronized Pending Order from Guest Session
+      const pendingOrderStr = localStorage.getItem('swiftflow_pending_order');
+      if (pendingOrderStr) {
+        try {
+          const pendingOrder = JSON.parse(pendingOrderStr);
+          FirebaseService.addManualOrder(firestore, 'system-seller', {
+            customerId: user.uid,
+            customerName: profile.fullName || profile.firstName || user.email?.split('@')[0] || 'Customer',
+            customerPhone: pendingOrder.customerPhone,
+            deliveryLocation: 'Online Storefront (Post-Auth Sync)',
+            totalAmount: pendingOrder.totalAmount,
+            paymentStatus: 'unpaid',
+            status: 'pending',
+            items: pendingOrder.items
+          });
+          localStorage.removeItem('swiftflow_pending_order');
+          toast({ title: "Order Synchronized", description: "Your pending items have been added to your profile." });
+          router.push('/orders');
+          return;
+        } catch (e) {
+          console.error("Failed to sync pending order:", e);
+          localStorage.removeItem('swiftflow_pending_order');
+        }
+      }
+
       if (profile.role === 'seller') {
         router.push('/dashboard');
       } else {
         router.push('/shop');
       }
     }
-  }, [user, isUserLoading, profile, isProfileLoading, router]);
+  }, [user, isUserLoading, profile, isProfileLoading, router, firestore]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +130,7 @@ export default function LoginPage() {
             <ShieldCheck className="h-8 w-8" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
-          <p className="text-slate-500 font-medium italic">Order Management and Inventory Tracking</p>
+          <p className="text-slate-500 font-medium italic">order management and inventory tracking</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">

@@ -38,10 +38,12 @@ import { useCustomerProducts } from '@/hooks/use-customer-data';
 import { cn } from '@/lib/utils';
 import { ChatMessage, Product } from '@/lib/types';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 export default function ShopPage() {
   const { user, profile } = useUser();
   const db = useFirestore();
+  const router = useRouter();
   
   const [cart, setCart] = useState<{ id: string, name: string, price: number, quantity: number }[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -127,7 +129,30 @@ export default function ShopPage() {
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleMpesaCheckout = async () => {
-    if (!user) return;
+    if (cart.length === 0) return;
+
+    if (!user) {
+      // Synchronized Guest Flow: Save order intent and redirect to login
+      const pendingOrder = {
+        items: cart.map(item => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          priceAtOrder: item.price
+        })),
+        totalAmount: cartTotal,
+        customerPhone: phoneNumber,
+      };
+      
+      localStorage.setItem('swiftflow_pending_order', JSON.stringify(pendingOrder));
+      toast({ 
+        title: "Account Required", 
+        description: "Please sign in to complete your synchronization." 
+      });
+      router.push('/login');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       await FirebaseService.addManualOrder(db, 'system-seller', {
@@ -148,6 +173,7 @@ export default function ShopPage() {
       setCart([]);
       setIsCheckoutOpen(false);
       toast({ title: "Order Submitted!", description: "Synchronized with your portal." });
+      router.push('/orders');
     } finally {
       setIsProcessing(false);
     }
@@ -198,6 +224,7 @@ export default function ShopPage() {
                     alt={product.name} 
                     fill 
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    data-ai-hint="jewelry diamond"
                   />
                   <div className="absolute top-2 right-2">
                     <Button 
@@ -342,7 +369,7 @@ export default function ShopPage() {
                 disabled={isProcessing || cart.length === 0}
                 className="w-full h-12 sm:h-14 bg-primary text-white font-bold rounded-2xl shadow-xl"
               >
-                {isProcessing ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : "Confirm Order"}
+                {isProcessing ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : user ? "Confirm Order" : "Login to Place Order"}
               </Button>
             </div>
           </DialogFooter>

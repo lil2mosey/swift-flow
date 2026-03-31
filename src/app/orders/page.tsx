@@ -200,14 +200,14 @@ export default function OrdersPage() {
   }, [orderToPrint]);
 
   const formatDate = (date: any) => {
-    if (!date) return 'Syncing...';
+    if (!date) return 'Loading...';
     const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
-    return isNaN(d.getTime()) ? 'Syncing...' : format(d, 'MMM d, yyyy');
+    return isNaN(d.getTime()) ? 'Recently' : format(d, 'MMM d, yyyy');
   };
 
   const handlePrintReceipt = (order: Order) => {
     setOrderToPrint(order);
-    toast({ title: "Syncing Receipt...", description: "Formatting for professional output." });
+    toast({ title: "Receipt Ready", description: "Formatting for professional output." });
   };
 
   const handleOpenPinDialog = (order: Order) => {
@@ -223,7 +223,7 @@ export default function OrdersPage() {
       setIsProcessingPayment(false);
       setIsPinDialogOpen(false);
       setPin('');
-      toast({ title: "Authorized", description: "Logistics synchronized and stock updated." });
+      toast({ title: "Authorized", description: "Payment recorded and stock updated." });
     }, 1500);
   };
 
@@ -252,26 +252,26 @@ export default function OrdersPage() {
       }]
     });
     setIsOrderDialogOpen(false);
-    toast({ title: "Order Recorded", description: "Manual sale synchronized successfully." });
+    toast({ title: "Order Recorded", description: "The manual sale has been successfully recorded." });
   };
 
   return (
     <RoleGuard allowedRoles={['seller', 'customer']}>
       <Shell userRole={isSeller ? "seller" : "customer"}>
         <PageHeader 
-          title={isSeller ? "Logistics Command" : "My Synchronized Orders"} 
-          description={isSeller ? "Track workshop fulfillment and manual DM sales." : "Track your jewelry pieces from workshop to delivery."}
+          title={isSeller ? "Order Management" : "My Orders"} 
+          description={isSeller ? "Track workshop fulfillment and direct sales." : "Track your jewelry pieces from the workshop to delivery."}
           action={isSeller && (
             <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11">
-                  <PlusCircle className="h-4 w-4" /> Create Direct Order
+                  <PlusCircle className="h-4 w-4" /> Create Order
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                 <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
-                  <DialogTitle className="text-3xl font-bold">Direct <span className="text-teal-400">Order</span></DialogTitle>
-                  <DialogDescription className="text-slate-400">Sync sales from Instagram or direct shop visits.</DialogDescription>
+                  <DialogTitle className="text-3xl font-bold">New <span className="text-teal-400">Order</span></DialogTitle>
+                  <DialogDescription className="text-slate-400">Record sales from Instagram or direct shop visits.</DialogDescription>
                 </div>
                 <div className="px-8 py-6 space-y-6">
                   <Input placeholder="Customer Name" value={newOrder.customerName} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
@@ -286,13 +286,12 @@ export default function OrdersPage() {
                     </Select>
                   </div>
                 </div>
-                <DialogFooter className="p-8 pt-0"><Button onClick={handleCreateOrder} className="w-full h-14 bg-primary text-white font-bold rounded-2xl">Finalize Sync</Button></DialogFooter>
+                <DialogFooter className="p-8 pt-0"><Button onClick={handleCreateOrder} className="w-full h-14 bg-primary text-white font-bold rounded-2xl">Finalize Order</Button></DialogFooter>
               </DialogContent>
             </Dialog>
           )}
         />
 
-        {/* Financial Summary Row for Customers */}
         {!isSeller && !isInitialLoading && orders && orders.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Card className="border-none shadow-sm bg-[#0f172a] text-white">
@@ -304,7 +303,7 @@ export default function OrdersPage() {
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Investment</span>
                 </div>
                 <div className="text-3xl font-bold">KES {stats.totalSpent.toLocaleString()}</div>
-                <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 tracking-tighter">Lifetime Synchronized Spent</p>
+                <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 tracking-tighter">Lifetime Total Spent</p>
               </CardContent>
             </Card>
 
@@ -317,7 +316,7 @@ export default function OrdersPage() {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending Balance</span>
                 </div>
                 <div className="text-3xl font-bold text-slate-900">KES {stats.pendingAmount.toLocaleString()}</div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Awaiting Sync/Payment</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Awaiting Payment</p>
               </CardContent>
             </Card>
 
@@ -327,10 +326,10 @@ export default function OrdersPage() {
                   <div className="p-2 bg-slate-50 rounded-xl">
                     <TrendingUp className="h-5 w-5 text-slate-400" />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Pool</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order History</span>
                 </div>
                 <div className="text-3xl font-bold text-slate-900">{stats.totalOrders}</div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Total Synchronized Pieces</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-tighter">Total Items Ordered</p>
               </CardContent>
             </Card>
           </div>
@@ -421,7 +420,7 @@ export default function OrdersPage() {
           <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
             <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-teal-600" /> Secure Authorization</DialogTitle></DialogHeader>
             <div className="py-6 space-y-4 text-center">
-              <Label className="text-xs font-bold uppercase text-slate-400">Enter PIN to Complete Sync</Label>
+              <Label className="text-xs font-bold uppercase text-slate-400">Enter PIN to Complete Payment</Label>
               <Input type="password" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="****" className="h-14 text-center text-3xl tracking-[1em] bg-slate-50 border-none rounded-2xl font-bold" />
             </div>
             <DialogFooter><Button className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-lg" onClick={handleConfirmPayment} disabled={isProcessingPayment}>{isProcessingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Secure Payment"}</Button></DialogFooter>

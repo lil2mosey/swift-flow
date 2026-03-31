@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   Package, 
@@ -80,11 +81,10 @@ export default function CustomerView() {
     setIsSending(true);
     try {
       const customerName = profile?.fullName || profile?.firstName || user.email?.split('@')[0] || 'Customer';
-      // Find or create a conversation with the system seller
       const convId = await FirebaseService.findOrCreateGeneralConversation(db, user.uid, 'system-seller', customerName);
       await FirebaseService.sendChatMessage(db, convId, user.uid, customerName, quickMessage, false);
       setQuickMessage('');
-      toast({ title: "Message Synchronized", description: "The workshop has received your inquiry." });
+      toast({ title: "Message Sent", description: "The workshop has received your inquiry." });
     } finally {
       setIsSending(false);
     }
@@ -146,7 +146,7 @@ export default function CustomerView() {
               </div>
               <div className="p-3 bg-amber-50 rounded-2xl group-hover:scale-110 transition-transform"><Clock className="h-5 w-5 text-amber-500" /></div>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{stats.pendingCount} items awaiting sync</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{stats.pendingCount} items awaiting payment</p>
           </CardContent>
         </Card>
 
@@ -187,10 +187,10 @@ export default function CustomerView() {
           <div className="p-6 bg-[#0f172a] text-white flex justify-between items-center">
             <div className="flex items-center gap-3">
               <TrendingUp className="h-5 w-5 text-teal-400" />
-              <h2 className="font-bold text-lg">Synchronized Orders</h2>
+              <h2 className="font-bold text-lg">Recent Orders</h2>
             </div>
             <Button asChild variant="ghost" size="sm" className="text-teal-400 hover:text-white hover:bg-slate-800 gap-1 font-bold text-xs uppercase">
-              <Link href="/orders">All History <ArrowUpRight className="h-3 w-3" /></Link>
+              <Link href="/orders">View All <ArrowUpRight className="h-3 w-3" /></Link>
             </Button>
           </div>
           <CardContent className="p-0 flex-1">
@@ -202,7 +202,7 @@ export default function CustomerView() {
               <div className="p-16 text-center">
                 <Package className="h-12 w-12 text-slate-100 mx-auto mb-4" />
                 <p className="text-sm text-slate-400 italic font-medium leading-relaxed">
-                  Your order pool is currently empty.<br />Explore our jewelry catalog to start synchronizing.
+                  You haven't placed any orders yet.<br />Explore our jewelry catalog to get started.
                 </p>
                 <Button asChild className="mt-6 bg-primary text-white font-bold h-11 rounded-xl">
                   <Link href="/shop">Go to Shop</Link>
@@ -256,23 +256,23 @@ export default function CustomerView() {
         <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden flex flex-col">
           <div className="p-6 bg-[#0f172a] text-white flex items-center gap-3">
             <MessageSquare className="h-5 w-5 text-teal-400" />
-            <h2 className="font-bold text-lg">Direct Communication</h2>
+            <h2 className="font-bold text-lg">Workshop Chat</h2>
           </div>
           <CardContent className="p-8 space-y-8 flex-1 flex flex-col">
             <div className="flex-1 bg-slate-50 rounded-3xl p-8 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
               <MessageSquare className="h-12 w-12 text-slate-200 mb-4" />
               <p className="text-sm text-slate-400 font-medium leading-relaxed italic">
-                Need help with a custom jewelry piece?<br />Start a synchronized chat with our master craftsmen.
+                Need help with a custom jewelry piece?<br />Start a conversation with our master craftsmen.
               </p>
               <Button asChild variant="outline" className="mt-8 border-slate-200 text-teal-600 hover:bg-teal-50 font-bold h-11 px-8 rounded-xl transition-all">
-                <Link href="/messages">View Full History</Link>
+                <Link href="/messages">View Messages</Link>
               </Button>
             </div>
             
             <div className="space-y-4">
-              <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Quick Message</Label>
+              <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Quick Inquiry</Label>
               <Textarea 
-                placeholder="Type your inquiry to the workshop..." 
+                placeholder="Type your question to the workshop..." 
                 className="min-h-[140px] bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus-visible:ring-teal-400 resize-none shadow-inner"
                 value={quickMessage}
                 onChange={(e) => setQuickMessage(e.target.value)}
@@ -283,7 +283,7 @@ export default function CustomerView() {
                 className="w-full h-14 bg-primary text-white font-bold rounded-2xl gap-2 shadow-xl group hover:bg-slate-800 transition-all"
               >
                 {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
-                Synchronize Message
+                Send Message
               </Button>
             </div>
           </CardContent>

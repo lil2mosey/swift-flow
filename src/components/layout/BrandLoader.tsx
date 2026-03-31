@@ -18,7 +18,7 @@ export function BrandLoader() {
       
       <div className="flex items-center gap-2 text-[#2dd4bf]/60 font-medium text-sm">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Synchronizing Order Flow...
+        Preparing Order Flow...
       </div>
 
       <div className="absolute bottom-10 text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">

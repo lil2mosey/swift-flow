@@ -121,11 +121,11 @@ export default function InventoryPage() {
         updatedAt: serverTimestamp()
       });
 
-      toast({ title: "Stock Replenished", description: `${item.name} synchronized.` });
+      toast({ title: "Stock Updated", description: `${item.name} inventory replenished.` });
       setIsAddDialogOpen(false);
       setRestockAmount(0);
     } catch (error) {
-      toast({ variant: "destructive", title: "Update Failed", description: "Could not sync." });
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not save changes." });
     }
   };
 
@@ -147,7 +147,7 @@ export default function InventoryPage() {
         leadTimeDays: 7
       });
 
-      toast({ title: "Registration Successful", description: `${formData.name} added.` });
+      toast({ title: "Item Added", description: `${formData.name} successfully registered.` });
       setIsAddDialogOpen(false);
       setFormData({
         name: '', sku: '', description: '', price: 0, cost: 0, currentStock: 0,
@@ -155,7 +155,7 @@ export default function InventoryPage() {
         criticalThreshold: 10, itemType: activeTab
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not register item." });
+      toast({ variant: "destructive", title: "Error", description: "Could not add item." });
     }
   };
 
@@ -164,9 +164,9 @@ export default function InventoryPage() {
     setIsSeeding(true);
     try {
       await FirebaseService.seedKenyaJewelry(db, user.uid);
-      toast({ title: "Catalog Seeded", description: "Synchronized jewelry materials." });
+      toast({ title: "Catalog Updated", description: "Sample jewelry data has been added." });
     } catch (error) {
-      toast({ variant: "destructive", title: "Seed Failed", description: "Could not populate." });
+      toast({ variant: "destructive", title: "Update Failed", description: "Could not populate data." });
     } finally {
       setIsSeeding(false);
     }
@@ -176,8 +176,8 @@ export default function InventoryPage() {
     <RoleGuard allowedRoles={['seller']}>
       <Shell userRole="seller">
         <PageHeader 
-          title="Inventory Command" 
-          description="Manage stock levels and track last synchronization dates."
+          title="Inventory Management" 
+          description="Manage stock levels and track last update dates."
           action={
             <div className="flex gap-3">
               <Button 
@@ -192,13 +192,13 @@ export default function InventoryPage() {
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary hover:bg-slate-800 text-white font-bold gap-2 rounded-xl h-11 px-6">
-                    <Plus className="h-4 w-4" /> Stock Management
+                    <Plus className="h-4 w-4" /> Stock Control
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                   <div className="bg-[#0f172a] p-8 pb-6 border-b border-slate-800 text-white">
                     <DialogTitle className="text-3xl font-bold tracking-tight">
-                      Stock <span className="text-teal-400">Logistics</span>
+                      Stock <span className="text-teal-400">Management</span>
                     </DialogTitle>
                     <DialogDescription className="text-slate-400 font-medium">Add to current stock levels or register a brand new item.</DialogDescription>
                   </div>
@@ -260,7 +260,7 @@ export default function InventoryPage() {
                     )}
                   </div>
                   <DialogFooter className="p-8 pt-0">
-                    <Button onClick={addMode === 'restock' ? handleRestock : handleAddNewItem} className="bg-primary text-white font-bold h-14 rounded-2xl w-full">Update Sync</Button>
+                    <Button onClick={addMode === 'restock' ? handleRestock : handleAddNewItem} className="bg-primary text-white font-bold h-14 rounded-2xl w-full">Save Changes</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -288,7 +288,7 @@ export default function InventoryPage() {
                 <TableRow className="border-none hover:bg-transparent">
                   <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Details</TableHead>
                   <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Current Stock</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Last Sync</TableHead>
+                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Last Updated</TableHead>
                   <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Unit Price</TableHead>
                 </TableRow>
               </TableHeader>

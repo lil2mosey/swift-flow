@@ -36,9 +36,9 @@ export default function SellerView() {
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
 
   const formatDate = (date: any, isPrecise = false) => {
-    if (!date) return 'Syncing...';
+    if (!date) return 'Loading...';
     const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
-    if (isNaN(d.getTime())) return 'Syncing...';
+    if (isNaN(d.getTime())) return 'Recently';
     return format(d, isPrecise ? 'HH:mm' : 'MMM d, yyyy');
   };
 
@@ -51,7 +51,7 @@ export default function SellerView() {
       { label: 'Total Revenue', value: `KES ${revenue.toLocaleString()}`, sub: 'CONFIRMED', icon: DollarSign, color: 'text-teal-400', bg: 'bg-teal-500/10' },
       { label: 'Pending Orders', value: pending, sub: 'LIVE', icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
       { label: 'Completed', value: completed, sub: 'SUCCESS', icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10' },
-      { label: 'Customer Chat', value: '0', sub: 'UNREAD', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+      { label: 'Customer Inquiries', value: '0', sub: 'UNREAD', icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/10' },
     ];
   }, [sellerOrders]);
 
@@ -64,7 +64,7 @@ export default function SellerView() {
   };
 
   const handlePrintReceipt = (order: Order) => {
-    toast({ title: "Printing...", description: `Formatting receipt for ${order.customerName}.` });
+    toast({ title: "Preparing...", description: `Formatting receipt for ${order.customerName}.` });
   };
 
   return (
@@ -75,10 +75,10 @@ export default function SellerView() {
         </div>
         <div>
           <h1 className="text-3xl font-bold text-slate-900 leading-tight">
-            Seller Command Center
+            Workshop Command
           </h1>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-0.5">
-            Synchronized Dashboard
+            Admin Dashboard
           </p>
         </div>
       </div>
@@ -105,8 +105,8 @@ export default function SellerView() {
           <Card className="border-none shadow-sm overflow-hidden">
             <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg font-bold">Live Order Synchronization</CardTitle>
-                <CardDescription>Real-time updates from Instagram & Storefront</CardDescription>
+                <CardTitle className="text-lg font-bold">Live Order Feed</CardTitle>
+                <CardDescription>Real-time updates from your shop</CardDescription>
               </div>
               <div className="flex items-center gap-2 text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
                 <span className="h-2 w-2 bg-teal-500 rounded-full animate-pulse" /> ACTIVE
@@ -118,7 +118,7 @@ export default function SellerView() {
                   <TableRow className="border-slate-100">
                     <TableHead className="font-bold pl-6">Ref</TableHead>
                     <TableHead className="font-bold">Customer</TableHead>
-                    <TableHead className="font-bold">Sync Time</TableHead>
+                    <TableHead className="font-bold">Time</TableHead>
                     <TableHead className="text-right pr-6">Action / Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -175,7 +175,7 @@ export default function SellerView() {
                               <Printer className="h-4 w-4" />
                             </Button>
                           ) : (
-                            <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Awaiting Client</span>
+                            <span className="text-[10px] font-bold text-blue-600 animate-pulse uppercase">Waiting</span>
                           )}
                           <span className="font-bold text-slate-900">KES {(order.totalAmount || order.total || 0).toLocaleString()}</span>
                         </div>

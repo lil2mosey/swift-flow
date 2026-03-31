@@ -105,7 +105,7 @@ export default function MessagesPage() {
       await FirebaseService.sendChatMessage(db, convId, user.uid, customerName, generalInquiry, false);
       setGeneralInquiry('');
       setSelectedConvId(convId);
-      toast({ title: "Message Sent", description: "Workshop will respond shortly." });
+      toast({ title: "Message Sent", description: "The workshop will respond shortly." });
     } finally {
       setIsSendingGeneral(false);
     }
@@ -122,8 +122,8 @@ export default function MessagesPage() {
               <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-3xl font-bold text-slate-900">Inquiry Command</h1>
-              <p className="text-slate-500 text-xs sm:text-sm font-medium italic">Synchronized workshop chat</p>
+              <h1 className="text-xl sm:text-3xl font-bold text-slate-900">Workshop Chat</h1>
+              <p className="text-slate-500 text-xs sm:text-sm font-medium italic">Customer Inquiries</p>
             </div>
           </div>
 
@@ -146,7 +146,7 @@ export default function MessagesPage() {
             <Card className="lg:col-span-2 border-none shadow-sm h-full flex flex-col bg-white overflow-hidden rounded-2xl">
               <div className="p-4 border-b bg-[#0f172a] text-white flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                <h2 className="text-xs font-bold uppercase tracking-widest">Active Chats</h2>
+                <h2 className="text-xs font-bold uppercase tracking-widest">Inquiries</h2>
               </div>
               <ScrollArea className="flex-1">
                 {isConvsLoading ? (
@@ -196,7 +196,7 @@ export default function MessagesPage() {
                       </Avatar>
                       <div>
                         <h3 className="text-sm font-bold">{activeConv?.customerName}</h3>
-                        <p className="text-[9px] font-bold text-teal-500 uppercase">Synchronized</p>
+                        <p className="text-[9px] font-bold text-teal-500 uppercase">Live Chat</p>
                       </div>
                     </div>
                   </div>
@@ -223,7 +223,7 @@ export default function MessagesPage() {
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-10 text-center text-slate-300 italic">
                   <MessageSquare className="h-10 w-10 mb-2" />
-                  <p className="text-sm">Select an inquiry to synchronize.</p>
+                  <p className="text-sm">Select a message to start chatting.</p>
                 </div>
               )}
             </Card>
@@ -242,7 +242,7 @@ export default function MessagesPage() {
           </div>
           <div>
             <h1 className="text-xl sm:text-3xl font-bold text-slate-900">Direct Messages</h1>
-            <p className="text-slate-500 text-xs sm:text-sm font-medium italic">Synchronize with our craftsmen</p>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium italic">Chat with our craftsmen</p>
           </div>
         </div>
 
@@ -266,11 +266,11 @@ export default function MessagesPage() {
         </Card>
 
         <div className="space-y-4">
-          <h3 className="text-sm sm:text-lg font-bold text-slate-800 ml-2">Recent Synchronizations</h3>
+          <h3 className="text-sm sm:text-lg font-bold text-slate-800 ml-2">Message History</h3>
           {conversations.length === 0 ? (
             <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
               <MessageSquare className="h-10 w-10 mx-auto text-slate-200 mb-2" />
-              <p className="text-sm text-slate-400 italic">No message history yet.</p>
+              <p className="text-sm text-slate-400 italic">No messages yet.</p>
             </div>
           ) : (
             conversations.map((conv) => (

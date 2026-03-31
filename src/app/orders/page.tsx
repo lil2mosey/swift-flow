@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -267,7 +268,7 @@ export default function OrdersPage() {
                   <DialogDescription className="text-slate-400">Record sales from DM or direct shop visits.</DialogDescription>
                 </div>
                 <div className="px-8 py-6 space-y-6">
-                  <Input placeholder="Customer Name" value={newOrder.customerName} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                  <Input placeholder="Customer Name" value={newOrder.customerName || ''} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                   <div className="grid grid-cols-2 gap-4">
                     <Select onValueChange={handleProductSelect}>
                       <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl"><SelectValue placeholder="Select Item" /></SelectTrigger>

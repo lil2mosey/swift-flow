@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -175,7 +176,7 @@ export default function InventoryPage() {
     <RoleGuard allowedRoles={['seller']}>
       <Shell userRole="seller">
         <PageHeader 
-          title="Inventory Command" 
+          title="Inventory Management" 
           description="Manage stock levels and track last update dates."
           action={
             <div className="flex gap-3">
@@ -238,11 +239,11 @@ export default function InventoryPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Item Name</Label>
-                            <Input placeholder="E.g. Gold Grain" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                            <Input placeholder="E.g. Gold Grain" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">SKU Code</Label>
-                            <Input placeholder="E.g. RM-G-24" value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                            <Input placeholder="E.g. RM-G-24" value={formData.sku || ''} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">

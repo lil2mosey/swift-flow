@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -200,11 +201,11 @@ export default function LoginPage() {
               <CardContent className="space-y-5 px-8 pb-8">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</Label>
-                  <Input placeholder="E.g. Jane Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                  <Input placeholder="E.g. Jane Doe" value={fullName || ''} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email</Label>
-                  <Input type="email" placeholder="E.g. jane@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                  <Input type="email" placeholder="E.g. jane@example.com" value={email || ''} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
@@ -212,7 +213,7 @@ export default function LoginPage() {
                     <Input 
                       type={showPassword ? "text" : "password"} 
                       placeholder="Minimum 6 characters" 
-                      value={password} 
+                      value={password || ''} 
                       onChange={(e) => setPassword(e.target.value)} 
                       required 
                       className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" 

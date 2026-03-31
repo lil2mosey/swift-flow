@@ -1,4 +1,3 @@
-
 import { ImageResponse } from 'next/og';
 
 export const size = {

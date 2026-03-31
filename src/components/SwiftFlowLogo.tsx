@@ -13,20 +13,21 @@ export function SwiftFlowLogo({ className = "h-8 w-8" }: { className?: string })
         y="10" 
         width="80" 
         height="80" 
-        rx="20" 
-        className="stroke-accent" 
-        strokeWidth="6" 
+        rx="24" 
+        fill="#0f172a"
+        stroke="#2dd4bf" 
+        strokeWidth="4" 
       />
       <path 
-        d="M50 30C50 30 40 35 40 45V58C40 65 44 70 50 70C56 70 60 65 60 58V45C60 35 50 30 50 30Z" 
-        className="stroke-accent" 
-        strokeWidth="6" 
+        d="M50 32C50 32 38 37 38 48V60C38 68 44 72 50 72C56 72 62 68 62 60V48C62 37 50 32 50 32Z" 
+        stroke="#2dd4bf" 
+        strokeWidth="5" 
         strokeLinejoin="round" 
       />
       <path 
-        d="M45 53L49 57L56 48" 
-        className="stroke-accent" 
-        strokeWidth="6" 
+        d="M44 56L48 60L56 51" 
+        stroke="#2dd4bf" 
+        strokeWidth="5" 
         strokeLinecap="round" 
         strokeLinejoin="round" 
       />

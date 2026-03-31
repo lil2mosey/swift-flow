@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
@@ -45,7 +45,7 @@ export default function LoginPage() {
             items: pendingOrder.items
           });
           localStorage.removeItem('swiftflow_pending_order');
-          toast({ title: "Order Linked", description: "Your items have been added to your profile." });
+          toast({ title: "Order Processed", description: "Your pending items have been added to your profile." });
           router.push('/orders');
           return;
         } catch (e) {
@@ -116,7 +116,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading || (user && isProfileLoading) || isLoading) {
+  if (isUserLoading || (user && isProfileLoading)) {
     return <BrandLoader />;
   }
 
@@ -124,11 +124,11 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-slate-900">
       <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
         <div className="text-center space-y-2">
-          <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-[#0f172a] mb-4 shadow-2xl ring-4 ring-white">
-            <SwiftFlowLogo className="h-10 w-10" />
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-[#0f172a] mb-4 shadow-2xl ring-4 ring-white overflow-hidden">
+            <SwiftFlowLogo className="h-20 w-20" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
-          <p className="text-slate-500 font-medium italic">order management and inventory tracking</p>
+          <p className="text-slate-500 font-medium italic">Order Management and Inventory Tracking</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -147,20 +147,45 @@ export default function LoginPage() {
                 <CardContent className="space-y-5 px-8 pb-8">
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email</Label>
-                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                    <Input 
+                      type="email" 
+                      placeholder="Enter your email"
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      required 
+                      className="bg-slate-50 h-14 border-none rounded-2xl font-medium" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                     <div className="relative">
-                      <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors">
+                      <Input 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="••••••••"
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                        required 
+                        className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPassword(!showPassword)} 
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors"
+                      >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="px-8 pb-8">
-                  <Button type="submit" className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all">Sign In to Portal</Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all gap-2"
+                  >
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Sign In to Portal
+                  </Button>
                 </CardFooter>
               </form>
             </Card>
@@ -184,7 +209,14 @@ export default function LoginPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                   <div className="relative">
-                    <Input type={showPassword ? "text" : "password"} placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
+                    <Input 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="Minimum 6 characters" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      required 
+                      className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" 
+                    />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors">
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -192,8 +224,22 @@ export default function LoginPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3 px-8 pb-8">
-                <Button onClick={(e) => handleSignUp(e, 'seller')} className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all">Start as Seller</Button>
-                <Button onClick={(e) => handleSignUp(e, 'customer')} variant="outline" className="w-full h-14 border-slate-200 font-bold rounded-2xl hover:bg-slate-50">Join as Customer</Button>
+                <Button 
+                  onClick={(e) => handleSignUp(e, 'seller')} 
+                  disabled={isLoading}
+                  className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all gap-2"
+                >
+                  {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Start as Seller
+                </Button>
+                <Button 
+                  onClick={(e) => handleSignUp(e, 'customer')} 
+                  disabled={isLoading}
+                  variant="outline" 
+                  className="w-full h-14 border-slate-200 font-bold rounded-2xl hover:bg-slate-50"
+                >
+                  Join as Customer
+                </Button>
               </CardFooter>
             </Card>
           </TabsContent>

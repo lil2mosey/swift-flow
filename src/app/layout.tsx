@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'SwiftFlow - Order Management',
-  description: 'Manage your business with ease.',
+  description: 'Order Management and Inventory Tracking',
 };
 
 export default function RootLayout({

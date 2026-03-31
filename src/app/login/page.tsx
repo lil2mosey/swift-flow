@@ -10,12 +10,19 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { BrandLoader } from '@/components/layout/BrandLoader';
 import { FirebaseService } from '@/services/firebase-service';
 import { SwiftFlowLogo } from '@/components/SwiftFlowLogo';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,6 +30,12 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Password Reset States
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetLoading, setIsResetLoading] = useState(false);
+
   const { auth, firestore } = useFirebase();
   const { user, isUserLoading, profile, isProfileLoading } = useUser();
   const router = useRouter();
@@ -117,6 +130,29 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast({ variant: "destructive", title: "Missing Email", description: "Please enter your email address." });
+      return;
+    }
+    setIsResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast({ title: "Reset Link Sent", description: "Check your inbox for password recovery instructions." });
+      setIsResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Reset Failed", 
+        description: error.message || "Could not send reset email." 
+      });
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
   if (isUserLoading || (user && isProfileLoading)) {
     return <BrandLoader />;
   }
@@ -158,7 +194,16 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
+                    <div className="flex justify-between items-center ml-1">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Password</Label>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsResetDialogOpen(true)}
+                        className="text-[10px] font-bold text-teal-600 hover:text-slate-900 transition-colors uppercase tracking-tighter"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
                     <div className="relative">
                       <Input 
                         type={showPassword ? "text" : "password"} 
@@ -246,6 +291,36 @@ export default function LoginPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem] border-none shadow-2xl bg-white p-0 overflow-hidden">
+          <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
+            <DialogTitle className="text-2xl font-bold">Reset <span className="text-accent">Password</span></DialogTitle>
+            <DialogDescription className="text-slate-400">Enter your email to receive a recovery link.</DialogDescription>
+          </div>
+          <form onSubmit={handleResetPassword} className="p-8 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email Address</Label>
+              <Input 
+                type="email" 
+                placeholder="E.g. jane@example.com"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+                className="bg-slate-50 h-14 border-none rounded-2xl font-medium text-sm"
+              />
+            </div>
+            <Button 
+              type="submit" 
+              disabled={isResetLoading}
+              className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl hover:bg-slate-800 transition-all gap-2"
+            >
+              {isResetLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Send Reset Link
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

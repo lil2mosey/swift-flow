@@ -173,13 +173,22 @@ export default function LoginPage() {
                 <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest">Join the ecosystem</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 px-8 pb-8">
-                <Input placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
-                <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
-                <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</Label>
+                  <Input placeholder="E.g. Jane Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email</Label>
+                  <Input type="email" placeholder="E.g. jane@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
+                  <div className="relative">
+                    <Input type={showPassword ? "text" : "password"} placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-3 px-8 pb-8">

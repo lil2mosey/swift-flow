@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 import { 
   Plus, 
   Loader2,
-  X,
   Layers,
   ShoppingBag,
   RefreshCcw,
@@ -36,7 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
@@ -110,7 +108,7 @@ export default function InventoryPage() {
 
   const handleRestock = async () => {
     if (!selectedItemId || restockAmount <= 0) {
-      toast({ variant: "destructive", title: "Invalid Input", description: "Please select an item." });
+      toast({ variant: "destructive", title: "Invalid Input", description: "Please select an item and quantity." });
       return;
     }
 
@@ -133,7 +131,10 @@ export default function InventoryPage() {
   };
 
   const handleAddNewItem = async () => {
-    if (!formData.name || !user) return;
+    if (!formData.name || !user) {
+       toast({ variant: "destructive", title: "Incomplete", description: "Please provide an item name." });
+       return;
+    }
 
     try {
       await FirebaseService.addProduct(db, user.uid, {
@@ -155,7 +156,7 @@ export default function InventoryPage() {
         criticalThreshold: 10, itemType: activeTab
       });
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not register." });
+      toast({ variant: "destructive", title: "Error", description: "Could not register item." });
     }
   };
 
@@ -177,7 +178,7 @@ export default function InventoryPage() {
       <Shell userRole="seller">
         <PageHeader 
           title="Inventory Command" 
-          description="Manage stock levels and track restock dates."
+          description="Manage stock levels and track last synchronization dates."
           action={
             <div className="flex gap-3">
               <Button 
@@ -226,18 +227,35 @@ export default function InventoryPage() {
                         </div>
                         <div className="space-y-2">
                           <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Quantity to Add</Label>
-                          <Input type="number" value={restockAmount || ''} onChange={(e) => setRestockAmount(Number(e.target.value))} className="h-14 bg-slate-50 border-none rounded-xl text-lg font-bold" />
+                          <Input 
+                            type="number" 
+                            value={restockAmount || ''} 
+                            onChange={(e) => setRestockAmount(e.target.value === '' ? 0 : Number(e.target.value))} 
+                            className="h-14 bg-slate-50 border-none rounded-xl text-lg font-bold" 
+                          />
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                          <Input placeholder="Item Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
-                          <Input placeholder="SKU" value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                          <div className="space-y-1.5">
+                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Item Name</Label>
+                            <Input placeholder="E.g. Gold Grain" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">SKU Code</Label>
+                            <Input placeholder="E.g. RM-G-24" value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          <Input placeholder="Initial Stock" type="number" onChange={(e) => setFormData({...formData, currentStock: Number(e.target.value)})} className="h-11 bg-slate-50 border-none rounded-xl" />
-                          <Input placeholder="Price (KES)" type="number" onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                          <div className="space-y-1.5">
+                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Initial Stock</Label>
+                            <Input placeholder="0" type="number" value={formData.currentStock || ''} onChange={(e) => setFormData({...formData, currentStock: e.target.value === '' ? 0 : Number(e.target.value)})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Price (KES)</Label>
+                            <Input placeholder="0" type="number" value={formData.price || ''} onChange={(e) => setFormData({...formData, price: e.target.value === '' ? 0 : Number(e.target.value)})} className="h-11 bg-slate-50 border-none rounded-xl" />
+                          </div>
                         </div>
                       </div>
                     )}

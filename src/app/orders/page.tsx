@@ -37,9 +37,7 @@ import {
   Loader2, 
   PlusCircle, 
   Calendar,
-  Smartphone,
   Lock,
-  ShieldCheck,
   ShoppingBag,
   DollarSign,
   Clock,
@@ -49,17 +47,16 @@ import {
   useCollection, 
   useFirestore, 
   useMemoFirebase, 
-  updateDocumentNonBlocking, 
   useUser 
 } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { Order, OrderStatus, Product, PaymentStatus } from '@/lib/types';
+import { Order, Product, PaymentStatus } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
 import { PermissionAwareCollection } from '@/components/PermissionAwareCollection';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { SwiftFlowLogo } from '@/components/SwiftFlowLogo';
 
 const ReceiptPrintView = ({ order }: { order: Order }) => {
   const orderTotal = order.totalAmount || order.total || 0;
@@ -70,11 +67,11 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
   return (
     <div className="p-8 max-w-2xl mx-auto bg-white text-slate-900 font-sans border border-slate-200">
       <div className="text-center border-b pb-6 mb-6">
-        <div className="flex justify-center items-center gap-2 mb-2">
-          <ShieldCheck className="h-8 w-8 text-teal-600" />
+        <div className="flex justify-center items-center gap-4 mb-2">
+          <SwiftFlowLogo className="h-10 w-10" />
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">SwiftFlow</h1>
         </div>
-        <p className="text-slate-500 font-medium italic text-xs uppercase tracking-widest">Order Management and Inventory Tracking</p>
+        <p className="text-slate-500 font-medium italic text-xs uppercase tracking-widest leading-relaxed">Order Management and Inventory Tracking</p>
       </div>
 
       <div className="grid grid-cols-2 gap-8 mb-8">
@@ -266,7 +263,7 @@ export default function OrdersPage() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                 <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
-                  <DialogTitle className="text-3xl font-bold">New <span className="text-teal-400">Order</span></DialogTitle>
+                  <DialogTitle className="text-3xl font-bold">New <span className="text-accent">Order</span></DialogTitle>
                   <DialogDescription className="text-slate-400">Record sales from DM or direct shop visits.</DialogDescription>
                 </div>
                 <div className="px-8 py-6 space-y-6">
@@ -293,13 +290,13 @@ export default function OrdersPage() {
             <Card className="border-none shadow-sm bg-[#0f172a] text-white">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
-                  <div className="p-2 bg-teal-500/10 rounded-xl">
-                    <DollarSign className="h-5 w-5 text-teal-400" />
+                  <div className="p-2 bg-accent/10 rounded-xl">
+                    <DollarSign className="h-5 w-5 text-accent" />
                   </div>
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Investment</span>
                 </div>
                 <div className="text-3xl font-bold">KES {stats.totalSpent.toLocaleString()}</div>
-                <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 tracking-tighter">Lifetime Total Spent</p>
+                <p className="text-[10px] text-accent font-bold uppercase mt-1 tracking-tighter">Lifetime Total Spent</p>
               </CardContent>
             </Card>
 
@@ -358,7 +355,7 @@ export default function OrdersPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
-                          <p className="font-bold text-teal-600 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p>
+                          <p className="font-bold text-accent text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-slate-50">
@@ -378,7 +375,7 @@ export default function OrdersPage() {
                   <Table>
                     <TableHeader className="bg-primary text-white">
                       <TableRow className="border-none hover:bg-transparent">
-                        <TableHead className="font-bold pl-6 uppercase text-[10px] text-teal-400">Order Ref</TableHead>
+                        <TableHead className="font-bold pl-6 uppercase text-[10px] text-accent">Order Ref</TableHead>
                         <TableHead className="font-bold uppercase text-[10px] text-slate-200">Date</TableHead>
                         <TableHead className="font-bold uppercase text-[10px] text-slate-200">Customer</TableHead>
                         <TableHead className="font-bold uppercase text-[10px] text-slate-200">Payment</TableHead>
@@ -397,9 +394,9 @@ export default function OrdersPage() {
                           <TableCell className="font-medium text-slate-600 text-xs">{order.customerName}</TableCell>
                           <TableCell><span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span></TableCell>
                           <TableCell><span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{order.status}</span></TableCell>
-                          <TableCell className="text-right font-bold text-teal-600 pr-6 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</TableCell>
+                          <TableCell className="text-right font-bold text-accent pr-6 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</TableCell>
                           <TableCell className="pr-6 text-right">
-                             {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-teal-600" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
+                             {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-accent" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
                              {order.paymentStatus === 'pending_approval' && !isSeller && <Button size="sm" className="h-8 bg-teal-500 text-white font-bold" onClick={() => handleOpenPinDialog(order)}>Pay Now</Button>}
                           </TableCell>
                         </TableRow>

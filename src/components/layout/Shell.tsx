@@ -14,7 +14,6 @@ import {
   X,
   CreditCard,
   User as UserIcon,
-  ShieldCheck,
   ShoppingBag,
   LogIn
 } from 'lucide-react';
@@ -23,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SwiftFlowLogo } from '@/components/SwiftFlowLogo';
 
 interface ShellProps {
   children: React.ReactNode;
@@ -79,9 +79,9 @@ export function Shell({ children, userRole }: ShellProps) {
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </Button>
-          <Link href="/" className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-teal-400" />
-            Swift<span className="text-teal-400">Flow</span>
+          <Link href="/" className="text-xl font-bold tracking-tight flex items-center gap-3">
+            <SwiftFlowLogo className="h-7 w-7 drop-shadow-[0_0_8px_rgba(45,212,191,0.3)]" />
+            <span className="hidden sm:inline">Swift<span className="text-teal-400">Flow</span></span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">

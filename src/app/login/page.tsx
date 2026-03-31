@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { BrandLoader } from '@/components/layout/BrandLoader';
 import { FirebaseService } from '@/services/firebase-service';
+import { SwiftFlowLogo } from '@/components/SwiftFlowLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -44,7 +45,7 @@ export default function LoginPage() {
             items: pendingOrder.items
           });
           localStorage.removeItem('swiftflow_pending_order');
-          toast({ title: "Order Synced", description: "Your items have been added to your profile." });
+          toast({ title: "Order Linked", description: "Your items have been added to your profile." });
           router.push('/orders');
           return;
         } catch (e) {
@@ -123,8 +124,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-slate-900">
       <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
         <div className="text-center space-y-2">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0f172a] text-teal-400 mb-4 shadow-2xl ring-4 ring-white">
-            <ShieldCheck className="h-8 w-8" />
+          <div className="inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-[#0f172a] mb-4 shadow-2xl ring-4 ring-white">
+            <SwiftFlowLogo className="h-10 w-10" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
           <p className="text-slate-500 font-medium italic">order management and inventory tracking</p>
@@ -152,7 +153,7 @@ export default function LoginPage() {
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                     <div className="relative">
                       <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors">
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors">
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
@@ -169,7 +170,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden">
               <CardHeader className="pt-8 px-8">
                 <CardTitle className="text-2xl font-bold">New Account</CardTitle>
-                <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Join the ecosystem</CardDescription>
+                <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Join the Live Ecosystem</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 px-8 pb-8">
                 <div className="space-y-1.5">
@@ -184,7 +185,7 @@ export default function LoginPage() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
                   <div className="relative">
                     <Input type={showPassword ? "text" : "password"} placeholder="Minimum 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors">
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>

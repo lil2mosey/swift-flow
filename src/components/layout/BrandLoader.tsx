@@ -1,14 +1,15 @@
 'use client';
 
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { SwiftFlowLogo } from '@/components/SwiftFlowLogo';
 
 export function BrandLoader() {
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#0f172a]">
       <div className="relative mb-6">
         <div className="absolute inset-0 animate-ping rounded-full bg-[#2dd4bf]/20" />
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-[#0f172a] border-2 border-[#2dd4bf] shadow-[0_0_20px_rgba(45,212,191,0.3)]">
-          <ShieldCheck className="h-10 w-10 text-[#2dd4bf]" />
+        <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-[#0f172a] border-2 border-[#2dd4bf] shadow-[0_0_30px_rgba(45,212,191,0.3)]">
+          <SwiftFlowLogo className="h-12 w-12" />
         </div>
       </div>
       

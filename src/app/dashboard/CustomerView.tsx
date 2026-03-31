@@ -94,7 +94,7 @@ export default function CustomerView() {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex items-center gap-5">
         <div className="h-16 w-16 bg-[#0f172a] rounded-2xl flex items-center justify-center shadow-2xl ring-4 ring-white">
-          <Package className="h-8 w-8 text-teal-400" />
+          <Package className="h-8 w-8 text-accent" />
         </div>
         <div>
           <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
@@ -181,10 +181,10 @@ export default function CustomerView() {
         <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden flex flex-col">
           <div className="p-6 bg-[#0f172a] text-white flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <TrendingUp className="h-5 w-5 text-teal-400" />
+              <TrendingUp className="h-5 w-5 text-accent" />
               <h2 className="font-bold text-lg">Recent Orders</h2>
             </div>
-            <Button asChild variant="ghost" size="sm" className="text-teal-400 hover:text-white hover:bg-slate-800 gap-1 font-bold text-xs uppercase">
+            <Button asChild variant="ghost" size="sm" className="text-accent hover:text-white hover:bg-slate-800 gap-1 font-bold text-xs uppercase">
               <Link href="/orders">View All <ArrowUpRight className="h-3 w-3" /></Link>
             </Button>
           </div>
@@ -249,7 +249,7 @@ export default function CustomerView() {
 
         <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden flex flex-col">
           <div className="p-6 bg-[#0f172a] text-white flex items-center gap-3">
-            <MessageSquare className="h-5 w-5 text-teal-400" />
+            <MessageSquare className="h-5 w-5 text-accent" />
             <h2 className="font-bold text-lg">Workshop Chat</h2>
           </div>
           <CardContent className="p-8 space-y-8 flex-1 flex flex-col">
@@ -258,7 +258,7 @@ export default function CustomerView() {
               <p className="text-sm text-slate-400 font-medium leading-relaxed italic">
                 Need help with a custom jewelry piece?<br />Start a conversation with our master craftsmen.
               </p>
-              <Button asChild variant="outline" className="mt-8 border-slate-200 text-teal-600 hover:bg-teal-50 font-bold h-11 px-8 rounded-xl transition-all">
+              <Button asChild variant="outline" className="mt-8 border-slate-200 text-accent font-bold h-11 px-8 rounded-xl transition-all">
                 <Link href="/messages">View Messages</Link>
               </Button>
             </div>
@@ -267,7 +267,7 @@ export default function CustomerView() {
               <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Quick Inquiry</Label>
               <Textarea 
                 placeholder="Type your question to the workshop..." 
-                className="min-h-[140px] bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus-visible:ring-teal-400 resize-none shadow-inner"
+                className="min-h-[140px] bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus-visible:ring-accent resize-none shadow-inner"
                 value={quickMessage}
                 onChange={(e) => setQuickMessage(e.target.value)}
               />

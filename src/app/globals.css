@@ -38,13 +38,12 @@
   }
 }
 
-/* Custom UI Utility Classes */
 .status-pending {
   @apply bg-amber-100 text-amber-700;
 }
 
 .text-teal-accent {
-  @apply text-teal-400;
+  @apply text-accent;
 }
 
 .glass-card {

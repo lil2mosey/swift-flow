@@ -21,7 +21,6 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * High-performance backend services for SwiftFlow.
- * Optimized for Vercel with parallel batch processing.
  */
 export const FirebaseService = {
   addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
@@ -71,7 +70,6 @@ export const FirebaseService = {
     });
 
     if (order.items && order.items.length > 0) {
-      // Parallelize stock updates for speed
       await Promise.all(order.items.map(item => {
         if (item.productId) {
           const productRef = doc(db, 'products', item.productId);
@@ -224,38 +222,11 @@ export const FirebaseService = {
         averageDailySales: 0.5,
         leadTimeDays: 3,
         itemType: 'product' as const
-      },
-      {
-        name: "24K Fine Gold Casting Grain",
-        sku: "RM-GOLD-24K-GR",
-        description: "Pure 24K gold grains for high-purity casting and custom alloying.",
-        price: 9500,
-        currentStock: 150,
-        category: "Precious Metals",
-        sellerId: sellerId,
-        lowStockThreshold: 50,
-        averageDailySales: 0,
-        leadTimeDays: 5,
-        itemType: 'material' as const
-      },
-      {
-        name: "Natural Blue Sapphire (4mm Round Cut)",
-        sku: "RM-GEM-SAP-4RD",
-        description: "AA Grade natural faceted blue sapphire for high-end solitaire and accent settings.",
-        price: 8500,
-        currentStock: 20,
-        category: "Gemstones",
-        sellerId: sellerId,
-        lowStockThreshold: 5,
-        averageDailySales: 0,
-        leadTimeDays: 14,
-        itemType: 'material' as const
       }
     ];
 
     const missingItems = inventory.filter(item => !existingSkus.has(item.sku));
     if (missingItems.length > 0) {
-      // High-speed parallelized seeding
       await Promise.all(missingItems.map(item => FirebaseService.addProduct(db, sellerId, item)));
     }
   },

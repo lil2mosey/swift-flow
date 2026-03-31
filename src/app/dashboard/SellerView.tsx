@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -14,18 +13,8 @@ import {
   TrendingUp,
   Printer,
   Smartphone,
-  AlertTriangle,
-  ChevronRight
+  Calendar
 } from 'lucide-react';
-import { 
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip
-} from 'recharts';
 import { useUser, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { FirebaseService } from '@/services/firebase-service';
 import { Order, Product } from '@/lib/types';
@@ -44,56 +33,14 @@ export default function SellerView() {
     return FirebaseService.getSellerOrdersQuery(db);
   }, [db, user, profile]);
 
-  const productsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'seller') return null;
-    return FirebaseService.getProductsQuery(db, user?.uid);
-  }, [db, user, profile]);
-
   const { data: sellerOrders, isLoading: isOrdersLoading } = useCollection<Order>(sellerOrdersQuery);
-  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
 
-  const lowStockItems = useMemo(() => {
-    if (!products) return [];
-    return products.filter(p => p.currentStock <= (p.lowStockThreshold || 20));
-  }, [products]);
-
-  const formatDate = (date: any) => {
-    if (!date) return 'Recently joined';
+  const formatDate = (date: any, isPrecise = false) => {
+    if (!date) return 'Syncing...';
     const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
-    return isNaN(d.getTime()) ? 'Recently joined' : `Managing since ${format(d, 'MMM d, yyyy')}`;
+    if (isNaN(d.getTime())) return 'Syncing...';
+    return format(d, isPrecise ? 'HH:mm' : 'MMM d, yyyy');
   };
-
-  const processedChartData = useMemo(() => {
-    if (!sellerOrders || sellerOrders.length === 0) return [];
-    
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      return d.toISOString().split('T')[0];
-    });
-
-    const dataMap = last7Days.reduce((acc, date) => {
-      acc[date] = 0;
-      return acc;
-    }, {} as Record<string, number>);
-
-    sellerOrders.forEach(order => {
-      if (order.paymentStatus === 'paid' && order.createdAt) {
-        const orderDate = typeof order.createdAt === 'string' 
-          ? order.createdAt.split('T')[0] 
-          : new Date(order.createdAt?.seconds * 1000 || order.createdAt).toISOString().split('T')[0];
-
-        if (dataMap[orderDate] !== undefined) {
-          dataMap[orderDate] += order.totalAmount || order.total || 0;
-        }
-      }
-    });
-
-    return last7Days.map(date => ({
-      name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-      value: dataMap[date]
-    }));
-  }, [sellerOrders]);
 
   const stats = useMemo(() => {
     const pending = sellerOrders?.filter(o => o.status === 'pending').length || 0;
@@ -131,7 +78,7 @@ export default function SellerView() {
             Seller Command Center
           </h1>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-0.5">
-            {formatDate(profile?.createdAt)}
+            Synchronized Dashboard
           </p>
         </div>
       </div>
@@ -171,7 +118,7 @@ export default function SellerView() {
                   <TableRow className="border-slate-100">
                     <TableHead className="font-bold pl-6">Ref</TableHead>
                     <TableHead className="font-bold">Customer</TableHead>
-                    <TableHead className="font-bold">Status</TableHead>
+                    <TableHead className="font-bold">Sync Time</TableHead>
                     <TableHead className="text-right pr-6">Action / Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -200,14 +147,11 @@ export default function SellerView() {
                           <span className="text-[10px] text-slate-400">{order.items?.[0]?.productName || 'Direct Order'}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full",
-                          order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : 
-                          order.paymentStatus === 'pending_approval' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                        )}>
-                          {order.paymentStatus.replace('_', ' ')}
-                        </span>
+                      <TableCell className="text-[10px] font-bold text-slate-400">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(order.createdAt, true)}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex items-center justify-end gap-3">

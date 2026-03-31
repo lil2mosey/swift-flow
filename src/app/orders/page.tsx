@@ -28,25 +28,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from '@/lib/utils';
 import { 
   Printer, 
-  CheckCircle2, 
   Loader2, 
   PlusCircle, 
-  User as UserIcon, 
-  Phone, 
-  MapPin,
+  Calendar,
   Smartphone,
   Lock,
-  X,
   ShieldCheck,
-  ShoppingBag,
-  Search
+  ShoppingBag
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -62,6 +56,7 @@ import { toast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
 import { PermissionAwareCollection } from '@/components/PermissionAwareCollection';
 import Link from 'next/link';
+import { format } from 'date-fns';
 
 /**
  * Official Receipt Layout for Printing.
@@ -69,10 +64,9 @@ import Link from 'next/link';
 const ReceiptPrintView = ({ order }: { order: Order }) => {
   const itemsSubtotal = order.items?.reduce((acc, item) => acc + (item.priceAtOrder * item.quantity), 0) || 0;
   const orderTotal = order.totalAmount || order.total || 0;
-  const deliveryFee = Math.max(0, orderTotal - itemsSubtotal);
   const formattedDate = order.createdAt 
-    ? (typeof order.createdAt === 'string' ? new Date(order.createdAt) : new Date(order.createdAt.seconds * 1000)).toLocaleString()
-    : new Date().toLocaleString();
+    ? (order.createdAt.seconds ? format(new Date(order.createdAt.seconds * 1000), 'MMMM d, yyyy HH:mm') : format(new Date(order.createdAt), 'MMMM d, yyyy HH:mm'))
+    : format(new Date(), 'MMMM d, yyyy HH:mm');
 
   return (
     <div className="p-8 max-w-2xl mx-auto bg-white text-slate-900 font-sans border border-slate-200">
@@ -81,7 +75,7 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
           <ShieldCheck className="h-8 w-8 text-teal-600" />
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">SwiftFlow</h1>
         </div>
-        <p className="text-slate-500 font-medium italic">Order Management and Inventory Tracking</p>
+        <p className="text-slate-500 font-medium italic text-xs uppercase tracking-widest">Order Management and Inventory Tracking</p>
       </div>
 
       <div className="grid grid-cols-2 gap-8 mb-8">
@@ -167,7 +161,7 @@ export default function OrdersPage() {
   }, [db]);
 
   const { data: orders, isLoading: isOrdersLoading, error: ordersError } = useCollection<Order>(ordersQuery);
-  const { data: products, isLoading: isProductsLoading } = useCollection<Product>(productsQuery);
+  const { data: products } = useCollection<Product>(productsQuery);
   
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
@@ -190,19 +184,15 @@ export default function OrdersPage() {
     }
   }, [orderToPrint]);
 
-  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
-    const orderRef = doc(db, 'orders', orderId);
-    updateDocumentNonBlocking(orderRef, { status: newStatus, updatedAt: new Date().toISOString() });
+  const formatDate = (date: any) => {
+    if (!date) return 'Syncing...';
+    const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    return isNaN(d.getTime()) ? 'Syncing...' : format(d, 'MMM d, yyyy');
   };
 
   const handlePrintReceipt = (order: Order) => {
     setOrderToPrint(order);
     toast({ title: "Syncing Receipt...", description: "Formatting for professional output." });
-  };
-
-  const handlePromptPay = (orderId: string) => {
-    FirebaseService.requestPayment(db, orderId);
-    toast({ title: "Prompt Sent", description: "Customer notified for synchronization." });
   };
 
   const handleOpenPinDialog = (order: Order) => {
@@ -302,14 +292,20 @@ export default function OrdersPage() {
         >
           {(data) => (
             <div className="space-y-4">
-              {/* Mobile View: High-Usability Cards */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
                 {data.map((order: Order) => (
                   <Card key={order.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
                     <CardContent className="p-5 space-y-4">
                       <div className="flex justify-between items-start">
-                        <div><p className="text-[10px] font-bold text-slate-400 uppercase">Order Ref</p><p className="font-bold text-slate-900 text-xs">#{order.id.slice(0, 8).toUpperCase()}</p></div>
-                        <div className="text-right"><p className="text-[10px] font-bold text-slate-400 uppercase">Total</p><p className="font-bold text-teal-600 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p></div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Order Ref</p>
+                          <p className="font-bold text-slate-900 text-xs">#{order.id.slice(0, 8).toUpperCase()}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(order.createdAt)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+                          <p className="font-bold text-teal-600 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-slate-50">
                         <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span>
@@ -323,13 +319,13 @@ export default function OrdersPage() {
                 ))}
               </div>
 
-              {/* Desktop View: Professional Table */}
               <Card className="hidden md:block border-none shadow-sm overflow-hidden min-h-[400px]">
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader className="bg-primary text-white">
                       <TableRow className="border-none hover:bg-transparent">
                         <TableHead className="font-bold pl-6 uppercase text-[10px] text-teal-400">Order Ref</TableHead>
+                        <TableHead className="font-bold uppercase text-[10px] text-slate-200">Date</TableHead>
                         <TableHead className="font-bold uppercase text-[10px] text-slate-200">Customer</TableHead>
                         <TableHead className="font-bold uppercase text-[10px] text-slate-200">Payment</TableHead>
                         <TableHead className="font-bold uppercase text-[10px] text-slate-200">Status</TableHead>
@@ -341,6 +337,9 @@ export default function OrdersPage() {
                       {data.map((order: Order) => (
                         <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50">
                           <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                          <TableCell className="text-xs text-slate-400 font-bold flex items-center gap-1.5 pt-4">
+                            <Calendar className="h-3 w-3" /> {formatDate(order.createdAt)}
+                          </TableCell>
                           <TableCell className="font-medium text-slate-600 text-xs">{order.customerName}</TableCell>
                           <TableCell><span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span></TableCell>
                           <TableCell><span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{order.status}</span></TableCell>
@@ -370,7 +369,6 @@ export default function OrdersPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Print Layer */}
         <div className="hidden print:block fixed inset-0 z-[9999] bg-white">{orderToPrint && <ReceiptPrintView order={orderToPrint} />}</div>
       </Shell>
     </RoleGuard>

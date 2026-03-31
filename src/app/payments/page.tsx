@@ -10,7 +10,8 @@ import {
   Wallet,
   Clock,
   CreditCard,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import { 
   Table, 
@@ -26,6 +27,7 @@ import { FirebaseService } from '@/services/firebase-service';
 import { Order } from '@/lib/types';
 import { RoleGuard } from '@/components/RoleGuard';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export default function PaymentsPage() {
   const db = useFirestore();
@@ -41,6 +43,12 @@ export default function PaymentsPage() {
   const totalRevenue = orders?.filter(o => o.paymentStatus === 'paid').reduce((acc, o) => acc + (o.totalAmount || o.total || 0), 0) || 0;
   const pendingClearance = orders?.filter(o => o.paymentStatus !== 'paid').reduce((acc, o) => acc + (o.totalAmount || o.total || 0), 0) || 0;
 
+  const formatDate = (date: any) => {
+    if (!date) return 'Syncing...';
+    const d = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    return isNaN(d.getTime()) ? 'Syncing...' : format(d, 'MMM d, yyyy');
+  };
+
   const handleExport = () => {
     if (!orders || orders.length === 0) {
       toast({ 
@@ -51,10 +59,7 @@ export default function PaymentsPage() {
       return;
     }
 
-    // Define CSV Headers
     const headers = ["Order ID", "Customer Name", "Payment Status", "Total Amount (KES)", "Created At"];
-    
-    // Process Data
     const csvContent = [
       headers.join(","),
       ...orders.map(order => {
@@ -72,7 +77,6 @@ export default function PaymentsPage() {
       })
     ].join("\n");
 
-    // Create and Trigger Download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -142,6 +146,7 @@ export default function PaymentsPage() {
               <TableHeader className="bg-slate-50">
                 <TableRow>
                   <TableHead className="pl-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Order Ref</TableHead>
+                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Date</TableHead>
                   <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Customer</TableHead>
                   <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Status</TableHead>
                   <TableHead className="text-right pr-6 font-bold uppercase text-[10px] tracking-widest text-slate-400">Amount</TableHead>
@@ -149,12 +154,15 @@ export default function PaymentsPage() {
               </TableHeader>
               <TableBody>
                 {isOrdersLoading ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
                 ) : !orders || orders.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-20 text-slate-400 font-medium italic">No payment records found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-20 text-slate-400 font-medium italic">No payment records found.</TableCell></TableRow>
                 ) : orders.map((order) => (
                   <TableRow key={order.id} className="border-slate-100">
                     <TableCell className="pl-6 font-bold text-slate-900">{order.id.slice(0, 8).toUpperCase()}</TableCell>
+                    <TableCell className="text-xs text-slate-400 font-bold flex items-center gap-1.5 py-4">
+                      <Calendar className="h-3 w-3" /> {formatDate(order.createdAt)}
+                    </TableCell>
                     <TableCell className="font-medium text-slate-600">{order.customerName || 'Anonymous'}</TableCell>
                     <TableCell>
                       <span className={cn(

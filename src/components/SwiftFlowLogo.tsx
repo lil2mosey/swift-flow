@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export function SwiftFlowLogo({ className = "h-8 w-8" }: { className?: string }) {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -207,7 +208,7 @@ export const FirebaseService = {
   getChatMessagesQuery: (db: Firestore, convId: string) => {
     return query(
       collection(db, 'conversations', convId, 'messages'),
-      orderBy('createdAt', 'asc'),
+      where('createdAt', '>=', new Date(0)),
       limit(100)
     );
   },

@@ -11,7 +11,7 @@ import {
   increment,
   getDocs,
   setDoc,
-  orderBy
+  runTransaction
 } from 'firebase/firestore';
 import { 
   addDocumentNonBlocking, 
@@ -21,9 +21,10 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * High-performance backend services for SwiftFlow.
+ * Implements FCFS (First-Come-First-Served) logic for inventory.
  */
 export const FirebaseService = {
-  addManualOrder: (db: Firestore, sellerId: string, orderDetails: {
+  addManualOrder: async (db: Firestore, sellerId: string, orderDetails: {
     customerName: string;
     customerPhone: string;
     deliveryLocation: string;
@@ -34,20 +35,52 @@ export const FirebaseService = {
     paymentStatus?: 'unpaid' | 'pending_approval' | 'paid';
     customerId?: string;
   }) => {
-    const ordersRef = collection(db, 'orders');
-    return addDocumentNonBlocking(ordersRef, {
-      sellerId: sellerId,
-      userId: orderDetails.customerId || sellerId, 
-      customerId: orderDetails.customerId || 'manual-dm',
-      customerName: orderDetails.customerName,
-      customerPhone: orderDetails.customerPhone,
-      deliveryLocation: orderDetails.deliveryLocation,
-      total: orderDetails.totalAmount, 
-      totalAmount: orderDetails.totalAmount,
-      status: orderDetails.status || 'pending',
-      paymentStatus: orderDetails.paymentStatus || 'unpaid',
-      items: orderDetails.items,
-      createdAt: orderDetails.createdAt || serverTimestamp(),
+    // FCFS Check: We use a transaction to ensure stock is only allocated if available at order time.
+    try {
+      await runTransaction(db, async (transaction) => {
+        // Validate stock for each item in the order
+        for (const item of orderDetails.items) {
+          if (item.productId) {
+            const productRef = doc(db, 'products', item.productId);
+            const productSnap = await transaction.get(productRef);
+            if (!productSnap.exists()) throw new Error(`Product ${item.productName} does not exist.`);
+            
+            const currentStock = productSnap.data().currentStock || 0;
+            if (currentStock < item.quantity) {
+              throw new Error(`Insufficient stock for ${item.productName}. Remaining: ${currentStock}`);
+            }
+          }
+        }
+
+        // If all stock checks pass, create the order document
+        const ordersRef = doc(collection(db, 'orders'));
+        transaction.set(ordersRef, {
+          sellerId: sellerId,
+          userId: orderDetails.customerId || sellerId, 
+          customerId: orderDetails.customerId || 'manual-dm',
+          customerName: orderDetails.customerName,
+          customerPhone: orderDetails.customerPhone,
+          deliveryLocation: orderDetails.deliveryLocation,
+          total: orderDetails.totalAmount, 
+          totalAmount: orderDetails.totalAmount,
+          status: orderDetails.status || 'pending',
+          paymentStatus: orderDetails.paymentStatus || 'unpaid',
+          items: orderDetails.items,
+          createdAt: orderDetails.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      });
+      return true;
+    } catch (e: any) {
+      console.error("Order creation failed due to stock/FCFS constraint:", e.message);
+      throw e;
+    }
+  },
+
+  updateOrderStatus: (db: Firestore, orderId: string, newStatus: OrderStatus) => {
+    const orderRef = doc(db, 'orders', orderId);
+    return updateDocumentNonBlocking(orderRef, { 
+      status: newStatus,
       updatedAt: serverTimestamp()
     });
   },

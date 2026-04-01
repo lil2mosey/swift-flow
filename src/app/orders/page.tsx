@@ -41,7 +41,9 @@ import {
   ShoppingBag,
   DollarSign,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Settings2,
+  ChevronRight
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -49,7 +51,7 @@ import {
   useMemoFirebase, 
   useUser 
 } from '@/firebase';
-import { Order, Product, PaymentStatus } from '@/lib/types';
+import { Order, Product, PaymentStatus, OrderStatus } from '@/lib/types';
 import { FirebaseService } from '@/services/firebase-service';
 import { toast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
@@ -124,11 +126,14 @@ export default function OrdersPage() {
   
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderToPrint, setOrderToPrint] = useState<Order | null>(null);
   const [pin, setPin] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [newStatus, setNewStatus] = useState<OrderStatus>('pending');
   
   const [newOrder, setNewOrder] = useState({
     customerName: '',
@@ -161,9 +166,16 @@ export default function OrdersPage() {
   
   const isInitialLoading = isProfileLoading || (user && !profile) || (ordersQuery && isOrdersLoading);
 
-  const filteredOrders = useMemo(() => {
+  const sortedOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(order => 
+    // Recognize FCFS order by sorting by createdAt
+    const data = [...orders].sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA; // Most recent first for view, but logic handles FCFS via timestamp
+    });
+
+    return data.filter(order => 
       !searchTerm ||
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -208,6 +220,12 @@ export default function OrdersPage() {
     setIsPinDialogOpen(true);
   };
 
+  const handleOpenStatusDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setNewStatus(order.status);
+    setIsStatusDialogOpen(true);
+  };
+
   const handleConfirmPayment = async () => {
     if (!selectedOrder) return;
     setIsProcessingPayment(true);
@@ -220,6 +238,18 @@ export default function OrdersPage() {
     }, 1500);
   };
 
+  const handleUpdateStatus = async () => {
+    if (!selectedOrder) return;
+    setIsUpdatingStatus(true);
+    try {
+      await FirebaseService.updateOrderStatus(db, selectedOrder.id, newStatus);
+      toast({ title: "Status Updated", description: `Order is now marked as ${newStatus}.` });
+      setIsStatusDialogOpen(false);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const handleProductSelect = (productId: string) => {
     const product = products?.find(p => p.id === productId);
     if (product) {
@@ -227,25 +257,30 @@ export default function OrdersPage() {
     }
   };
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (!user) return;
     const selectedProduct = products?.find(p => p.id === newOrder.productId);
-    FirebaseService.addManualOrder(db, user.uid, {
-      customerName: newOrder.customerName,
-      customerPhone: newOrder.customerPhone,
-      deliveryLocation: newOrder.deliveryLocation,
-      totalAmount: newOrder.amount,
-      paymentStatus: newOrder.paymentStatus,
-      status: newOrder.paymentStatus === 'paid' ? 'processing' : 'pending',
-      items: [{
-        productId: newOrder.productId,
-        productName: selectedProduct?.name || 'Manual Item',
-        quantity: newOrder.quantity,
-        priceAtOrder: selectedProduct?.price || 0
-      }]
-    });
-    setIsOrderDialogOpen(false);
-    toast({ title: "Order Recorded", description: "The sale has been successfully recorded." });
+    
+    try {
+      await FirebaseService.addManualOrder(db, user.uid, {
+        customerName: newOrder.customerName,
+        customerPhone: newOrder.customerPhone,
+        deliveryLocation: newOrder.deliveryLocation,
+        totalAmount: newOrder.amount,
+        paymentStatus: newOrder.paymentStatus,
+        status: newOrder.paymentStatus === 'paid' ? 'processing' : 'pending',
+        items: [{
+          productId: newOrder.productId,
+          productName: selectedProduct?.name || 'Manual Item',
+          quantity: newOrder.quantity,
+          priceAtOrder: selectedProduct?.price || 0
+        }]
+      });
+      setIsOrderDialogOpen(false);
+      toast({ title: "Order Recorded", description: "The sale has been successfully registered." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Order Failed", description: e.message });
+    }
   };
 
   return (
@@ -264,7 +299,7 @@ export default function OrdersPage() {
               <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl bg-white">
                 <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
                   <DialogTitle className="text-3xl font-bold">New <span className="text-accent">Order</span></DialogTitle>
-                  <DialogDescription className="text-slate-400">Record sales from DM or direct shop visits.</DialogDescription>
+                  <DialogDescription className="text-slate-400">Record sales with FCFS stock validation.</DialogDescription>
                 </div>
                 <div className="px-8 py-6 space-y-6">
                   <Input placeholder="Customer Name" value={newOrder.customerName || ''} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
@@ -285,7 +320,7 @@ export default function OrdersPage() {
           )}
         />
 
-        {!isInitialLoading && orders && orders.length > 0 && (
+        {!isInitialLoading && sortedOrders && sortedOrders.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Card className="border-none shadow-sm bg-[#0f172a] text-white">
               <CardContent className="p-6">
@@ -331,7 +366,7 @@ export default function OrdersPage() {
         <PermissionAwareCollection 
           isLoading={isInitialLoading} 
           error={ordersError} 
-          data={filteredOrders} 
+          data={sortedOrders} 
           collectionName="orders"
           fallback={!isSeller && (
             <div className="py-32 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
@@ -361,6 +396,7 @@ export default function OrdersPage() {
                       <div className="flex items-center justify-between pt-2 border-t border-slate-50">
                         <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span>
                         <div className="flex gap-2">
+                          {isSeller && <Button size="sm" variant="outline" className="h-8 text-[9px] font-bold border-slate-200" onClick={() => handleOpenStatusDialog(order)}>Status</Button>}
                           {order.paymentStatus === 'pending_approval' && !isSeller && <Button size="sm" className="h-8 bg-teal-500 text-white font-bold text-[10px]" onClick={() => handleOpenPinDialog(order)}>Pay Now</Button>}
                           {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
                         </div>
@@ -393,7 +429,21 @@ export default function OrdersPage() {
                           </TableCell>
                           <TableCell className="font-medium text-slate-600 text-xs">{order.customerName}</TableCell>
                           <TableCell><span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span></TableCell>
-                          <TableCell><span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{order.status}</span></TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{order.status}</span>
+                              {isSeller && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 text-slate-300 hover:text-primary"
+                                  onClick={() => handleOpenStatusDialog(order)}
+                                >
+                                  <Settings2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right font-bold text-accent pr-6 text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</TableCell>
                           <TableCell className="pr-6 text-right">
                              {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400 hover:text-accent" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
@@ -417,6 +467,45 @@ export default function OrdersPage() {
               <Input type="password" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="****" className="h-14 text-center text-3xl tracking-[1em] bg-slate-50 border-none rounded-2xl font-bold" />
             </div>
             <DialogFooter><Button className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-lg" onClick={handleConfirmPayment} disabled={isProcessingPayment}>{isProcessingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Secure Payment"}</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+          <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+            <div className="bg-[#0f172a] p-8 pb-6 text-white">
+              <DialogTitle className="text-2xl font-bold">Manage <span className="text-teal-400">Status</span></DialogTitle>
+              <DialogDescription className="text-slate-400">Update order fulfillment stage.</DialogDescription>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Current Order Ref</Label>
+                <div className="p-4 bg-slate-50 rounded-xl font-bold text-slate-900 border border-slate-100 flex justify-between items-center">
+                  <span>#{selectedOrder?.id.slice(0, 8).toUpperCase()}</span>
+                  <span className="text-[9px] px-2 py-0.5 rounded bg-slate-200 uppercase">{selectedOrder?.status}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">New Selection</Label>
+                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus)}>
+                  <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="shipped">Shipped</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter className="p-8 pt-0">
+              <Button onClick={handleUpdateStatus} disabled={isUpdatingStatus} className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-lg gap-2">
+                {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+                Confirm Status Update
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

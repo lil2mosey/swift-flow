@@ -2,8 +2,7 @@ import { ImageResponse } from 'next/og';
 
 /**
  * Dynamic Brand Icon Generator for SwiftFlow.
- * This file replaces corrupted binary icon files (png/ico) with a high-fidelity 
- * dynamic SVG brand icon, ensuring zero build errors.
+ * Resolves the "Processing image failed" error by generating a high-fidelity SVG icon from code.
  */
 
 export const size = {

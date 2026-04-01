@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -81,13 +80,13 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
 
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div className="space-y-1">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer Details</p>
+          <p className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Customer Details</p>
           <p className="text-sm font-bold">{order.customerName || 'Anonymous'}</p>
           <p className="text-xs text-slate-700 font-medium">{order.customerPhone || 'N/A'}</p>
           <p className="text-xs text-slate-700 italic font-medium">{order.deliveryLocation || 'Delivery not specified'}</p>
         </div>
         <div className="text-right space-y-1">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Order Reference</p>
+          <p className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Order Reference</p>
           <p className="text-sm font-bold">#{order.id.slice(0, 8).toUpperCase()}</p>
           <p className="text-xs text-slate-700 font-medium">{formattedDate}</p>
         </div>
@@ -96,7 +95,7 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
       <div className="mb-8">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-slate-600 uppercase text-[10px] font-bold">
+            <tr className="border-b border-slate-200 text-slate-700 uppercase text-[10px] font-bold">
               <th className="py-2">Item Description</th>
               <th className="py-2 text-center">Qty</th>
               <th className="py-2 text-right">Price</th>
@@ -389,10 +388,10 @@ export default function OrdersPage() {
                   <div className="p-2 bg-amber-50 rounded-xl">
                     <Clock className="h-5 w-5 text-amber-500" />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Pending Balance</span>
+                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Pending Balance</span>
                 </div>
                 <div className="text-3xl font-bold text-slate-900">KES {stats.pendingAmount.toLocaleString()}</div>
-                <p className="text-[10px] text-slate-600 font-bold uppercase mt-1 tracking-tighter">Awaiting Payment</p>
+                <p className="text-[10px] text-slate-700 font-bold uppercase mt-1 tracking-tighter">Awaiting Payment</p>
               </CardContent>
             </Card>
 
@@ -402,10 +401,10 @@ export default function OrdersPage() {
                   <div className="p-2 bg-slate-50 rounded-xl">
                     <TrendingUp className="h-5 w-5 text-slate-500" />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Order History</span>
+                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Order History</span>
                 </div>
                 <div className="text-3xl font-bold text-slate-900">{stats.totalOrders}</div>
-                <p className="text-[10px] text-slate-600 font-bold uppercase mt-1 tracking-tighter">Total Items Ordered</p>
+                <p className="text-[10px] text-slate-700 font-bold uppercase mt-1 tracking-tighter">Total Items Ordered</p>
               </CardContent>
             </Card>
           </div>
@@ -444,7 +443,7 @@ export default function OrdersPage() {
                       {data.map((order: Order) => (
                         <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50">
                           <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                          <TableCell className="text-xs text-slate-600 font-bold">
+                          <TableCell className="text-xs text-slate-700 font-bold">
                             <div className="flex items-center gap-1.5">
                               <Calendar className="h-3 w-3" /> {formatDate(order.createdAt)}
                             </div>
@@ -452,13 +451,13 @@ export default function OrdersPage() {
                           <TableCell>
                              <div className="flex flex-col">
                                <span className="font-bold text-slate-900 text-xs">{order.customerName}</span>
-                               <span className="text-[9px] text-slate-600 font-bold uppercase tracking-tight">{order.customerPhone || 'Direct'}</span>
+                               <span className="text-[9px] text-slate-700 font-bold uppercase tracking-tight">{order.customerPhone || 'Direct'}</span>
                              </div>
                           </TableCell>
                           <TableCell><span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded shadow-sm", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span></TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase text-slate-600 bg-slate-100 px-2 py-0.5 rounded border">{order.status}</span>
+                              <span className="text-[10px] font-bold uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded border">{order.status}</span>
                               {isSeller && (
                                 <Button 
                                   variant="ghost" 
@@ -490,7 +489,7 @@ export default function OrdersPage() {
           <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
             <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-teal-600" /> Secure Authorization</DialogTitle></DialogHeader>
             <div className="py-6 space-y-4 text-center">
-              <Label className="text-xs font-bold uppercase text-slate-600">Enter PIN to Complete Payment</Label>
+              <Label className="text-xs font-bold uppercase text-slate-700">Enter PIN to Complete Payment</Label>
               <Input type="password" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="****" className="h-14 text-center text-3xl tracking-[1em] bg-slate-50 border-none rounded-2xl font-bold" />
             </div>
             <DialogFooter><Button className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-lg" onClick={handleConfirmPayment} disabled={isProcessingPayment}>{isProcessingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Secure Payment"}</Button></DialogFooter>
@@ -505,14 +504,14 @@ export default function OrdersPage() {
             </div>
             <div className="p-8 space-y-6">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase text-slate-600 ml-1">Current Order Ref</Label>
+                <Label className="text-[10px] font-bold uppercase text-slate-700 ml-1">Current Order Ref</Label>
                 <div className="p-4 bg-slate-50 rounded-xl font-bold text-slate-900 border border-slate-100 flex justify-between items-center shadow-inner">
                   <span>#{selectedOrder?.id.slice(0, 8).toUpperCase()}</span>
                   <span className="text-[9px] px-2 py-0.5 rounded bg-slate-200 uppercase border border-slate-300">{selectedOrder?.status}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase text-slate-600 ml-1">New Selection</Label>
+                <Label className="text-[10px] font-bold uppercase text-slate-700 ml-1">New Selection</Label>
                 <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus)}>
                   <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl font-bold">
                     <SelectValue />

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -179,7 +178,7 @@ export default function LoginPage() {
               <form onSubmit={handleSignIn}>
                 <CardHeader className="pt-8 px-8">
                   <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-                  <CardDescription className="text-slate-500 font-bold text-xs uppercase tracking-widest leading-relaxed">Secure Portal Access</CardDescription>
+                  <CardDescription className="text-slate-600 font-bold text-xs uppercase tracking-widest leading-relaxed">Secure Portal Access</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 px-8 pb-8">
                   <div className="space-y-2">
@@ -241,7 +240,7 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden">
               <CardHeader className="pt-8 px-8">
                 <CardTitle className="text-2xl font-bold">New Account</CardTitle>
-                <CardDescription className="text-slate-500 font-bold text-xs uppercase tracking-widest leading-relaxed">Join the Live Ecosystem</CardDescription>
+                <CardDescription className="text-slate-600 font-bold text-xs uppercase tracking-widest leading-relaxed">Join the Live Ecosystem</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 px-8 pb-8">
                 <div className="space-y-1.5">

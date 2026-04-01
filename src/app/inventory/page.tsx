@@ -204,14 +204,14 @@ export default function InventoryPage() {
                   
                   <div className="px-8 py-6 space-y-6">
                     <div className="flex gap-4 p-1 bg-slate-100 rounded-xl">
-                      <button onClick={() => setAddMode('restock')} className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all", addMode === 'restock' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}>Restock</button>
-                      <button onClick={() => setAddMode('new')} className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all", addMode === 'new' ? "bg-white text-teal-600 shadow-sm" : "text-slate-400")}>New Item</button>
+                      <button onClick={() => setAddMode('restock')} className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all", addMode === 'restock' ? "bg-white text-teal-600 shadow-sm" : "text-slate-700")}>Restock</button>
+                      <button onClick={() => setAddMode('new')} className={cn("flex-1 py-3 text-xs font-bold rounded-lg transition-all", addMode === 'new' ? "bg-white text-teal-600 shadow-sm" : "text-slate-700")}>New Item</button>
                     </div>
 
                     {addMode === 'restock' ? (
                       <div className="space-y-6">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Target Item</Label>
+                          <Label className="text-[10px] font-bold uppercase text-teal-700 tracking-wider">Target Item</Label>
                           <Select value={selectedItemId || ''} onValueChange={setSelectedItemId}>
                             <SelectTrigger className="h-14 bg-slate-50 border-none rounded-xl font-bold">
                               <SelectValue placeholder="-- Select Item --" />
@@ -224,7 +224,7 @@ export default function InventoryPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase text-teal-600 tracking-wider">Quantity to Add</Label>
+                          <Label className="text-[10px] font-bold uppercase text-teal-700 tracking-wider">Quantity to Add</Label>
                           <Input 
                             type="number" 
                             value={restockAmount === 0 ? '' : restockAmount} 
@@ -237,21 +237,21 @@ export default function InventoryPage() {
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Item Name</Label>
+                            <Label className="text-[9px] font-bold uppercase text-slate-700 ml-1">Item Name</Label>
                             <Input placeholder="E.g. Gold Grain" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">SKU Code</Label>
+                            <Label className="text-[9px] font-bold uppercase text-slate-700 ml-1">SKU Code</Label>
                             <Input placeholder="E.g. RM-G-24" value={formData.sku || ''} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Initial Stock</Label>
+                            <Label className="text-[9px] font-bold uppercase text-slate-700 ml-1">Initial Stock</Label>
                             <Input placeholder="0" type="number" value={formData.currentStock === 0 ? '' : formData.currentStock} onChange={(e) => setFormData({...formData, currentStock: e.target.value === '' ? 0 : Number(e.target.value)})} className="h-11 bg-slate-50 border-none rounded-xl" />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-[9px] font-bold uppercase text-slate-400 ml-1">Price (KES)</Label>
+                            <Label className="text-[9px] font-bold uppercase text-slate-700 ml-1">Price (KES)</Label>
                             <Input placeholder="0" type="number" value={formData.price === 0 ? '' : formData.price} onChange={(e) => setFormData({...formData, price: e.target.value === '' ? 0 : Number(e.target.value)})} className="h-11 bg-slate-50 border-none rounded-xl" />
                           </div>
                         </div>
@@ -295,13 +295,13 @@ export default function InventoryPage() {
                 {isProductsLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" /></TableCell></TableRow>
                 ) : filteredItems.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-20 text-slate-400 italic">No items found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-20 text-slate-700 italic">No items found.</TableCell></TableRow>
                 ) : filteredItems.map((item) => (
                   <TableRow key={item.id} className="border-slate-100">
                     <TableCell className="font-medium text-slate-900 pl-6">
                       <div className="flex flex-col">
                         <span className="font-bold">{item.name}</span>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{item.sku}</span>
+                        <span className="text-[10px] text-slate-700 font-bold uppercase tracking-tighter">{item.sku}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -309,7 +309,7 @@ export default function InventoryPage() {
                         {item.currentStock}
                       </span>
                     </TableCell>
-                    <TableCell className="text-[10px] font-bold text-slate-400">
+                    <TableCell className="text-[10px] font-bold text-slate-700">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="h-3 w-3" /> {formatDate(item.updatedAt)}
                       </div>

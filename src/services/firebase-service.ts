@@ -22,7 +22,7 @@ import { OrderStatus, Product, OrderItem, Order } from '@/lib/types';
 
 /**
  * High-performance backend services for SwiftFlow.
- * Implements FCFS (First-Come-First-Served) logic for inventory.
+ * Implements FCFS (First-Come-First-Served) logic for inventory using Firestore Transactions.
  */
 export const FirebaseService = {
   addManualOrder: async (db: Firestore, sellerId: string, orderDetails: {
@@ -36,7 +36,7 @@ export const FirebaseService = {
     paymentStatus?: 'unpaid' | 'pending_approval' | 'paid';
     customerId?: string;
   }) => {
-    // FCFS Check: We use a transaction to ensure stock is only allocated if available at order time.
+    // Atomic FCFS Logic: Validate stock availability at the exact microsecond of finalization.
     try {
       await runTransaction(db, async (transaction) => {
         // Validate stock for each item in the order
@@ -48,12 +48,12 @@ export const FirebaseService = {
             
             const currentStock = productSnap.data().currentStock || 0;
             if (currentStock < item.quantity) {
-              throw new Error(`Insufficient stock for ${item.productName}. Remaining: ${currentStock}`);
+              throw new Error(`Insufficient stock for ${item.productName}. Available: ${currentStock}, Requested: ${item.quantity}`);
             }
           }
         }
 
-        // If all stock checks pass, create the order document
+        // If all stock checks pass, create the order document with the first-come sequence
         const ordersRef = doc(collection(db, 'orders'));
         transaction.set(ordersRef, {
           sellerId: sellerId,
@@ -73,7 +73,7 @@ export const FirebaseService = {
       });
       return true;
     } catch (e: any) {
-      console.error("Order creation failed due to stock/FCFS constraint:", e.message);
+      console.error("Order finalization failed due to FCFS stock constraint:", e.message);
       throw e;
     }
   },

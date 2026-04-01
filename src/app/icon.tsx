@@ -4,7 +4,6 @@ import { ImageResponse } from 'next/og';
 /**
  * Dynamic Brand Icon Generator for SwiftFlow.
  * Resolves the "Processing image failed" error by generating a high-fidelity icon from code.
- * This is the modern Next.js standard for favicons/icons.
  */
 
 export const size = {

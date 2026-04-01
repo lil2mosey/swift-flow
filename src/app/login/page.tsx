@@ -165,13 +165,13 @@ export default function LoginPage() {
             <SwiftFlowLogo className="h-20 w-20" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
-          <p className="text-slate-500 font-medium italic">Integrated Logistics & Inventory</p>
+          <p className="text-slate-600 font-bold italic">Professional Order Ecosystem</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-200/50 p-1.5 rounded-2xl">
-            <TabsTrigger value="login" className="rounded-xl font-bold py-2.5">Login</TabsTrigger>
-            <TabsTrigger value="register" className="rounded-xl font-bold py-2.5">Register</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-200/50 p-1.5 rounded-2xl shadow-inner">
+            <TabsTrigger value="login" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-white data-[state=active]:text-teal-600">Login</TabsTrigger>
+            <TabsTrigger value="register" className="rounded-xl font-bold py-2.5 data-[state=active]:bg-white data-[state=active]:text-teal-600">Register</TabsTrigger>
           </TabsList>
 
           <TabsContent value="login">
@@ -179,23 +179,23 @@ export default function LoginPage() {
               <form onSubmit={handleSignIn}>
                 <CardHeader className="pt-8 px-8">
                   <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-                  <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Secure Portal Access</CardDescription>
+                  <CardDescription className="text-slate-500 font-bold text-xs uppercase tracking-widest leading-relaxed">Secure Portal Access</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 px-8 pb-8">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 ml-1">Email</Label>
                     <Input 
                       type="email" 
                       placeholder="Enter your email"
                       value={email} 
                       onChange={(e) => setEmail(e.target.value)} 
                       required 
-                      className="bg-slate-50 h-14 border-none rounded-2xl font-medium" 
+                      className="bg-slate-50 h-14 border-none rounded-2xl font-bold" 
                     />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center ml-1">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Password</Label>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-700">Password</Label>
                       <button 
                         type="button" 
                         onClick={() => setIsResetDialogOpen(true)}
@@ -211,12 +211,12 @@ export default function LoginPage() {
                         value={password} 
                         onChange={(e) => setPassword(e.target.value)} 
                         required 
-                        className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" 
+                        className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-bold" 
                       />
                       <button 
                         type="button" 
                         onClick={() => setShowPassword(!showPassword)} 
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-accent transition-colors"
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -241,19 +241,19 @@ export default function LoginPage() {
             <Card className="border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden">
               <CardHeader className="pt-8 px-8">
                 <CardTitle className="text-2xl font-bold">New Account</CardTitle>
-                <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Join the Live Ecosystem</CardDescription>
+                <CardDescription className="text-slate-500 font-bold text-xs uppercase tracking-widest leading-relaxed">Join the Live Ecosystem</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 px-8 pb-8">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</Label>
-                  <Input placeholder="E.g. Jane Doe" value={fullName || ''} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 ml-1">Full Name</Label>
+                  <Input placeholder="E.g. Jane Doe" value={fullName || ''} onChange={(e) => setFullName(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-bold" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email</Label>
-                  <Input type="email" placeholder="E.g. jane@example.com" value={email || ''} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-medium" />
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 ml-1">Email</Label>
+                  <Input type="email" placeholder="E.g. jane@example.com" value={email || ''} onChange={(e) => setEmail(e.target.value)} required className="bg-slate-50 h-14 border-none rounded-2xl font-bold" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Password</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 ml-1">Password</Label>
                   <div className="relative">
                     <Input 
                       type={showPassword ? "text" : "password"} 
@@ -261,9 +261,9 @@ export default function LoginPage() {
                       value={password || ''} 
                       onChange={(e) => setPassword(e.target.value)} 
                       required 
-                      className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-medium" 
+                      className="bg-slate-50 h-14 border-none rounded-2xl pr-12 font-bold" 
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-accent transition-colors">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-accent transition-colors">
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
@@ -282,7 +282,7 @@ export default function LoginPage() {
                   onClick={(e) => handleSignUp(e, 'customer')} 
                   disabled={isLoading}
                   variant="outline" 
-                  className="w-full h-14 border-slate-200 font-bold rounded-2xl hover:bg-slate-50"
+                  className="w-full h-14 border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 shadow-sm"
                 >
                   Join as Customer
                 </Button>
@@ -296,18 +296,18 @@ export default function LoginPage() {
         <DialogContent className="sm:max-w-[400px] rounded-[2rem] border-none shadow-2xl bg-white p-0 overflow-hidden">
           <div className="bg-[#0f172a] p-8 pb-6 text-white border-b border-slate-800">
             <DialogTitle className="text-2xl font-bold">Reset <span className="text-accent">Password</span></DialogTitle>
-            <DialogDescription className="text-slate-400">Enter your email to receive a recovery link.</DialogDescription>
+            <DialogDescription className="text-slate-400 font-medium">Enter your email to receive a recovery link.</DialogDescription>
           </div>
           <form onSubmit={handleResetPassword} className="p-8 space-y-6">
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email Address</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 ml-1">Email Address</Label>
               <Input 
                 type="email" 
                 placeholder="E.g. jane@example.com"
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 required
-                className="bg-slate-50 h-14 border-none rounded-2xl font-medium text-sm"
+                className="bg-slate-50 h-14 border-none rounded-2xl font-bold text-sm"
               />
             </div>
             <Button 

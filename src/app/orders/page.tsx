@@ -44,7 +44,9 @@ import {
   Clock,
   TrendingUp,
   Settings2,
-  ChevronRight
+  ChevronRight,
+  MapPin,
+  Smartphone
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -82,6 +84,7 @@ const ReceiptPrintView = ({ order }: { order: Order }) => {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Details</p>
           <p className="text-sm font-bold">{order.customerName || 'Anonymous'}</p>
           <p className="text-xs text-slate-600">{order.customerPhone || 'N/A'}</p>
+          <p className="text-xs text-slate-600 italic">{order.deliveryLocation || 'Delivery not specified'}</p>
         </div>
         <div className="text-right space-y-1">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Reference</p>
@@ -169,11 +172,10 @@ export default function OrdersPage() {
 
   const sortedOrders = useMemo(() => {
     if (!orders) return [];
-    // Recognize FCFS order by sorting by createdAt
     const data = [...orders].sort((a, b) => {
       const timeA = a.createdAt?.seconds || 0;
       const timeB = b.createdAt?.seconds || 0;
-      return timeB - timeA; // Most recent first for view, but logic handles FCFS via timestamp
+      return timeB - timeA;
     });
 
     return data.filter(order => 
@@ -278,6 +280,15 @@ export default function OrdersPage() {
         }]
       });
       setIsOrderDialogOpen(false);
+      setNewOrder({
+        customerName: '',
+        customerPhone: '',
+        deliveryLocation: '',
+        productId: '',
+        quantity: 1,
+        amount: 0,
+        paymentStatus: 'unpaid'
+      });
       toast({ title: "Order Recorded", description: "The sale has been successfully registered." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Order Failed", description: e.message });
@@ -302,20 +313,56 @@ export default function OrdersPage() {
                   <DialogTitle className="text-3xl font-bold">New <span className="text-accent">Order</span></DialogTitle>
                   <DialogDescription className="text-slate-400">Record sales with FCFS stock validation.</DialogDescription>
                 </div>
-                <div className="px-8 py-6 space-y-6">
-                  <Input placeholder="Customer Name" value={newOrder.customerName || ''} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Select onValueChange={handleProductSelect}>
-                      <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl"><SelectValue placeholder="Select Item" /></SelectTrigger>
-                      <SelectContent>{products?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Select value={newOrder.paymentStatus} onValueChange={(v) => setNewOrder({...newOrder, paymentStatus: v as PaymentStatus})}>
-                      <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl"><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="paid">Paid (Cash)</SelectItem></SelectContent>
-                    </Select>
+                <div className="px-8 py-6 space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Customer Details</Label>
+                    <Input placeholder="Full Name" value={newOrder.customerName || ''} onChange={(e) => setNewOrder({...newOrder, customerName: e.target.value})} className="h-11 bg-slate-50 border-none rounded-xl" />
                   </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Phone Number</Label>
+                      <div className="relative">
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                        <Input placeholder="07XX XXX XXX" value={newOrder.customerPhone || ''} onChange={(e) => setNewOrder({...newOrder, customerPhone: e.target.value})} className="h-11 pl-9 bg-slate-50 border-none rounded-xl" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Delivery Location</Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
+                        <Input placeholder="City / Area" value={newOrder.deliveryLocation || ''} onChange={(e) => setNewOrder({...newOrder, deliveryLocation: e.target.value})} className="h-11 pl-9 bg-slate-50 border-none rounded-xl" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Selection</Label>
+                      <Select onValueChange={handleProductSelect}>
+                        <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl font-medium"><SelectValue placeholder="Select Item" /></SelectTrigger>
+                        <SelectContent className="rounded-xl">{products?.map(p => <SelectItem key={p.id} value={p.id} disabled={p.currentStock <= 0}>{p.name} ({p.currentStock})</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Payment</Label>
+                      <Select value={newOrder.paymentStatus} onValueChange={(v) => setNewOrder({...newOrder, paymentStatus: v as PaymentStatus})}>
+                        <SelectTrigger className="h-11 bg-slate-50 border-none rounded-xl font-medium"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl"><SelectItem value="unpaid">Unpaid</SelectItem><SelectItem value="paid">Paid (Cash)</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {newOrder.amount > 0 && (
+                    <div className="p-4 bg-teal-50 rounded-2xl flex justify-between items-center border border-teal-100 mt-2">
+                      <span className="text-[10px] font-bold text-teal-600 uppercase">Grand Total</span>
+                      <span className="text-xl font-bold text-slate-900">KES {newOrder.amount.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
-                <DialogFooter className="p-8 pt-0"><Button onClick={handleCreateOrder} className="w-full h-14 bg-primary text-white font-bold rounded-2xl">Finalize Order</Button></DialogFooter>
+                <DialogFooter className="p-8 pt-0">
+                  <Button onClick={handleCreateOrder} disabled={!newOrder.productId || !newOrder.customerName} className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-xl transition-all hover:bg-slate-800">Finalize Order</Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           )}
@@ -379,35 +426,7 @@ export default function OrdersPage() {
         >
           {(data) => (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:hidden">
-                {data.map((order: Order) => (
-                  <Card key={order.id} className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Order Ref</p>
-                          <p className="font-bold text-slate-900 text-xs">#{order.id.slice(0, 8).toUpperCase()}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(order.createdAt)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
-                          <p className="font-bold text-accent text-xs">KES {(order.totalAmount || order.total || 0).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                        <span className={cn("text-[9px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span>
-                        <div className="flex gap-2">
-                          {isSeller && <Button size="sm" variant="outline" className="h-8 text-[9px] font-bold border-slate-200" onClick={() => handleOpenStatusDialog(order)}>Status</Button>}
-                          {order.paymentStatus === 'pending_approval' && !isSeller && <Button size="sm" className="h-8 bg-teal-500 text-white font-bold text-[10px]" onClick={() => handleOpenPinDialog(order)}>Pay Now</Button>}
-                          {order.paymentStatus === 'paid' && <Button size="sm" variant="ghost" className="h-8 text-slate-400" onClick={() => handlePrintReceipt(order)}><Printer className="h-4 w-4" /></Button>}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <Card className="hidden md:block border-none shadow-sm overflow-hidden min-h-[400px]">
+              <Card className="border-none shadow-sm overflow-hidden min-h-[400px]">
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader className="bg-primary text-white">
@@ -425,10 +444,17 @@ export default function OrdersPage() {
                       {data.map((order: Order) => (
                         <TableRow key={order.id} className="border-slate-100 hover:bg-slate-50/50">
                           <TableCell className="font-bold text-slate-900 pl-6 text-xs">{order.id.slice(0, 8).toUpperCase()}</TableCell>
-                          <TableCell className="text-xs text-slate-400 font-bold flex items-center gap-1.5 pt-4">
-                            <Calendar className="h-3 w-3" /> {formatDate(order.createdAt)}
+                          <TableCell className="text-xs text-slate-400 font-bold">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3" /> {formatDate(order.createdAt)}
+                            </div>
                           </TableCell>
-                          <TableCell className="font-medium text-slate-600 text-xs">{order.customerName}</TableCell>
+                          <TableCell>
+                             <div className="flex flex-col">
+                               <span className="font-medium text-slate-900 text-xs">{order.customerName}</span>
+                               <span className="text-[9px] text-slate-400 font-bold uppercase">{order.customerPhone || 'Direct'}</span>
+                             </div>
+                          </TableCell>
                           <TableCell><span className={cn("text-[10px] font-bold uppercase px-2 py-0.5 rounded", order.paymentStatus === 'paid' ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700")}>{order.paymentStatus}</span></TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">

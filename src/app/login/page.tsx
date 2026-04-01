@@ -52,7 +52,7 @@ export default function LoginPage() {
             customerId: user.uid,
             customerName: profile.fullName || profile.firstName || user.email?.split('@')[0] || 'Customer',
             customerPhone: pendingOrder.customerPhone,
-            deliveryLocation: 'Online Storefront',
+            deliveryLocation: pendingOrder.deliveryLocation || 'Online Storefront',
             totalAmount: pendingOrder.totalAmount,
             paymentStatus: 'unpaid',
             status: 'pending',

@@ -104,7 +104,7 @@ export default function CustomerView() {
             <span className="text-slate-400 uppercase text-[10px] font-bold tracking-widest mr-2 border-r pr-2">Member since</span>
             <span className="font-bold text-slate-600">{formatDate(profile?.createdAt)}</span>
           </p>
-          <p className="text-slate-400 text-sm font-medium mt-1 italic">Order Management and Inventory Tracking</p>
+          <p className="text-slate-400 text-sm font-medium mt-1 italic">Integrated Order & Fulfillment Tracking</p>
         </div>
       </div>
 

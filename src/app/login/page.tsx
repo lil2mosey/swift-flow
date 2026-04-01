@@ -58,7 +58,7 @@ export default function LoginPage() {
             items: pendingOrder.items
           });
           localStorage.removeItem('swiftflow_pending_order');
-          toast({ title: "Order Processed", description: "Your pending items have been added to your profile." });
+          toast({ title: "Order Integrated", description: "Your pending items have been added to your profile." });
           router.push('/orders');
           return;
         } catch (e) {
@@ -138,7 +138,7 @@ export default function LoginPage() {
     setIsResetLoading(true);
     try {
       await sendPasswordResetEmail(auth, resetEmail);
-      toast({ title: "Reset Link Sent", description: "Check your inbox for password recovery instructions." });
+      toast({ title: "Reset Link Sent", description: "Check your inbox for recovery instructions." });
       setIsResetDialogOpen(false);
       setResetEmail('');
     } catch (error: any) {
@@ -164,7 +164,7 @@ export default function LoginPage() {
             <SwiftFlowLogo className="h-20 w-20" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">SwiftFlow</h1>
-          <p className="text-slate-500 font-medium italic">Order Management and Inventory Tracking</p>
+          <p className="text-slate-500 font-medium italic">Integrated Logistics & Inventory</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -178,7 +178,7 @@ export default function LoginPage() {
               <form onSubmit={handleSignIn}>
                 <CardHeader className="pt-8 px-8">
                   <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-                  <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Enterprise Command Center</CardDescription>
+                  <CardDescription className="text-slate-400 font-medium text-xs uppercase tracking-widest leading-relaxed">Secure Portal Access</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5 px-8 pb-8">
                   <div className="space-y-2">

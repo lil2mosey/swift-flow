@@ -163,7 +163,7 @@ export default function InventoryPage() {
     setIsSeeding(true);
     try {
       await FirebaseService.seedKenyaJewelry(db, user.uid);
-      toast({ title: "Catalog Updated", description: "High-speed workshop synchronization complete." });
+      toast({ title: "Catalog Integrated", description: "High-speed workshop catalog replenishment complete." });
     } catch (error) {
       toast({ variant: "destructive", title: "Update Failed", description: "Could not populate data." });
     } finally {
@@ -176,7 +176,7 @@ export default function InventoryPage() {
       <Shell userRole="seller">
         <PageHeader 
           title="Inventory Management" 
-          description="Manage stock levels and track last update dates."
+          description="Manage stock levels and track live inventory updates."
           action={
             <div className="flex gap-3">
               <Button 
@@ -287,7 +287,7 @@ export default function InventoryPage() {
                 <TableRow className="border-none hover:bg-transparent">
                   <TableHead className="font-bold pl-6 uppercase text-[10px] tracking-widest text-teal-400">Item Details</TableHead>
                   <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Current Stock</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Last Sync</TableHead>
+                  <TableHead className="font-bold uppercase text-[10px] tracking-widest text-slate-200">Last Update</TableHead>
                   <TableHead className="font-bold text-right pr-6 uppercase text-[10px] tracking-widest text-slate-200">Unit Price</TableHead>
                 </TableRow>
               </TableHeader>
